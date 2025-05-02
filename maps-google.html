@@ -1,0 +1,838 @@
+<!--
+    Copyright 2023 Google LLC
+
+    Licensed under the Apache License, Version 2.0 (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
+
+        https://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+  -->
+<!DOCTYPE html lang="zh-TW">
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>新增景點</title>
+    <style>
+      body {
+        margin: 0;
+        font-family: 'Noto Sans TC', sans-serif;
+        background-color: #f5f5f5;
+      }
+
+      .container {
+        display: flex;
+        height: calc(100vh - 56px);
+      }
+
+      .header {
+        background-color: white;
+        padding: 16px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        position: sticky;
+        top: 0;
+        z-index: 1000;
+      }
+
+      .back-button {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        color: #1a1a1a;
+        text-decoration: none;
+        font-weight: 500;
+      }
+
+      .map-section {
+        flex: 3;
+        height: 100%;
+        position: relative;
+      }
+
+      .form-section {
+        flex: 2;
+        background: white;
+        padding: 24px;
+        overflow-y: auto;
+        height: 100%;
+        box-sizing: border-box;
+      }
+
+      .cover-image-section {
+        margin: -24px -24px 24px -24px;
+        position: relative;
+        background-color: #f3f4f6;
+        min-height: 200px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+      }
+
+      .cover-image {
+        width: 100%;
+        height: 200px;
+        object-fit: cover;
+        display: none;
+      }
+
+      .cover-image.has-image {
+        display: block;
+      }
+
+      .cover-upload-overlay {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        padding: 16px;
+        background: linear-gradient(to top, rgba(0,0,0,0.7), transparent);
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .upload-button {
+        background-color: white;
+        border: none;
+        border-radius: 6px;
+        padding: 8px 16px;
+        font-size: 14px;
+        color: #1a1a1a;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .upload-button:hover {
+        background-color: #f3f4f6;
+      }
+
+      .upload-text {
+        color: white;
+        font-size: 14px;
+        flex: 1;
+      }
+
+      .form-group {
+        margin-bottom: 20px;
+      }
+
+      .form-label {
+        display: block;
+        margin-bottom: 8px;
+        color: #1a1a1a;
+        font-weight: 500;
+      }
+
+      .required::after {
+        content: " *";
+        color: #ef4444;
+      }
+
+      input, select, textarea {
+        width: 100%;
+        border: 1px solid #e5e7eb;
+        border-radius: 6px;
+        padding: 8px 12px;
+        font-size: 14px;
+        transition: all 0.2s;
+        box-sizing: border-box;
+      }
+
+      input, select {
+        height: 40px;
+      }
+
+      textarea {
+        height: 100px;
+        resize: vertical;
+      }
+
+      input:focus, select:focus, textarea:focus {
+        outline: none;
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+      }
+
+      .category-filters {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 16px;
+        flex-wrap: wrap;
+      }
+
+      .category-button {
+        padding: 6px 12px;
+        border: 1px solid #e5e7eb;
+        border-radius: 20px;
+        background: white;
+        color: #6b7280;
+        font-size: 14px;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+
+      .category-button.active {
+        background: #3b82f6;
+        color: white;
+        border-color: #3b82f6;
+      }
+
+      .social-media {
+        display: flex;
+        gap: 12px;
+        margin-bottom: 20px;
+      }
+
+      .social-input {
+        flex: 1;
+      }
+
+      .action-buttons {
+        display: flex;
+        gap: 12px;
+        margin-top: 24px;
+        position: sticky;
+        bottom: 24px;
+        background: white;
+        padding-top: 12px;
+        border-top: 1px solid #e5e7eb;
+      }
+
+      .submit-button {
+        flex: 1;
+        background-color: #3b82f6;
+        color: white;
+        border: none;
+        border-radius: 6px;
+        padding: 12px 24px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: background-color 0.2s;
+      }
+
+      .submit-button:hover {
+        background-color: #2563eb;
+      }
+
+      .cancel-button {
+        flex: 1;
+        background-color: white;
+        color: #6b7280;
+        border: 1px solid #e5e7eb;
+        border-radius: 6px;
+        padding: 12px 24px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+
+      .cancel-button:hover {
+        background-color: #f3f4f6;
+      }
+
+      gmp-map {
+        width: 100%;
+        height: 100%;
+      }
+
+      h1 {
+        font-size: 20px;
+        margin: 0 0 24px 0;
+      }
+
+      p {
+        margin: 4px 0 12px 0;
+        color: #6b7280;
+        font-size: 14px;
+      }
+
+      .half-input-container {
+        display: flex;
+        gap: 12px;
+      }
+
+      .half-input-container > * {
+        flex: 1;
+      }
+
+      .rating-container {
+        position: relative;
+        display: flex;
+        align-items: center;
+      }
+
+      .rating-star {
+        position: absolute;
+        right: 12px;
+        color: #fbbf24;
+        font-size: 18px;
+      }
+
+      .helper-text {
+        font-size: 12px;
+        color: #6b7280;
+        margin-top: 4px;
+      }
+
+      input[readonly] {
+        background-color: #f3f4f6;
+        cursor: not-allowed;
+      }
+    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+    <script type="module">
+      "use strict";
+
+      // This loads helper components from the Extended Component Library,
+      // https://github.com/googlemaps/extended-component-library.
+      import {APILoader} from 'https://ajax.googleapis.com/ajax/libs/@googlemaps/extended-component-library/0.6.11/index.min.js';
+
+      const CONFIGURATION = {
+        "ctaTitle": "確認",
+        "mapOptions": {
+          "center": {"lat": 23.5711, "lng": 119.5794},
+          "fullscreenControl": true,
+          "mapTypeControl": false,
+          "streetViewControl": true,
+          "zoom": 13,
+          "zoomControl": true,
+          "maxZoom": 22,
+          "mapId": ""
+        },
+        "mapsApiKey": "YOUR_GOOGLE_MAPS_API_KEY_HERE",
+        "capabilities": {
+          "addressAutocompleteControl": true,
+          "mapDisplayControl": true,
+          "ctaControl": true
+        }
+      };
+
+      const SHORT_NAME_ADDRESS_COMPONENT_TYPES =
+          new Set(['street_number', 'administrative_area_level_1', 'postal_code']);
+
+      const ADDRESS_COMPONENT_TYPES_IN_FORM = [
+        'location',
+        'locality',
+        'administrative_area_level_1',
+        'postal_code',
+        'country',
+      ];
+
+      function getFormInputElement(componentType) {
+        return document.getElementById(`${componentType}-input`);
+      }
+
+      function fillInAddress(place) {
+        // 填充位置資訊（經緯度）
+        if (place.geometry && place.geometry.location) {
+          const locationInput = getFormInputElement('location');
+          if (locationInput) {
+            locationInput.value = `${place.geometry.location.lat().toFixed(6)}, ${place.geometry.location.lng().toFixed(6)}`;
+          }
+        }
+
+        // 填充景點名稱
+        if (place.name) {
+          const nameInput = document.querySelector('input[placeholder="請輸入景點名稱"]');
+          if (nameInput) nameInput.value = place.name;
+        }
+
+        // 填充封面圖片
+        const coverImage = document.querySelector('.cover-image img');
+        const coverImageSection = document.querySelector('.cover-image');
+        if (place.photos && place.photos.length > 0) {
+          const photo = place.photos[0];
+          coverImage.src = photo.getUrl();
+          coverImageSection.classList.add('has-image');
+        } else {
+          coverImage.src = '';
+          coverImageSection.classList.remove('has-image');
+        }
+
+        // 填充評分和評論數
+        const ratingInput = document.getElementById('rating-input');
+        const reviewsCountInput = document.getElementById('reviews-count-input');
+        
+        if (ratingInput) {
+          ratingInput.value = place.rating ? place.rating.toString() : '';
+        }
+        
+        if (reviewsCountInput) {
+          reviewsCountInput.value = place.user_ratings_total ? place.user_ratings_total.toString() : '';
+        }
+
+        // 根據地點類型設置分類
+        if (place.types) {
+          const categorySelect = document.querySelector('select');
+          const categoryButtons = document.querySelectorAll('.category-button');
+          
+          if (place.types.includes('restaurant') || place.types.includes('food')) {
+            categorySelect.value = 'restaurant';
+            categoryButtons.forEach(btn => btn.classList.remove('active'));
+            categoryButtons[0].classList.add('active');
+          } else if (place.types.includes('lodging')) {
+            categorySelect.value = 'hotel';
+            categoryButtons.forEach(btn => btn.classList.remove('active'));
+            categoryButtons[1].classList.add('active');
+          } else if (place.types.includes('tourist_attraction') || place.types.includes('point_of_interest')) {
+            categorySelect.value = 'attraction';
+            categoryButtons.forEach(btn => btn.classList.remove('active'));
+            categoryButtons[2].classList.add('active');
+          }
+        }
+
+        // 填充地址資訊
+        if (place.address_components) {
+          // 門牌號碼和街道
+          const streetNumber = place.address_components.find(c => c.types.includes('street_number'));
+          const route = place.address_components.find(c => c.types.includes('route'));
+          const streetInput = document.getElementById('street-input');
+          if (streetInput) {
+            streetInput.value = `${streetNumber ? streetNumber.long_name : ''} ${route ? route.long_name : ''}`.trim();
+          }
+
+          // 縣市
+          const administrative = place.address_components.find(c => c.types.includes('administrative_area_level_1'));
+          const adminInput = document.getElementById('administrative_area_level_1-input');
+          if (adminInput && administrative) {
+            adminInput.value = administrative.long_name;
+          }
+
+          // 郵遞區號
+          const postal = place.address_components.find(c => c.types.includes('postal_code'));
+          const postalInput = document.getElementById('postal_code-input');
+          if (postalInput && postal) {
+            postalInput.value = postal.long_name;
+          }
+        }
+
+        // 填充聯絡電話
+        if (place.formatted_phone_number) {
+          const phoneInput = document.querySelector('input[placeholder="請輸入聯絡電話"]');
+          if (phoneInput) phoneInput.value = place.formatted_phone_number;
+        }
+
+        // 填充標籤
+        if (place.types) {
+          const tagsInput = document.getElementById('tags-input');
+          if (tagsInput) {
+            tagsInput.value = place.types.join(' ');
+          }
+        }
+
+        // 填充網站資訊
+        if (place.website) {
+          const websiteInput = document.querySelector('.social-media input[placeholder="網站"]');
+          if (websiteInput) websiteInput.value = place.website;
+        }
+      }
+
+      function renderAddress(place) {
+        const mapEl = document.querySelector('gmp-map');
+        const markerEl = document.querySelector('gmp-advanced-marker');
+
+        if (place.geometry && place.geometry.location) {
+          mapEl.center = place.geometry.location;
+          markerEl.position = place.geometry.location;
+        } else {
+          markerEl.position = null;
+        }
+      }
+
+      async function initMap() {
+        const {Autocomplete, PlacesService} = await APILoader.importLibrary('places');
+
+        const mapOptions = CONFIGURATION.mapOptions;
+        mapOptions.mapId = mapOptions.mapId || 'DEMO_MAP_ID';
+
+        await customElements.whenDefined('gmp-map');
+        const mapElement = document.querySelector('gmp-map');
+        const map = mapElement.innerMap;
+        map.setOptions(mapOptions);
+
+        const markerElement = document.querySelector('gmp-advanced-marker');
+        const placesService = new PlacesService(map);
+        
+        // 保存當前打開的信息窗口的引用
+        let currentInfoWindow = null;
+
+        // 設置地圖點擊事件
+        map.addListener('click', async (event) => {
+          const location = event.latLng;
+          markerElement.position = location;
+
+          // 更新位置資訊欄位顯示座標
+          const locationInput = getFormInputElement('location');
+          if (locationInput) {
+            locationInput.value = `${location.lat().toFixed(6)}, ${location.lng().toFixed(6)}`;
+          }
+
+          // 使用 Places API 進行反向地理編碼
+          const geocoder = new google.maps.Geocoder();
+          geocoder.geocode({ location: location }, (results, status) => {
+            if (status === 'OK' && results[0]) {
+              const place = results[0];
+              
+              // 使用 Places Service 獲取更多詳細信息
+              placesService.getDetails({
+                placeId: place.place_id,
+                fields: [
+                  'name',
+                  'formatted_address',
+                  'geometry',
+                  'place_id',
+                  'rating',
+                  'user_ratings_total',
+                  'formatted_phone_number',
+                  'international_phone_number',
+                  'website',
+                  'opening_hours',
+                  'types',
+                  'price_level',
+                  'business_status',
+                  'photos',
+                  'reviews',
+                  'address_components'
+                ]
+              }, (placeDetails, detailStatus) => {
+                if (detailStatus === google.maps.places.PlacesServiceStatus.OK) {
+                  console.log('Place Details:', placeDetails);
+                  fillInAddress(placeDetails);
+                  
+                  // 如果有已打開的信息窗口，先關閉它
+                  if (currentInfoWindow) {
+                    currentInfoWindow.close();
+                  }
+
+                  // 創建信息窗口內容
+                  let content = `
+                    <div style="padding: 10px; max-width: 300px;">
+                  `;
+
+                  // 添加圖片（如果有）
+                  if (placeDetails.photos && placeDetails.photos.length > 0) {
+                    const photo = placeDetails.photos[0];
+                    content += `
+                      <div style="margin: -10px -10px 10px -10px; height: 150px; overflow: hidden;">
+                        <img src="${photo.getUrl()}" style="width: 100%; height: 150px; object-fit: cover;" alt="${placeDetails.name || '地點圖片'}">
+                      </div>
+                    `;
+                  }
+
+                  content += `
+                    <h3 style="margin: 0 0 8px 0; font-size: 16px; font-weight: 500;">${placeDetails.name || ''}</h3>
+                    <p style="margin: 0 0 4px 0; color: #666; font-size: 14px;">${placeDetails.formatted_address || ''}</p>
+                  `;
+
+                  if (placeDetails.rating) {
+                    content += `
+                      <div style="display: flex; align-items: center; margin: 8px 0; font-size: 14px;">
+                        <span style="color: #fbbf24; margin-right: 4px;">★</span>
+                        <span style="color: #666;">${placeDetails.rating} (${placeDetails.user_ratings_total || 0} 則評論)</span>
+                      </div>
+                    `;
+                  }
+
+                  if (placeDetails.formatted_phone_number) {
+                    content += `
+                      <p style="margin: 4px 0; font-size: 14px; color: #666;">
+                        <span style="margin-right: 4px;">📞</span>
+                        ${placeDetails.formatted_phone_number}
+                      </p>
+                    `;
+                  }
+
+                  if (placeDetails.opening_hours && placeDetails.opening_hours.weekday_text) {
+                    content += `
+                      <div style="margin: 8px 0; font-size: 14px; color: #666;">
+                        <p style="margin: 0 0 4px 0;">⏰ 營業時間:</p>
+                        <p style="margin: 0; padding-left: 16px; font-size: 13px;">
+                          ${placeDetails.opening_hours.weekday_text.join('<br>')}
+                        </p>
+                      </div>
+                    `;
+                  }
+
+                  if (placeDetails.website) {
+                    content += `
+                      <p style="margin: 8px 0;">
+                        <a href="${placeDetails.website}" 
+                           target="_blank" 
+                           style="color: #3b82f6; text-decoration: none; font-size: 14px;">
+                          🌐 查看網站
+                        </a>
+                      </p>
+                    `;
+                  }
+
+                  if (placeDetails.types && placeDetails.types.length > 0) {
+                    content += `
+                      <div style="margin: 8px 0; display: flex; flex-wrap: wrap; gap: 4px;">
+                        ${placeDetails.types.map(type => `
+                          <span style="
+                            font-size: 12px;
+                            padding: 2px 8px;
+                            background: #f3f4f6;
+                            border-radius: 12px;
+                            color: #666;
+                          ">${type}</span>
+                        `).join('')}
+                      </div>
+                    `;
+                  }
+
+                  content += `
+                    <div style="margin: 8px -10px -10px -10px; padding: 8px; background-color: #f3f4f6; border-bottom-left-radius: 8px; border-bottom-right-radius: 8px;">
+                      <div style="display: flex; align-items: center; justify-content: center;">
+                        <img src="https://maps.gstatic.com/mapfiles/api-3/images/spotlight-poi2.png" style="width: 23px; height: 34px; margin-right: 8px;">
+                        <span style="color: #666; font-size: 13px;">${location.lat().toFixed(6)}, ${location.lng().toFixed(6)}</span>
+                      </div>
+                    </div>
+                  </div>`;
+
+                  // 創建新的信息窗口
+                  const infowindow = new google.maps.InfoWindow({
+                    content: content,
+                    position: location,
+                    maxWidth: 300
+                  });
+
+                  // 保存新的信息窗口引用
+                  currentInfoWindow = infowindow;
+                  
+                  // 打開新的信息窗口
+                  infowindow.open(map);
+
+                  // 當信息窗口關閉時，清除引用
+                  google.maps.event.addListener(infowindow, 'closeclick', () => {
+                    currentInfoWindow = null;
+                  });
+                } else {
+                  // 如果沒有找到地點信息，只顯示座標
+                  const locationInput = getFormInputElement('location');
+                  if (locationInput) {
+                    locationInput.value = `${location.lat().toFixed(6)}, ${location.lng().toFixed(6)}`;
+                  }
+                }
+              });
+            }
+          });
+        });
+
+        // 設置自動完成
+        const autocomplete = new Autocomplete(getFormInputElement('location'), {
+          fields: [
+            'name',
+            'formatted_address',
+            'geometry',
+            'place_id',
+            'rating',
+            'user_ratings_total',
+            'formatted_phone_number',
+            'international_phone_number',
+            'website',
+            'opening_hours',
+            'types',
+            'price_level',
+            'business_status',
+            'photos',
+            'reviews',
+            'address_components'
+          ],
+          types: ['establishment'],
+        });
+
+        autocomplete.addListener('place_changed', () => {
+          const place = autocomplete.getPlace();
+          if (!place.geometry) {
+            window.alert(`找不到地址: '${place.name}'`);
+            return;
+          }
+          
+          // 更新位置資訊欄位顯示座標
+          const location = place.geometry.location;
+          const locationInput = getFormInputElement('location');
+          if (locationInput) {
+            locationInput.value = `${location.lat().toFixed(6)}, ${location.lng().toFixed(6)}`;
+          }
+          
+          renderAddress(place);
+          fillInAddress(place);
+        });
+
+        // 設置分類按鈕點擊事件
+        document.querySelectorAll('.category-button').forEach((button, index) => {
+          button.addEventListener('click', () => {
+            document.querySelectorAll('.category-button').forEach(btn => btn.classList.remove('active'));
+            button.classList.add('active');
+            const select = document.querySelector('select');
+            select.selectedIndex = index + 1;
+          });
+        });
+
+        // 設置圖片上傳功能
+        const uploadButton = document.querySelector('.upload-button');
+        const fileInput = document.createElement('input');
+        fileInput.type = 'file';
+        fileInput.accept = 'image/*';
+        fileInput.style.display = 'none';
+        document.body.appendChild(fileInput);
+
+        uploadButton.addEventListener('click', () => {
+          fileInput.click();
+        });
+
+        fileInput.addEventListener('change', (event) => {
+          const file = event.target.files[0];
+          if (file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+              const coverImage = document.querySelector('.cover-image img');
+              const coverImageSection = document.querySelector('.cover-image');
+              coverImage.src = e.target.result;
+              coverImageSection.classList.add('has-image');
+            };
+            reader.readAsDataURL(file);
+          }
+        });
+      }
+
+      initMap();
+    </script>
+  </head>
+  <body>
+    <div class="header">
+      <a href="#" class="back-button">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <path d="M15 18L9 12L15 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        返回
+      </a>
+      <div class="form-group">
+        <label class="form-label required">搜尋地點</label>
+        <input type="text" placeholder="請輸入地點名稱、地址、或在地圖上點擊選擇地點位置，紀錄地點。" id="location-input"/>
+      </div>
+    </div>
+
+    <div class="container">
+      <div class="map-section">
+        <gmp-map>
+          <gmp-advanced-marker></gmp-advanced-marker>
+        </gmp-map>
+      </div>
+
+      <div class="form-section">
+        <div class="cover-image-section">
+          <div class="cover-image">
+            <img src="" alt="封面圖片" style="width: 100%; height: 150px; object-fit: cover;">
+          </div>
+          <div class="cover-upload-overlay">
+            <span class="upload-text">選擇一張封面圖片</span>
+            <button class="upload-button">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                <path d="M12 5V19M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              上傳圖片
+            </button>
+          </div>
+        </div>
+
+        <h1>新增景點</h1>
+        
+        <div class="form-group">
+          <label class="form-label required">座標</label>
+        
+          <input type="text" placeholder="座標" id="location-input"/>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label required">景點名稱</label>
+          <input type="text" placeholder="請輸入景點名稱"/>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label required">分類</label>
+          <div class="category-filters">
+            <button class="category-button active">餐廳</button>
+            <button class="category-button">飯店</button>
+            <button class="category-button">觀光景點</button>
+          </div>
+          <select>
+            <option value="">選擇分類</option>
+            <option value="restaurant">餐廳</option>
+            <option value="hotel">飯店</option>
+            <option value="attraction">觀光景點</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">地址</label>
+          <input type="text" placeholder="門牌號碼、樓層等" id="street-input"/>
+          <div class="half-input-container" style="margin-top: 8px;">
+            <input type="text" placeholder="縣市" id="administrative_area_level_1-input"/>
+            <input type="text" placeholder="郵遞區號" id="postal_code-input"/>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">評分與評論</label>
+          <div class="half-input-container">
+            <div class="rating-container">
+              <input type="text" id="rating-input" placeholder="評分 (例如: 4.1)" readonly/>
+              <span class="rating-star">★</span>
+            </div>
+            <input type="text" id="reviews-count-input" placeholder="評論數 (例如: 22)" readonly/>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">聯絡電話</label>
+          <input type="tel" placeholder="請輸入聯絡電話"/>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">描述</label>
+          <textarea placeholder="請輸入景點描述"></textarea>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">社交媒體</label>
+          <div class="social-media">
+            <div class="social-input">
+              <input type="text" placeholder="Instagram"/>
+            </div>
+            <div class="social-input">
+              <input type="text" placeholder="Facebook"/>
+            </div>
+            <div class="social-input">
+              <input type="text" placeholder="網站"/>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">標籤</label>
+          <input type="text" id="tags-input" placeholder="請用空格分隔標籤 (例如: bar point_of_interest establishment)"/>
+          <p class="helper-text">標籤將用於分類和搜尋，請使用英文小寫，多個標籤請用空格分隔</p>
+        </div>
+
+        <div class="action-buttons">
+          <button class="cancel-button">取消</button>
+          <button class="submit-button">儲存</button>
+        </div>
+      </div>
+    </div>
+
+    <gmpx-api-loader key="YOUR_GOOGLE_MAPS_API_KEY_HERE" solution-channel="GMP_QB_addressselection_v4_cABC">
+    </gmpx-api-loader>
+  </body>
+</html>

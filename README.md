@@ -1,6 +1,6 @@
-# Hopenghu CC - 社區中心管理系統
+# Hope penghu  - 
 
-這是一個基於 React 的社區中心管理系統，提供活動管理、會員管理等功能。
+這是一個基於 React 的管理系統，提供活動管理、會員管理等功能。
 
 ## 功能特點
 
@@ -75,3 +75,7 @@ src/
 ## 授權
 
 本專案採用 MIT 授權條款 - 詳見 [LICENSE](LICENSE) 文件
+
+const clientId = env.GOOGLE_CLIENT_ID;
+const clientSecret = env.GOOGLE_CLIENT_SECRET;
+const mapsApiKey = env.GOOGLE_MAPS_API_KEY;
