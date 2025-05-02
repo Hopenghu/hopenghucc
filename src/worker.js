@@ -1,343 +1,336 @@
+// Import new services
+import { AuthService } from './services/AuthService.js';
+import { UserService } from './services/UserService.js';
+import { SessionService } from './services/SessionService.js';
+import { GoogleAuthService } from './services/GoogleAuthService.js';
+import { LocationService } from './services/locationService.js'; // Import LocationService
+// import { BusinessService } from './services/BusinessService.js'; // Removed GMB dependency
+
+// Keep existing imports if still needed (like templates, initiateGoogleAuth)
+import { initiateGoogleAuth, initiateGmbAuth } from './modules/auth/google.js'; // Import BOTH functions
+// Removed: import { handleGoogleCallback } from './modules/auth/google.js';
+// Removed: import { handleLogout } from './modules/auth/logout.js'; 
+// Removed: import { getUserFromSession } from './modules/session/service.js'; 
+import { getHomePageHtml, getGoogleInfoPageHtml, getProfilePageHtml, getProfilePageContent, getHomePageContent, getAddPlacePageHtml } from './templates/html.js';
+// import { Router } from 'itty-router'; // Router not used directly
+
+// Import bundled CSS as text
+import bundledCss from './styles/tailwind.output.css';
+
+// Helper to parse cookies
+function getCookie(request, name) {
+  const cookieHeader = request.headers.get('cookie');
+  if (!cookieHeader) return null;
+  const cookies = cookieHeader.split(';');
+  for (let cookie of cookies) {
+    const [cookieName, cookieValue] = cookie.trim().split('=');
+    if (cookieName === name) {
+      return decodeURIComponent(cookieValue);
+    }
+  }
+  return null;
+}
+
+// Initialize router
+// const router = Router(); // Router not used directly
+
 export default {
   async fetch(request, env, ctx) {
+    const url = new URL(request.url);
+    const pathname = url.pathname;
+    console.log(`[Worker] Received request: ${request.method} ${pathname}`);
+
+    // Instantiate services
+    let authService, userService, sessionService, googleAuthService, locationService; // Add locationService
     try {
-      const url = new URL(request.url);
-      const session = await getSession(request, env);
+        userService = new UserService(env.DB);
+        sessionService = new SessionService(env.DB);
+        googleAuthService = new GoogleAuthService(env);
+        // Instantiate LocationService with DB and API Key from env
+        locationService = new LocationService(env.DB, env.GOOGLE_MAPS_API_KEY); 
+        authService = new AuthService(userService, sessionService, googleAuthService);
+    } catch (err) {
+        console.error('[Worker] Failed to instantiate services:', err);
+        // Ensure API key secret is set in Cloudflare dashboard if this fails
+        if (err.message.includes('mapsApiKey')) {
+             console.error('[Worker] GOOGLE_MAPS_API_KEY secret might be missing in Cloudflare environment.');
+             return new Response('Internal Server Error - API Key Configuration Missing', { status: 500 });
+        }
+        return new Response('Internal Server Error - Service Configuration Failed', { status: 500 });
+    }
+
+    // Get user from session using AuthService
+    const sessionId = getCookie(request, 'session');
+    const user = await authService.getUserFromSession(sessionId);
+    console.log('[Worker] User from session:', user ? user.email : 'null');
+
+    try {
+      // --- Basic Routing --- 
       
-      // 處理 API 請求
-      if (url.pathname.startsWith('/api/')) {
-        return handleApiRequest(request, env, session);
+      // Homepage Route
+      if (request.method === 'GET' && pathname === '/') {
+        console.log('[Worker] Serving homepage.');
+        const html = getHomePageHtml(user, bundledCss); 
+        return new Response(html, { headers: { 'Content-Type': 'text/html;charset=UTF-8' } });
+      }
+
+      // Google Auth Routes
+      if (request.method === 'GET' && pathname === '/api/auth/google') {
+        // Initial basic login
+        return initiateGoogleAuth(url, env); 
+      }
+      // --- NEW ROUTE for requesting GMB Scope ---
+      if (request.method === 'GET' && pathname === '/api/auth/google/request-gmb-scope') {
+        console.log('[Worker] Handling request for GMB scope...');
+        // Ensure user is logged in before requesting additional scopes
+        if (!user) {
+            console.log('[Worker] User not logged in. Redirecting to login for GMB scope request.');
+            // Redirect to the standard login flow first
+            return Response.redirect(url.origin + '/api/auth/google', 302);
+        }
+        // User is logged in, initiate the flow for GMB scope
+        return initiateGmbAuth(url, env, user.id); // Pass user ID if needed later
+      }
+      // --- End NEW ROUTE ---
+      if (request.method === 'GET' && pathname === '/api/auth/google/callback') {
+        console.log('[Worker] Handling Google callback...');
+        // --- Log the full URL and extracted code --- 
+        console.log(`[Worker] Callback URL: ${url.toString()}`);
+        const code = url.searchParams.get('code');
+        console.log(`[Worker] Extracted code: ${code}`);
+        // --- End logging ---
+        if (!code) {
+            console.error('[Worker] Missing authorization code in callback URL.') // Add error log
+            return new Response('Missing authorization code from Google', { status: 400 });
+        }
+        try {
+            const { session, user: loggedInUser } = await authService.handleGoogleLogin(code);
+            console.log('[Worker] Google login successful for:', loggedInUser.email);
+            
+            const cookieValue = `session=${session.id}; HttpOnly; Path=/; SameSite=Lax; Expires=${new Date(session.expiresAt).toUTCString()}`;
+            
+            // Redirect to profile page after successful login
+            const headers = new Headers();
+            headers.append('Set-Cookie', cookieValue);
+            headers.append('Location', '/profile'); // Redirect to profile or dashboard
+            return new Response(null, { status: 302, headers });
+
+        } catch (error) {
+             console.error('[Worker] Google callback error:', error);
+             // Redirect to homepage with an error query parameter? Or show an error page.
+             const headers = new Headers();
+             headers.append('Location', '/?error=google_auth_failed'); 
+             return new Response(null, { status: 302, headers });
+        }
+      }
+
+      // Logout Route
+      if (request.method === 'POST' && pathname === '/api/auth/logout') {
+         console.log('[Worker] Handling logout...');
+         const currentSessionId = getCookie(request, 'session');
+         if (currentSessionId) {
+             try {
+                await authService.logout(currentSessionId);
+                console.log('[Worker] Logout successful for session:', currentSessionId);
+             } catch (error) {
+                 console.error('[Worker] Logout error:', error);
+                 // Even if server-side logout fails, proceed to clear cookie
+             }
+         }
+         // Clear the cookie by setting expiry in the past
+         const cookieValue = `session=; HttpOnly; Path=/; SameSite=Lax; Max-Age=0`;
+         const headers = new Headers();
+         headers.append('Set-Cookie', cookieValue);
+         headers.append('Location', '/'); // Redirect to homepage after logout
+         return new Response(null, { status: 302, headers });
+      }
+
+      // Google Info Page Route
+      if (request.method === 'GET' && pathname === '/google-info') {
+        console.log('[Worker] Serving Google Info page.');
+        const html = getGoogleInfoPageHtml(user, bundledCss); 
+        return new Response(html, { headers: { 'Content-Type': 'text/html;charset=UTF-8' } });
+      }
+
+      // Profile Page Route
+      if (request.method === 'GET' && pathname === '/profile') {
+        if (!user) {
+          console.log('[Worker] User not logged in, redirecting from /profile to /');
+          return Response.redirect(url.origin + '/', 302);
+        }
+        console.log('[Worker] Serving profile page for:', user.email);
+        const html = getProfilePageHtml(user, bundledCss); 
+        return new Response(html, { headers: { 'Content-Type': 'text/html;charset=UTF-8' } });
       }
       
-      // 處理登入請求
-      if (url.pathname === '/login') {
-        return handleLogin(request, env);
+      // --- TODO: Add routes for email/password login/registration ---
+      // Example:
+      // if (request.method === 'POST' && pathname === '/api/auth/login') {
+      //    const { email, password } = await request.json();
+      //    try {
+      //        const { session, user: loggedInUser } = await authService.loginWithPassword({ email, password });
+      //        // Set cookie and return success response
+      //    } catch (error) {
+      //        // Return error response (e.g., 401 Unauthorized)
+      //    }
+      // }
+      // if (request.method === 'POST' && pathname === '/api/auth/register') {
+      //     // ... handle registration using authService.registerWithPassword ...
+      // }
+
+      // --- Location API Routes --- 
+
+      // GET /api/maps/config - Provides the frontend Maps API Key
+      if (request.method === 'GET' && pathname === '/api/maps/config') {
+          console.log('[Worker] Providing Maps API config');
+          // Ensure the API key is actually configured in the environment
+          const apiKey = env.GOOGLE_MAPS_API_KEY;
+          if (!apiKey) {
+              console.error('[Worker] GOOGLE_MAPS_API_KEY is not configured in environment secrets.');
+              return new Response(JSON.stringify({ error: 'Maps configuration unavailable.' }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+          }
+          return new Response(JSON.stringify({ apiKey: apiKey }), { 
+              status: 200, 
+              headers: { 'Content-Type': 'application/json' } 
+          });
+      }
+
+      // POST /api/locations/import/google-place
+      if (request.method === 'POST' && pathname === '/api/locations/import/google-place') {
+         console.log('[Worker] Handling POST /api/locations/import/google-place');
+         // 1. Check authentication
+         if (!user || !user.id) {
+             console.log('[Worker] Unauthorized attempt to import location.');
+             return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+         }
+
+         // 2. Parse request body for googlePlaceId
+         let requestBody;
+         try {
+             requestBody = await request.json();
+         } catch (e) {
+             console.error('[Worker] Invalid JSON in request body:', e);
+             return new Response(JSON.stringify({ error: 'Invalid request body' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+         }
+         const { googlePlaceId } = requestBody;
+         if (!googlePlaceId || typeof googlePlaceId !== 'string') {
+              console.log('[Worker] Missing or invalid googlePlaceId in request body.');
+              return new Response(JSON.stringify({ error: 'Missing or invalid googlePlaceId' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+         }
+         
+         const userId = user.id;
+         console.log(`[Worker] User ${userId} attempting to import place ${googlePlaceId}`);
+
+         try {
+             // 3. Check if location already exists in our DB
+             let location = await locationService.findLocationByPlaceId(googlePlaceId);
+             
+             // 4. If not, fetch from Google and create in our DB
+             if (!location) {
+                 console.log(`[Worker] Location ${googlePlaceId} not found locally. Fetching from Google...`);
+                 const locationDetails = await locationService.fetchPlaceDetails(googlePlaceId);
+                 
+                 if (!locationDetails) {
+                     console.error(`[Worker] Failed to fetch details for ${googlePlaceId} from Google.`);
+                     return new Response(JSON.stringify({ error: 'Failed to fetch location details from Google.' }), { status: 502, headers: { 'Content-Type': 'application/json' } }); // 502 Bad Gateway
+                 }
+                 
+                 // Add the user who initiated the creation
+                 locationDetails.createdByUser = userId;
+
+                 console.log(`[Worker] Creating new local location record for ${googlePlaceId}`);
+                 try {
+                      location = await locationService.createLocation(locationDetails);
+                 } catch (createError) {
+                     // Handle potential race condition where another request created it just now
+                     if (createError.message.includes('already exists')) {
+                         console.warn(`[Worker] Race condition? Location ${googlePlaceId} was created between check and insert. Fetching existing.`);
+                         location = await locationService.findLocationByPlaceId(googlePlaceId);
+                         if (!location) { // Should not happen, but handle defensively
+                              console.error(`[Worker] CRITICAL: Failed to find location ${googlePlaceId} after creation race condition.`);
+                              throw new Error('Failed to resolve location after creation conflict.');
+                         }
+                     } else {
+                         throw createError; // Re-throw other creation errors
+                     }
+                 }
+             } else {
+                 console.log(`[Worker] Location ${googlePlaceId} found locally (ID: ${location.id}).`);
+             }
+
+             // 5. Check if user is already linked to this location
+             const isLinked = await locationService.checkUserLocationLink(userId, location.id);
+             let userLocationLink = null;
+
+             // 6. If not linked, create the link
+             if (!isLinked) {
+                 console.log(`[Worker] Linking user ${userId} to location ${location.id}`);
+                 try {
+                      userLocationLink = await locationService.linkUserToLocation(userId, location.id);
+                 } catch (linkError) {
+                      // Handle potential race condition or existing link error
+                      if (linkError.message.includes('already associated')) {
+                           console.warn(`[Worker] User ${userId} already linked to location ${location.id} (detected during link attempt).`);
+                           // Optionally fetch the existing link here if needed
+                      } else {
+                          throw linkError; // Re-throw other linking errors
+                      }
+                 }
+             } else {
+                 console.log(`[Worker] User ${userId} is already linked to location ${location.id}.`);
+                 // Optionally fetch the existing link details if needed for the response
+             }
+
+             // 7. Return success response (e.g., the location ID or link ID)
+             console.log(`[Worker] Successfully processed import for place ${googlePlaceId} by user ${userId}.`);
+             return new Response(JSON.stringify({ 
+                 message: 'Location added to your list successfully.',
+                 locationId: location.id,
+                 userLocationLinkId: userLocationLink ? userLocationLink.id : null // Return link ID if newly created
+             }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+
+         } catch (error) {
+             console.error(`[Worker] Error processing location import for place ${googlePlaceId}:`, error);
+             // Return a generic server error
+             return new Response(JSON.stringify({ error: 'Failed to process location import.' }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+         }
       }
       
-      // 處理登出請求
-      if (url.pathname === '/logout') {
-        return handleLogout(request, env);
-      }
+      // --- TODO: Add POST /api/locations/import/coordinate route --- 
+      // --- TODO: Add GET /api/locations (search) route --- 
+      // --- TODO: Add GET /api/user/locations (get user's saved locations) route --- 
+      // --- TODO: Add PUT/PATCH /api/user/locations/:linkId (update description/status) route --- 
+      // --- TODO: Add POST /api/user/locations/:linkId/links (add link) route --- 
+      // --- TODO: Add DELETE /api/user/locations/:linkId/links/:linkId (delete link) route --- 
       
-      // 處理根路徑請求
-      if (url.pathname === '/') {
-        return new Response(`
-          <!DOCTYPE html>
-          <html lang="zh-TW">
-            <head>
-              <meta charset="UTF-8">
-              <meta name="viewport" content="width=device-width, initial-scale=1.0">
-              <title>HOPE PENGHU | 好澎湖</title>
-              <script src="https://accounts.google.com/gsi/client" async defer></script>
-              <script src="https://maps.googleapis.com/maps/api/js?key=${env.GOOGLE_MAPS_API_KEY}" async defer></script>
-              <style>
-                body {
-                  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
-                  margin: 0;
-                  padding: 0;
-                  line-height: 1.6;
-                }
-                .header {
-                  background-color: #2563eb;
-                  color: white;
-                  padding: 1rem;
-                  display: flex;
-                  justify-content: space-between;
-                  align-items: center;
-                }
-                .header h1 {
-                  margin: 0;
-                  font-size: 1.5rem;
-                }
-                .user-info {
-                  display: flex;
-                  align-items: center;
-                  gap: 1rem;
-                }
-                .user-avatar {
-                  width: 32px;
-                  height: 32px;
-                  border-radius: 50%;
-                }
-                .main-content {
-                  max-width: 800px;
-                  margin: 2rem auto;
-                  padding: 0 1rem;
-                }
-                .login-button {
-                  background-color: white;
-                  color: #2563eb;
-                  border: none;
-                  padding: 0.5rem 1rem;
-                  border-radius: 4px;
-                  cursor: pointer;
-                  font-weight: 500;
-                }
-                .logout-button {
-                  background-color: transparent;
-                  color: white;
-                  border: 1px solid white;
-                  padding: 0.5rem 1rem;
-                  border-radius: 4px;
-                  cursor: pointer;
-                }
-                #map {
-                  height: 400px;
-                  width: 100%;
-                  margin-top: 2rem;
-                  border-radius: 8px;
-                }
-              </style>
-            </head>
-            <body>
-              <div class="header">
-                <h1>HOPE PENGHU | 好澎湖</h1>
-                <div class="user-info">
-                  ${session ? `
-                    <img src="${session.avatar_url}" alt="${session.name}" class="user-avatar">
-                    <span>${session.name}</span>
-                    <button class="logout-button" onclick="window.location.href='/logout'">登出</button>
-                  ` : `
-                    <button class="login-button" onclick="window.location.href='/login'">登入</button>
-                  `}
-                </div>
-              </div>
-              <div class="main-content">
-                <h2>歡迎來到好澎湖社區中心</h2>
-                <p>這是一個基於 Cloudflare Workers 和 D1 資料庫的應用程式。</p>
-                
-                <div id="map"></div>
-                
-                <div class="api-section">
-                  <h2>API 端點</h2>
-                  
-                  <div class="api-endpoint">
-                    <h3>用戶 API</h3>
-                    <p><code>GET /api/users</code> - 獲取用戶列表</p>
-                    <p><code>POST /api/users</code> - 創建新用戶</p>
-                  </div>
-                  
-                  <div class="api-endpoint">
-                    <h3>活動 API</h3>
-                    <p><code>GET /api/events</code> - 獲取活動列表</p>
-                    <p><code>POST /api/events</code> - 創建新活動</p>
-                  </div>
-                </div>
-              </div>
-              <script>
-                function initMap() {
-                  const map = new google.maps.Map(document.getElementById('map'), {
-                    center: { lat: 23.5712, lng: 119.5793 },
-                    zoom: 12
-                  });
-                  
-                  const marker = new google.maps.Marker({
-                    position: { lat: 23.5712, lng: 119.5793 },
-                    map: map,
-                    title: '好澎湖社區中心'
-                  });
-                }
-                
-                window.onload = initMap;
-              </script>
-            </body>
-          </html>
-        `, {
-          headers: {
-            'Content-Type': 'text/html;charset=UTF-8',
-          },
-        });
+      // --- Page Routes ---
+
+      // Add Place Page Route
+      if (request.method === 'GET' && pathname === '/add-place') {
+        if (!user) {
+          console.log('[Worker] User not logged in, redirecting from /add-place to /');
+          return Response.redirect(url.origin + '/', 302); // Redirect to login/home if not logged in
+        }
+        console.log('[Worker] Serving Add Place page for:', user.email);
+        // Need to import getAddPlacePageHtml
+        const html = getAddPlacePageHtml(user, bundledCss);
+        return new Response(html, { headers: { 'Content-Type': 'text/html;charset=UTF-8' } });
       }
-      
-      // 處理 404 錯誤
-      return new Response('Not Found', { status: 404 });
+       
+      // --- Default Response for other paths ---
+      console.log(`[Worker] No specific route match for ${pathname}. Returning 404.`);
+      return new Response("Not Found", {
+        status: 404, 
+        headers: { 'Content-Type': 'text/plain' }
+      });
+
     } catch (error) {
-      console.error('Error:', error);
-      return new Response('Internal Server Error', { status: 500 });
+      // Catch potential errors from routing or service calls
+      console.error('[Worker] Unhandled Error in routing:', error);
+      return new Response('Internal Server Error', { 
+        status: 500, 
+        headers: { 'Content-Type': 'text/plain' } 
+      });
     }
-  },
-};
-
-async function getSession(request, env) {
-  try {
-    const sessionId = request.cookies.get('session_id');
-    if (!sessionId) return null;
-    
-    const { results } = await env.DB.prepare(
-      'SELECT * FROM users WHERE id = ?'
-    ).bind(sessionId).all();
-    
-    return results[0] || null;
-  } catch (error) {
-    console.error('Error in getSession:', error);
-    return null;
   }
-}
-
-async function handleLogin(request, env) {
-  try {
-    const url = new URL(request.url);
-    const code = url.searchParams.get('code');
-    
-    if (!code) {
-      // 重定向到 Google 登入頁面
-      const clientId = env.GOOGLE_CLIENT_ID;
-      const redirectUri = `${url.origin}/login`;
-      const scope = 'email profile';
-      
-      return Response.redirect(
-        `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code&scope=${scope}`,
-        302
-      );
-    }
-    
-    // 使用 code 獲取 access token
-    const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-      body: new URLSearchParams({
-        code,
-        client_id: env.GOOGLE_CLIENT_ID,
-        client_secret: env.GOOGLE_CLIENT_SECRET,
-        redirect_uri: `${url.origin}/login`,
-        grant_type: 'authorization_code',
-      }),
-    });
-    
-    if (!tokenResponse.ok) {
-      const error = await tokenResponse.text();
-      console.error('Token response error:', error);
-      return new Response('Authentication failed', { status: 401 });
-    }
-    
-    const tokenData = await tokenResponse.json();
-    
-    // 使用 access token 獲取用戶信息
-    const userResponse = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
-      headers: {
-        Authorization: `Bearer ${tokenData.access_token}`,
-      },
-    });
-    
-    if (!userResponse.ok) {
-      const error = await userResponse.text();
-      console.error('User info response error:', error);
-      return new Response('Failed to get user info', { status: 401 });
-    }
-    
-    const userData = await userResponse.json();
-    
-    // 檢查用戶是否已存在
-    const { results } = await env.DB.prepare(
-      'SELECT * FROM users WHERE google_id = ?'
-    ).bind(userData.id).all();
-    
-    let userId;
-    
-    if (results.length === 0) {
-      // 創建新用戶
-      const { success, meta } = await env.DB.prepare(
-        'INSERT INTO users (google_id, name, email, avatar_url) VALUES (?, ?, ?, ?)'
-      ).bind(
-        userData.id,
-        userData.name,
-        userData.email,
-        userData.picture
-      ).run();
-      
-      userId = meta.last_row_id;
-    } else {
-      userId = results[0].id;
-    }
-    
-    // 設置 session cookie
-    const response = Response.redirect(url.origin, 302);
-    response.headers.set('Set-Cookie', `session_id=${userId}; Path=/; HttpOnly; SameSite=Lax`);
-    
-    return response;
-  } catch (error) {
-    console.error('Error in handleLogin:', error);
-    return new Response('Internal Server Error', { status: 500 });
-  }
-}
-
-async function handleLogout(request, env) {
-  try {
-    const response = Response.redirect(new URL(request.url).origin, 302);
-    response.headers.set('Set-Cookie', 'session_id=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0');
-    return response;
-  } catch (error) {
-    console.error('Error in handleLogout:', error);
-    return new Response('Internal Server Error', { status: 500 });
-  }
-}
-
-async function handleApiRequest(request, env, session) {
-  try {
-    const url = new URL(request.url);
-    const path = url.pathname.replace('/api/', '');
-    
-    // 根據路徑處理不同的 API 請求
-    switch (path) {
-      case 'users':
-        return handleUsersRequest(request, env);
-      case 'events':
-        return handleEventsRequest(request, env);
-      default:
-        return new Response('Not Found', { status: 404 });
-    }
-  } catch (error) {
-    console.error('Error in handleApiRequest:', error);
-    return new Response('Internal Server Error', { status: 500 });
-  }
-}
-
-async function handleUsersRequest(request, env) {
-  try {
-    if (request.method === 'GET') {
-      const { results } = await env.DB.prepare(
-        'SELECT * FROM users LIMIT 10'
-      ).all();
-      return Response.json(results);
-    }
-    
-    if (request.method === 'POST') {
-      const data = await request.json();
-      const { success } = await env.DB.prepare(
-        'INSERT INTO users (name, email) VALUES (?, ?)'
-      ).bind(data.name, data.email).run();
-      return Response.json({ success });
-    }
-    
-    return new Response('Method Not Allowed', { status: 405 });
-  } catch (error) {
-    console.error('Error in handleUsersRequest:', error);
-    return new Response('Internal Server Error', { status: 500 });
-  }
-}
-
-async function handleEventsRequest(request, env) {
-  try {
-    if (request.method === 'GET') {
-      const { results } = await env.DB.prepare(
-        'SELECT * FROM events LIMIT 10'
-      ).all();
-      return Response.json(results);
-    }
-    
-    if (request.method === 'POST') {
-      const data = await request.json();
-      const { success } = await env.DB.prepare(
-        'INSERT INTO events (title, description, date) VALUES (?, ?, ?)'
-      ).bind(data.title, data.description, data.date).run();
-      return Response.json({ success });
-    }
-    
-    return new Response('Method Not Allowed', { status: 405 });
-  } catch (error) {
-    console.error('Error in handleEventsRequest:', error);
-    return new Response('Internal Server Error', { status: 500 });
-  }
-} 
+}; 

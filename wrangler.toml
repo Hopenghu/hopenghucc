@@ -1,13 +1,21 @@
 name = "hopenghucc"
-main = "src/worker.js"
-compatibility_date = "2024-04-07"
+# Update main back to the single build output file
+main = "dist/worker.js"
+compatibility_date = "2024-04-14"
+compatibility_flags = ["nodejs_compat"]
+
+[build]
+command = "npm run build"
+# watch_dir = "src" # Consider if watch_dir needs update if we output to public
 
 [[d1_databases]]
 binding = "DB"
 database_name = "hopenghucc_db"
 database_id = "c2b675cd-af9c-4da9-b35c-aa7fb7f35344"
 
-[vars]
-GOOGLE_CLIENT_ID = ""
-GOOGLE_CLIENT_SECRET = ""
-GOOGLE_MAPS_API_KEY = "" 
+# Removed [site] section
+# [site]
+# bucket = "./public"
+
+[observability.logs]
+enabled = true 

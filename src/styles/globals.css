@@ -1,0 +1,294 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Add any custom base styles or component overrides here */
+
+@layer base {
+  :root {
+    /* Keeping custom variables for now, could be moved to Tailwind config theme */
+    --primary-color: #1a73e8;
+    --primary-light: #4ecdc4; /* Base style, might conflict? */
+    --accent-color: #ff6b6b; /* Base style, might conflict? */
+    --background-color: #ffffff;
+    --text-color: #333333;
+    --border-color: #e0e0e0;
+    --shadow-color: rgba(0, 0, 0, 0.1);
+    --font-family: 'Noto Sans TC', sans-serif;
+  }
+
+  * {
+    @apply p-0 m-0 box-border;
+  }
+  
+  html {
+    @apply antialiased;
+  }
+
+  body {
+    /* @apply bg-background text-text; /* Already applied by Tailwind's preflight/base */
+    font-family: var(--font-family);
+    line-height: 1.6; 
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-serif;
+  }
+}
+
+@layer components {
+  /* === General Layout & Components (from merged styles) === */
+  .container {
+    @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8; /* Keep Tailwind container */
+    /* max-width: 1200px; /* Alternative from baseStyles */ 
+    /* padding: 0 1rem; /* Alternative from baseStyles */
+  }
+
+  .header {
+    @apply bg-white/80 border-b border-border sticky top-0 z-[100] backdrop-blur-md py-4;
+    /* padding: 1rem 0; /* Alternative */
+    /* border-color: var(--border-color); /* Alternative */
+  }
+
+  .nav {
+    @apply flex justify-between items-center;
+  }
+
+  .nav-logo {
+    @apply text-2xl font-bold text-primary no-underline;
+    color: var(--primary-color); /* Override Tailwind primary if needed */
+  }
+
+  .nav-menu {
+    @apply hidden md:flex gap-6 list-none items-center;
+  }
+
+  /* Reuse existing .nav-link from globals.css */
+  /* .nav-link {
+    @apply text-text hover:text-primary-ocean transition-colors duration-200;
+    color: var(--text-color);
+    text-decoration: none;
+    font-weight: 500;
+    transition: color 0.3s ease;
+  } */
+  /* .nav-link:hover {
+    color: var(--primary-color);
+  } */
+  .nav-link-active {
+    @apply text-primary-ocean font-medium;
+  }
+
+  .mobile-menu-toggle {
+    @apply md:hidden bg-none border-none text-2xl cursor-pointer text-text;
+  }
+
+  /* Reuse existing .btn from globals.css */
+  /* .button {
+    @apply inline-block px-4 py-2 rounded font-medium no-underline cursor-pointer transition-all duration-300;
+     padding: 0.5rem 1rem; 
+     border-radius: 0.25rem; 
+  } */
+
+   /* Reuse existing .btn-primary from globals.css */
+  /* .button-primary {
+    @apply bg-primary text-white border-none;
+    background-color: var(--primary-color);
+  } */
+  /* .button-primary:hover {
+    background-color: #1558b0;
+  } */
+
+  .button-secondary {
+     @apply bg-gray-500 text-white border-none hover:bg-gray-600;
+     /* background-color: #6c757d; */
+  }
+  /* .button-secondary:hover {
+     background-color: #5a6268;
+  } */
+  
+  /* Reuse existing .card from globals.css */
+  /* .card {
+    @apply bg-white border border-border rounded-lg p-4 shadow-md;
+     padding: 1rem;
+     box-shadow: 0 2px 4px var(--shadow-color);
+  } */
+
+  /* Reuse existing .input from globals.css */
+  /* .input {
+    @apply w-full px-3 py-2 border border-border rounded font-sans bg-background text-text focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20;
+     padding: 0.5rem;
+     border-radius: 0.25rem;
+  } */
+
+  .footer {
+    @apply bg-gray-100 border-t border-border py-4 text-center mt-16;
+    /* padding: 1rem 0; */ 
+    /* margin-top: 4rem; */
+  }
+
+  /* Responsive Nav Menu (Mobile) */
+  @media (max-width: 768px) {
+    .nav-menu {
+      @apply hidden flex-col absolute top-full left-0 right-0 bg-white p-4 border-b border-border shadow-md items-stretch gap-4;
+    }
+    
+    .nav-menu.active {
+      @apply flex;
+    }
+
+    .nav-menu .button {
+      @apply w-full text-center;
+    }
+  }
+
+  /* === Avatar & Dropdown Styles (from layout.js) === */
+  .nav-menu-item-avatar {
+    @apply relative flex items-center;
+  }
+  .avatar-container-div {
+    @apply bg-transparent border-none p-0 cursor-pointer;
+  }
+  .user-avatar {
+    @apply w-8 h-8 rounded-full object-cover cursor-pointer border-2 border-transparent transition-colors duration-200 inline-block align-middle;
+  }
+  .avatar-container-div:focus .user-avatar,
+  .user-avatar:hover {
+     border-color: var(--primary-color); 
+  }
+  .avatar-fallback {
+     /* background-color: var(--primary-light); /* Maybe use Tailwind bg-primary-light? */
+     @apply w-8 h-8 rounded-full text-white text-center font-bold text-base leading-8; /* Adjusted line-height/size */
+     background-color: #4ecdc4; /* Hardcoded for now */
+  }
+  .user-dropdown {
+    @apply hidden absolute top-full right-0 mt-2 min-w-[160px] bg-white rounded-md shadow-md z-50 py-1 border border-border;
+  }
+  .user-dropdown.dropdown-active {
+    @apply block; 
+  }
+  .dropdown-header {
+    @apply px-4 py-2 border-b border-border;
+  }
+  .dropdown-header-name {
+    @apply text-sm font-medium text-gray-900 truncate m-0;
+  }
+  .dropdown-header-email {
+    @apply text-xs text-gray-500 truncate m-0;
+  }
+  .dropdown-item {
+    @apply block px-4 py-2 text-sm text-text no-underline whitespace-nowrap hover:bg-gray-100 hover:text-primary;
+    color: var(--text-color); /* Ensure override */
+  }
+  .dropdown-divider {
+    @apply h-px bg-border my-1; 
+  }
+  #logout-button {
+    /* Applied .dropdown-item styles, adding text-red */
+    @apply w-full text-left bg-transparent border-none cursor-pointer text-red-600;
+  }
+   #logout-button:hover {
+     @apply bg-red-50;
+   }
+
+  /* === Explore Page Styles (from layout.js) === */
+  .explore-search-box {
+    @apply max-w-md mt-4 md:mt-0 md:ml-auto; /* Reapplied from globals */
+  }
+  .place-image {
+     @apply relative pt-[66.67%] bg-gray-200 overflow-hidden; /* Reapplied from globals */
+   }
+  .place-image-img {
+    @apply absolute top-0 left-0 w-full h-full object-cover; /* Reapplied from globals */
+  }
+
+   /* === Home Page Styles === */
+   .home-hero {
+    @apply relative flex items-center justify-center text-center text-white;
+    /* Temporarily removed background image */
+    /* background-image: linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url(/images/hero.jpg); */ 
+    @apply bg-gradient-to-r from-primary-ocean to-primary-wave; /* Using fallback gradient for now */
+    background-size: cover;
+    background-position: center;
+    height: 80vh; 
+    margin: -1rem -1rem 2rem -1rem; 
+  }
+
+  @media (min-width: 768px) {
+    .home-hero {
+      margin: -2rem -1rem 2rem -1rem; /* Keep negative margin */
+    }
+  }
+
+  .home-hero-content {
+    @apply max-w-xl mx-auto p-4 relative z-10;
+  }
+
+  .home-hero-title {
+    @apply text-4xl md:text-5xl font-bold mb-4;
+  }
+
+  .home-hero-subtitle {
+    @apply text-lg md:text-xl mb-8;
+  }
+
+  .home-search-box {
+    @apply flex flex-col sm:flex-row gap-2 max-w-lg mx-auto;
+  }
+  
+  .section-header {
+    @apply flex justify-between items-center mb-6;
+  }
+
+  .section-header h2 {
+     /* Prefer using .section-title */
+    @apply text-2xl font-bold; 
+  }
+  
+  .places-grid,
+  .events-grid {
+    @apply grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12;
+  }
+
+  .favorite-button {
+    @apply absolute top-2 right-2 p-2 bg-white/80 rounded-full cursor-pointer transition hover:bg-white focus:outline-none backdrop-blur-sm;
+  }
+
+  .place-info,
+  .event-info {
+    @apply p-4 flex flex-col flex-grow;
+  }
+
+  .event-description {
+     @apply text-sm text-text-secondary mb-auto pb-2;
+  }
+
+  .event-meta {
+     @apply flex justify-between items-center text-sm mt-auto pt-2 border-t border-border;
+  }
+
+  /* === Explore Page Styles (from globals.css originally from explore.js) === */
+  .explore-header {
+    @apply mb-8;
+  }
+
+  .explore-filters {
+    @apply flex flex-col md:flex-row md:items-center gap-4;
+  }
+
+  .category-labels {
+    @apply flex gap-2 overflow-x-auto pb-2;
+  }
+
+  .category-label {
+    @apply px-4 py-2 rounded-full bg-background border border-border text-text whitespace-nowrap cursor-pointer transition hover:border-primary-ocean hover:text-primary-ocean;
+  }
+
+  .category-label.active {
+    @apply bg-primary-ocean text-white border-primary-ocean;
+  }
+
+  .error-message {
+    @apply text-red-700 bg-red-100 p-4 rounded-md mb-4;
+  }
+
+} 
