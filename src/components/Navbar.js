@@ -96,7 +96,7 @@ const Navbar = ({ user }) => {
                     className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                     onClick={() => setShowUserMenu(false)}
                   >
-                    個人資料
+                    我的地點
                   </Link>
                   <button
                     onClick={() => { handleLogout(); setShowUserMenu(false); }}

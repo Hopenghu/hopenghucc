@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>隱私設定 - HOPENGHU好澎湖</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;600;700&display=swap');
+        body { 
+            font-family: 'Noto Sans TC', sans-serif; 
+            background: #f8fafc;
+        }
+        
+        .privacy-container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 1rem;
+        }
+        
+        .privacy-section {
+            background: white;
+            border-radius: 12px;
+            margin-bottom: 1rem;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        .section-header {
+            padding: 1rem 1.5rem;
+            background: #f9fafb;
+            border-bottom: 1px solid #e5e7eb;
+            font-weight: 600;
+            color: #374151;
+        }
+        
+        .privacy-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid #f3f4f6;
+        }
+        
+        .privacy-item:last-child {
+            border-bottom: none;
+        }
+        
+        .item-content {
+            flex: 1;
+        }
+        
+        .item-title {
+            font-weight: 500;
+            color: #111827;
+            margin-bottom: 0.25rem;
+        }
+        
+        .item-description {
+            font-size: 0.9rem;
+            color: #6b7280;
+        }
+        
+        .toggle-switch {
+            position: relative;
+            width: 50px;
+            height: 28px;
+            background: #d1d5db;
+            border-radius: 14px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        
+        .toggle-switch.active {
+            background: #667eea;
+        }
+        
+        .toggle-switch::after {
+            content: '';
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 24px;
+            height: 24px;
+            background: white;
+            border-radius: 50%;
+            transition: transform 0.3s;
+        }
+        
+        .toggle-switch.active::after {
+            transform: translateX(22px);
+        }
+        
+        .privacy-select {
+            background: white;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            padding: 0.5rem;
+            font-size: 0.9rem;
+            color: #374151;
+            cursor: pointer;
+        }
+        
+        .privacy-select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .info-text {
+            background: #f0f4ff;
+            border: 1px solid #c7d2fe;
+            border-radius: 8px;
+            padding: 1rem;
+            margin: 1rem 1.5rem;
+            font-size: 0.9rem;
+            color: #3730a3;
+        }
+        
+        .warning-text {
+            background: #fef3c7;
+            border: 1px solid #fde68a;
+            border-radius: 8px;
+            padding: 1rem;
+            margin: 1rem 1.5rem;
+            font-size: 0.9rem;
+            color: #92400e;
+        }
+        
+        .danger-zone {
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+        }
+        
+        .danger-title {
+            color: #dc2626;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+        
+        .danger-description {
+            color: #7f1d1d;
+            font-size: 0.9rem;
+            margin-bottom: 1rem;
+        }
+        
+        .danger-button {
+            background: #dc2626;
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        
+        .danger-button:hover {
+            background: #b91c1c;
+        }
+        
+        .save-button {
+            width: 100%;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 1rem;
+            border-radius: 12px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.3s;
+            margin-top: 1rem;
+        }
+        
+        .save-button:hover {
+            transform: translateY(-2px);
+        }
+        
+        /* 手機版優化 */
+        @media (max-width: 768px) {
+            .privacy-container {
+                padding: 0.5rem;
+            }
+            
+            .privacy-item {
+                padding: 0.75rem 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- 頂部導航 -->
+    <nav class="bg-white shadow-sm sticky top-0 z-50">
+        <div class="max-w-600px mx-auto px-4 py-3">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center">
+                    <a href="settings.html" class="mr-4">
+                        <i class="fas fa-arrow-left text-xl text-gray-600"></i>
+                    </a>
+                    <span class="text-lg font-semibold">隱私設定</span>
+                </div>
+                <button class="text-blue-600 font-semibold" onclick="saveSettings()">儲存</button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="privacy-container">
+        <!-- 帳戶隱私 -->
+        <div class="privacy-section">
+            <div class="section-header">帳戶隱私</div>
+            
+            <div class="privacy-item">
+                <div class="item-content">
+                    <div class="item-title">個人資料可見性</div>
+                    <div class="item-description">控制誰可以看到您的個人資料</div>
+                </div>
+                <select class="privacy-select" id="profileVisibility">
+                    <option value="public">公開</option>
+                    <option value="friends">僅朋友</option>
+                    <option value="private">私人</option>
+                </select>
+            </div>
+            
+            <div class="privacy-item">
+                <div class="item-content">
+                    <div class="item-title">貼文可見性</div>
+                    <div class="item-description">新貼文的預設可見性設定</div>
+                </div>
+                <select class="privacy-select" id="postVisibility">
+                    <option value="public">公開</option>
+                    <option value="friends">僅朋友</option>
+                    <option value="private">私人</option>
+                </select>
+            </div>
+            
+            <div class="privacy-item">
+                <div class="item-content">
+                    <div class="item-title">允許朋友標記</div>
+                    <div class="item-description">允許朋友在貼文中標記您</div>
+                </div>
+                <div class="toggle-switch active" onclick="toggleSwitch(this)"></div>
+            </div>
+        </div>
+
+        <!-- 搜尋與發現 -->
+        <div class="privacy-section">
+            <div class="section-header">搜尋與發現</div>
+            
+            <div class="privacy-item">
+                <div class="item-content">
+                    <div class="item-title">在搜尋中顯示</div>
+                    <div class="item-description">允許其他用戶透過搜尋找到您</div>
+                </div>
+                <div class="toggle-switch active" onclick="toggleSwitch(this)"></div>
+            </div>
+            
+            <div class="privacy-item">
+                <div class="item-content">
+                    <div class="item-title">朋友推薦</div>
+                    <div class="item-description">允許系統推薦您給其他用戶</div>
+                </div>
+                <div class="toggle-switch active" onclick="toggleSwitch(this)"></div>
+            </div>
+            
+            <div class="privacy-item">
+                <div class="item-content">
+                    <div class="item-title">基於位置的推薦</div>
+                    <div class="item-description">根據您的位置推薦相關朋友</div>
+                </div>
+                <div class="toggle-switch" onclick="toggleSwitch(this)"></div>
+            </div>
+        </div>
+
+        <!-- 互動設定 -->
+        <div class="privacy-section">
+            <div class="section-header">互動設定</div>
+            
+            <div class="privacy-item">
+                <div class="item-content">
+                    <div class="item-title">允許陌生人留言</div>
+                    <div class="item-description">允許非朋友用戶在您的貼文留言</div>
+                </div>
+                <div class="toggle-switch active" onclick="toggleSwitch(this)"></div>
+            </div>
+            
+            <div class="privacy-item">
+                <div class="item-content">
+                    <div class="item-title">允許陌生人按讚</div>
+                    <div class="item-description">允許非朋友用戶按讚您的貼文</div>
+                </div>
+                <div class="toggle-switch active" onclick="toggleSwitch(this)"></div>
+            </div>
+            
+            <div class="privacy-item">
+                <div class="item-content">
+                    <div class="item-title">允許陌生人分享</div>
+                    <div class="item-description">允許非朋友用戶分享您的貼文</div>
+                </div>
+                <div class="toggle-switch" onclick="toggleSwitch(this)"></div>
+            </div>
+        </div>
+
+        <!-- 資料使用 -->
+        <div class="privacy-section">
+            <div class="section-header">資料使用</div>
+            
+            <div class="privacy-item">
+                <div class="item-content">
+                    <div class="item-title">個人化廣告</div>
+                    <div class="item-description">根據您的興趣顯示相關廣告</div>
+                </div>
+                <div class="toggle-switch" onclick="toggleSwitch(this)"></div>
+            </div>
+            
+            <div class="privacy-item">
+                <div class="item-content">
+                    <div class="item-title">資料分析</div>
+                    <div class="item-description">允許使用您的資料改善服務</div>
+                </div>
+                <div class="toggle-switch active" onclick="toggleSwitch(this)"></div>
+            </div>
+            
+            <div class="info-text">
+                <i class="fas fa-info-circle mr-2"></i>
+                我們會保護您的隱私，並遵守相關的資料保護法規。您可以隨時更改這些設定。
+            </div>
+        </div>
+
+        <!-- 位置隱私 -->
+        <div class="privacy-section">
+            <div class="section-header">位置隱私</div>
+            
+            <div class="privacy-item">
+                <div class="item-content">
+                    <div class="item-title">位置服務</div>
+                    <div class="item-description">允許應用程式存取您的位置</div>
+                </div>
+                <div class="toggle-switch active" onclick="toggleSwitch(this)"></div>
+            </div>
+            
+            <div class="privacy-item">
+                <div class="item-content">
+                    <div class="item-title">顯示位置資訊</div>
+                    <div class="item-description">在貼文中顯示位置資訊</div>
+                </div>
+                <div class="toggle-switch active" onclick="toggleSwitch(this)"></div>
+            </div>
+            
+            <div class="privacy-item">
+                <div class="item-content">
+                    <div class="item-title">精確位置</div>
+                    <div class="item-description">使用精確的位置資訊</div>
+                </div>
+                <div class="toggle-switch" onclick="toggleSwitch(this)"></div>
+            </div>
+            
+            <div class="warning-text">
+                <i class="fas fa-exclamation-triangle mr-2"></i>
+                關閉位置服務可能會影響某些功能的正常運作，如附近朋友推薦等。
+            </div>
+        </div>
+
+        <!-- 危險區域 -->
+        <div class="danger-zone">
+            <div class="danger-title">危險區域</div>
+            <div class="danger-description">
+                以下操作將永久刪除您的資料，且無法復原。請謹慎操作。
+            </div>
+            <button class="danger-button" onclick="showDeleteAccountModal()">
+                <i class="fas fa-trash mr-2"></i>刪除帳戶
+            </button>
+        </div>
+
+        <!-- 儲存按鈕 -->
+        <button class="save-button" onclick="saveSettings()">
+            <i class="fas fa-save mr-2"></i>儲存隱私設定
+        </button>
+    </div>
+
+    <!-- 刪除帳戶確認模態框 -->
+    <div class="modal" id="deleteModal" style="display: none;">
+        <div class="modal-content" style="background: white; border-radius: 12px; padding: 2rem; max-width: 400px; width: 90%; text-align: center;">
+            <div class="modal-title" style="font-size: 1.2rem; font-weight: 600; color: #111827; margin-bottom: 1rem;">確認刪除帳戶</div>
+            <p class="text-gray-600 mb-4">此操作將永久刪除您的帳戶和所有相關資料，且無法復原。您確定要繼續嗎？</p>
+            <div class="modal-buttons" style="display: flex; gap: 1rem; margin-top: 1.5rem;">
+                <button class="modal-btn modal-btn-secondary" onclick="hideDeleteModal()" style="flex: 1; padding: 0.75rem; border-radius: 8px; font-weight: 500; cursor: pointer; background: #f3f4f6; color: #374151; border: 1px solid #d1d5db;">取消</button>
+                <button class="modal-btn modal-btn-primary" onclick="deleteAccount()" style="flex: 1; padding: 0.75rem; border-radius: 8px; font-weight: 500; cursor: pointer; background: #dc2626; color: white; border: none;">刪除</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 切換開關
+        function toggleSwitch(element) {
+            element.classList.toggle('active');
+        }
+        
+        // 儲存設定
+        function saveSettings() {
+            const saveBtn = document.querySelector('.save-button');
+            saveBtn.disabled = true;
+            saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>儲存中...';
+            
+            // 模擬儲存過程
+            setTimeout(() => {
+                alert('隱私設定已成功更新！');
+                saveBtn.disabled = false;
+                saveBtn.innerHTML = '<i class="fas fa-save mr-2"></i>儲存隱私設定';
+            }, 1500);
+        }
+        
+        // 顯示刪除帳戶模態框
+        function showDeleteAccountModal() {
+            document.getElementById('deleteModal').style.display = 'flex';
+        }
+        
+        // 隱藏刪除帳戶模態框
+        function hideDeleteModal() {
+            document.getElementById('deleteModal').style.display = 'none';
+        }
+        
+        // 刪除帳戶
+        function deleteAccount() {
+            alert('帳戶刪除功能需要進一步確認');
+            hideDeleteModal();
+        }
+        
+        // 點擊模態框外部關閉
+        document.getElementById('deleteModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                hideDeleteModal();
+            }
+        });
+        
+        // 初始化設定
+        document.addEventListener('DOMContentLoaded', function() {
+            // 這裡可以從後端載入用戶的隱私設定
+            console.log('隱私設定頁面已載入');
+        });
+    </script>
+</body>
+</html>

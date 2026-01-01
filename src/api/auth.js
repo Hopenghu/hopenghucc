@@ -1,4 +1,4 @@
-import { createSession, deleteSession } from '../auth/session.js';
+import { SessionService } from '../services/SessionService.js';
 import { randomBytes } from 'node:crypto'; // Import for session ID generation
 
 // Helper to generate session ID (if not already in session.js)

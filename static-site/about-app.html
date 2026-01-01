@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>關於應用 - HOPENGHU好澎湖</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;600;700&display=swap');
+        body { 
+            font-family: 'Noto Sans TC', sans-serif; 
+            background: #f8fafc;
+        }
+        
+        .about-container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 1rem;
+        }
+        
+        .about-section {
+            background: white;
+            border-radius: 12px;
+            margin-bottom: 1rem;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        .section-header {
+            padding: 1rem 1.5rem;
+            background: #f9fafb;
+            border-bottom: 1px solid #e5e7eb;
+            font-weight: 600;
+            color: #374151;
+        }
+        
+        .app-header {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            text-align: center;
+            padding: 2rem 1.5rem;
+            margin-bottom: 1rem;
+            border-radius: 12px;
+        }
+        
+        .app-logo {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+        }
+        
+        .app-name {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+        
+        .app-tagline {
+            font-size: 1.1rem;
+            opacity: 0.9;
+            margin-bottom: 1rem;
+        }
+        
+        .app-version {
+            background: rgba(255,255,255,0.2);
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            display: inline-block;
+        }
+        
+        .info-item {
+            display: flex;
+            align-items: center;
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid #f3f4f6;
+        }
+        
+        .info-item:last-child {
+            border-bottom: none;
+        }
+        
+        .info-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 1rem;
+            font-size: 1.2rem;
+            color: white;
+        }
+        
+        .info-icon.version {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+        }
+        
+        .info-icon.build {
+            background: linear-gradient(135deg, #10b981, #059669);
+        }
+        
+        .info-icon.update {
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+        }
+        
+        .info-icon.size {
+            background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+        }
+        
+        .info-details {
+            flex: 1;
+        }
+        
+        .info-label {
+            font-weight: 500;
+            color: #111827;
+            margin-bottom: 0.25rem;
+        }
+        
+        .info-value {
+            font-size: 0.9rem;
+            color: #6b7280;
+        }
+        
+        .team-section {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        .team-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #111827;
+            margin-bottom: 1rem;
+        }
+        
+        .team-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+        }
+        
+        .team-member {
+            text-align: center;
+            padding: 1rem;
+            background: #f8fafc;
+            border-radius: 8px;
+        }
+        
+        .member-avatar {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 1.5rem;
+            margin: 0 auto 0.5rem;
+        }
+        
+        .member-name {
+            font-weight: 500;
+            color: #111827;
+            margin-bottom: 0.25rem;
+        }
+        
+        .member-role {
+            font-size: 0.8rem;
+            color: #6b7280;
+        }
+        
+        .features-section {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        .features-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #111827;
+            margin-bottom: 1rem;
+        }
+        
+        .features-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        
+        .feature-item {
+            display: flex;
+            align-items: center;
+            padding: 0.75rem 0;
+            border-bottom: 1px solid #f3f4f6;
+        }
+        
+        .feature-item:last-child {
+            border-bottom: none;
+        }
+        
+        .feature-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 6px;
+            background: #dbeafe;
+            color: #1e40af;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 1rem;
+            font-size: 1rem;
+        }
+        
+        .feature-text {
+            flex: 1;
+            color: #374151;
+        }
+        
+        .links-section {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        .links-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #111827;
+            margin-bottom: 1rem;
+        }
+        
+        .link-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.75rem 0;
+            border-bottom: 1px solid #f3f4f6;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        
+        .link-item:hover {
+            background: #f9fafb;
+        }
+        
+        .link-item:last-child {
+            border-bottom: none;
+        }
+        
+        .link-info {
+            display: flex;
+            align-items: center;
+            flex: 1;
+        }
+        
+        .link-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 6px;
+            background: #f3f4f6;
+            color: #6b7280;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 1rem;
+            font-size: 1rem;
+        }
+        
+        .link-text {
+            color: #374151;
+            font-weight: 500;
+        }
+        
+        .link-arrow {
+            color: #9ca3af;
+        }
+        
+        .copyright {
+            text-align: center;
+            color: #6b7280;
+            font-size: 0.9rem;
+            margin-top: 1rem;
+        }
+        
+        /* 手機版優化 */
+        @media (max-width: 768px) {
+            .about-container {
+                padding: 0.5rem;
+            }
+            
+            .app-header {
+                padding: 1.5rem 1rem;
+            }
+            
+            .app-logo {
+                font-size: 3rem;
+            }
+            
+            .app-name {
+                font-size: 1.5rem;
+            }
+            
+            .team-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- 頂部導航 -->
+    <nav class="bg-white shadow-sm sticky top-0 z-50">
+        <div class="max-w-600px mx-auto px-4 py-3">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center">
+                    <a href="settings.html" class="mr-4">
+                        <i class="fas fa-arrow-left text-xl text-gray-600"></i>
+                    </a>
+                    <span class="text-lg font-semibold">關於應用</span>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="about-container">
+        <!-- 應用程式標題 -->
+        <div class="app-header">
+            <div class="app-logo">🏝️</div>
+            <div class="app-name">HOPENGHU好澎湖</div>
+            <div class="app-tagline">發現與您相關的澎湖朋友！像小紅書、IG一樣簡單</div>
+            <div class="app-version">版本 1.0.0</div>
+        </div>
+
+        <!-- 應用程式資訊 -->
+        <div class="about-section">
+            <div class="section-header">
+                <i class="fas fa-info-circle mr-2"></i>
+                應用程式資訊
+            </div>
+            
+            <div class="info-item">
+                <div class="info-icon version">
+                    <i class="fas fa-code-branch"></i>
+                </div>
+                <div class="info-details">
+                    <div class="info-label">版本號</div>
+                    <div class="info-value">1.0.0 (Build 100)</div>
+                </div>
+            </div>
+            
+            <div class="info-item">
+                <div class="info-icon build">
+                    <i class="fas fa-calendar"></i>
+                </div>
+                <div class="info-details">
+                    <div class="info-label">建置日期</div>
+                    <div class="info-value">2024年10月5日</div>
+                </div>
+            </div>
+            
+            <div class="info-item">
+                <div class="info-icon update">
+                    <i class="fas fa-sync"></i>
+                </div>
+                <div class="info-details">
+                    <div class="info-label">最後更新</div>
+                    <div class="info-value">2024年10月5日</div>
+                </div>
+            </div>
+            
+            <div class="info-item">
+                <div class="info-icon size">
+                    <i class="fas fa-hdd"></i>
+                </div>
+                <div class="info-details">
+                    <div class="info-label">應用程式大小</div>
+                    <div class="info-value">25.6 MB</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 主要功能 -->
+        <div class="features-section">
+            <div class="features-title">主要功能</div>
+            <ul class="features-list">
+                <li class="feature-item">
+                    <div class="feature-icon">
+                        <i class="fas fa-users"></i>
+                    </div>
+                    <div class="feature-text">智能朋友推薦系統</div>
+                </li>
+                <li class="feature-item">
+                    <div class="feature-icon">
+                        <i class="fas fa-camera"></i>
+                    </div>
+                    <div class="feature-text">照片和影片分享</div>
+                </li>
+                <li class="feature-item">
+                    <div class="feature-icon">
+                        <i class="fas fa-map-marker-alt"></i>
+                    </div>
+                    <div class="feature-text">澎湖地點標記</div>
+                </li>
+                <li class="feature-item">
+                    <div class="feature-icon">
+                        <i class="fas fa-heart"></i>
+                    </div>
+                    <div class="feature-text">社交互動功能</div>
+                </li>
+                <li class="feature-item">
+                    <div class="feature-icon">
+                        <i class="fas fa-shield-alt"></i>
+                    </div>
+                    <div class="feature-text">隱私保護設定</div>
+                </li>
+                <li class="feature-item">
+                    <div class="feature-icon">
+                        <i class="fas fa-mobile-alt"></i>
+                    </div>
+                    <div class="feature-text">響應式設計</div>
+                </li>
+            </ul>
+        </div>
+
+        <!-- 開發團隊 -->
+        <div class="team-section">
+            <div class="team-title">開發團隊</div>
+            <div class="team-grid">
+                <div class="team-member">
+                    <div class="member-avatar">開</div>
+                    <div class="member-name">開發團隊</div>
+                    <div class="member-role">前端開發</div>
+                </div>
+                <div class="team-member">
+                    <div class="member-avatar">設</div>
+                    <div class="member-name">設計團隊</div>
+                    <div class="member-role">UI/UX 設計</div>
+                </div>
+                <div class="team-member">
+                    <div class="member-avatar">測</div>
+                    <div class="member-name">測試團隊</div>
+                    <div class="member-role">品質保證</div>
+                </div>
+                <div class="team-member">
+                    <div class="member-avatar">運</div>
+                    <div class="member-name">運營團隊</div>
+                    <div class="member-role">產品運營</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 相關連結 -->
+        <div class="links-section">
+            <div class="links-title">相關連結</div>
+            
+            <div class="link-item" onclick="openLink('https://hopenghu.cc')">
+                <div class="link-info">
+                    <div class="link-icon">
+                        <i class="fas fa-globe"></i>
+                    </div>
+                    <div class="link-text">官方網站</div>
+                </div>
+                <div class="link-arrow">
+                    <i class="fas fa-external-link-alt"></i>
+                </div>
+            </div>
+            
+            <div class="link-item" onclick="openLink('https://github.com/hopenghu')">
+                <div class="link-info">
+                    <div class="link-icon">
+                        <i class="fab fa-github"></i>
+                    </div>
+                    <div class="link-text">GitHub 專案</div>
+                </div>
+                <div class="link-arrow">
+                    <i class="fas fa-external-link-alt"></i>
+                </div>
+            </div>
+            
+            <div class="link-item" onclick="openLink('https://docs.hopenghu.cc')">
+                <div class="link-info">
+                    <div class="link-icon">
+                        <i class="fas fa-book"></i>
+                    </div>
+                    <div class="link-text">開發文檔</div>
+                </div>
+                <div class="link-arrow">
+                    <i class="fas fa-external-link-alt"></i>
+                </div>
+            </div>
+            
+            <div class="link-item" onclick="openLink('https://blog.hopenghu.cc')">
+                <div class="link-info">
+                    <div class="link-icon">
+                        <i class="fas fa-blog"></i>
+                    </div>
+                    <div class="link-text">開發部落格</div>
+                </div>
+                <div class="link-arrow">
+                    <i class="fas fa-external-link-alt"></i>
+                </div>
+            </div>
+            
+            <div class="link-item" onclick="openLink('mailto:contact@hopenghu.cc')">
+                <div class="link-info">
+                    <div class="link-icon">
+                        <i class="fas fa-envelope"></i>
+                    </div>
+                    <div class="link-text">聯絡我們</div>
+                </div>
+                <div class="link-arrow">
+                    <i class="fas fa-external-link-alt"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- 版權聲明 -->
+        <div class="copyright">
+            <p>&copy; 2024 HOPENGHU好澎湖. 保留所有權利.</p>
+            <p>本應用程式採用開源技術開發，致力於為澎湖社群提供最佳的社交體驗。</p>
+        </div>
+    </div>
+
+    <script>
+        // 開啟外部連結
+        function openLink(url) {
+            window.open(url, '_blank');
+        }
+        
+        // 檢查更新
+        function checkForUpdates() {
+            alert('檢查更新功能');
+            // 這裡可以實現檢查應用程式更新的邏輯
+        }
+        
+        // 初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            // 這裡可以載入動態資訊，如版本號、建置日期等
+            console.log('關於應用頁面已載入');
+        });
+    </script>
+</body>
+</html>

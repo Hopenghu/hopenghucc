@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>內容流 - HOPENGHU好澎湖</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;600;700&display=swap');
+        body { 
+            font-family: 'Noto Sans TC', sans-serif; 
+            background: #f8fafc;
+        }
+        
+        .feed-container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 0;
+        }
+        
+        .post-card {
+            background: white;
+            margin-bottom: 1rem;
+            border-radius: 0;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        .post-image {
+            width: 100%;
+            height: 400px;
+            object-fit: cover;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        
+        .post-actions {
+            padding: 1rem;
+        }
+        
+        .action-btn {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            margin-right: 1rem;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        
+        .action-btn:hover {
+            transform: scale(1.1);
+        }
+        
+        .action-btn.liked {
+            color: #ef4444;
+        }
+        
+        .action-btn.bookmarked {
+            color: #f59e0b;
+        }
+        
+        .post-caption {
+            padding: 0 1rem 1rem;
+            font-size: 0.9rem;
+            line-height: 1.4;
+        }
+        
+        .post-meta {
+            padding: 0 1rem 1rem;
+            font-size: 0.8rem;
+            color: #6b7280;
+        }
+        
+        .user-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 0.9rem;
+        }
+        
+        .floating-upload {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.5rem;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+            cursor: pointer;
+            transition: transform 0.3s;
+            z-index: 1000;
+        }
+        
+        .floating-upload:hover {
+            transform: scale(1.1);
+        }
+        
+        .story-ring {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: linear-gradient(45deg, #f59e0b, #ef4444, #8b5cf6, #06b6d4);
+            padding: 2px;
+            margin-right: 1rem;
+        }
+        
+        .story-avatar {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #374151;
+            font-weight: bold;
+        }
+        
+        .stories-container {
+            background: white;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            overflow-x: auto;
+            white-space: nowrap;
+        }
+        
+        .story-item {
+            display: inline-block;
+            text-align: center;
+            margin-right: 1rem;
+            cursor: pointer;
+        }
+        
+        .story-name {
+            font-size: 0.8rem;
+            margin-top: 0.5rem;
+            color: #374151;
+        }
+        
+        /* 手機版優化 */
+        @media (max-width: 768px) {
+            .feed-container {
+                max-width: 100%;
+            }
+            
+            .post-image {
+                height: 300px;
+            }
+            
+            .floating-upload {
+                bottom: 1rem;
+                right: 1rem;
+                width: 50px;
+                height: 50px;
+                font-size: 1.2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- 頂部導航 -->
+    <nav class="bg-white shadow-sm sticky top-0 z-50">
+        <div class="max-w-600px mx-auto px-4 py-3">
+            <div class="flex items-center justify-between">
+                <a href="index.html" class="text-xl font-bold text-blue-600">🏝️ HOPENGHU</a>
+                <div class="flex items-center space-x-4">
+                    <a href="feed.html" class="text-blue-600">
+                        <i class="fas fa-home text-xl"></i>
+                    </a>
+                    <a href="discover.html" class="text-gray-600">
+                        <i class="fas fa-search text-xl"></i>
+                    </a>
+                    <a href="upload.html" class="text-gray-600">
+                        <i class="fas fa-plus-square text-xl"></i>
+                    </a>
+                    <a href="profile.html" class="text-gray-600">
+                        <i class="fas fa-user text-xl"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 限時動態 -->
+    <div class="stories-container">
+        <div class="story-item">
+            <div class="story-ring">
+                <div class="story-avatar">
+                    <i class="fas fa-plus"></i>
+                </div>
+            </div>
+            <div class="story-name">你的動態</div>
+        </div>
+        <div class="story-item">
+            <div class="story-ring">
+                <div class="story-avatar">小</div>
+            </div>
+            <div class="story-name">小美</div>
+        </div>
+        <div class="story-item">
+            <div class="story-ring">
+                <div class="story-avatar">阿</div>
+            </div>
+            <div class="story-name">阿明</div>
+        </div>
+        <div class="story-item">
+            <div class="story-ring">
+                <div class="story-avatar">小</div>
+            </div>
+            <div class="story-name">小華</div>
+        </div>
+        <div class="story-item">
+            <div class="story-ring">
+                <div class="story-avatar">李</div>
+            </div>
+            <div class="story-name">李老師</div>
+        </div>
+    </div>
+
+    <!-- 內容流 -->
+    <div class="feed-container">
+        <!-- 貼文 1 -->
+        <div class="post-card">
+            <div class="flex items-center p-4">
+                <div class="user-avatar">小</div>
+                <div class="ml-3">
+                    <div class="font-semibold text-sm">小美</div>
+                    <div class="text-xs text-gray-500">七美雙心石滬 · 2小時前</div>
+                </div>
+                <div class="ml-auto">
+                    <i class="fas fa-ellipsis-h text-gray-400"></i>
+                </div>
+            </div>
+            <div class="post-image flex items-center justify-center text-white text-4xl">
+                <i class="fas fa-heart"></i>
+            </div>
+            <div class="post-actions">
+                <button class="action-btn" onclick="toggleLike(this)">
+                    <i class="far fa-heart"></i>
+                </button>
+                <button class="action-btn" onclick="toggleComment(this)">
+                    <i class="far fa-comment"></i>
+                </button>
+                <button class="action-btn" onclick="sharePost(this)">
+                    <i class="far fa-paper-plane"></i>
+                </button>
+                <button class="action-btn bookmarked" onclick="toggleBookmark(this)">
+                    <i class="fas fa-bookmark"></i>
+                </button>
+            </div>
+            <div class="post-caption">
+                <span class="font-semibold">小美</span> 在七美雙心石滬看夕陽，是我最美好的回憶！💕 
+                <br>#七美 #雙心石滬 #澎湖 #夕陽 #浪漫
+            </div>
+            <div class="post-meta">
+                23個讚 · 5則留言
+            </div>
+        </div>
+
+        <!-- 貼文 2 -->
+        <div class="post-card">
+            <div class="flex items-center p-4">
+                <div class="user-avatar">阿</div>
+                <div class="ml-3">
+                    <div class="font-semibold text-sm">阿明</div>
+                    <div class="text-xs text-gray-500">澎湖跨海大橋 · 4小時前</div>
+                </div>
+                <div class="ml-auto">
+                    <i class="fas fa-ellipsis-h text-gray-400"></i>
+                </div>
+            </div>
+            <div class="post-image flex items-center justify-center text-white text-4xl" style="background: linear-gradient(135deg, #06b6d4 0%, #3b82f6 100%);">
+                <i class="fas fa-fish"></i>
+            </div>
+            <div class="post-actions">
+                <button class="action-btn liked" onclick="toggleLike(this)">
+                    <i class="fas fa-heart"></i>
+                </button>
+                <button class="action-btn" onclick="toggleComment(this)">
+                    <i class="far fa-comment"></i>
+                </button>
+                <button class="action-btn" onclick="sharePost(this)">
+                    <i class="far fa-paper-plane"></i>
+                </button>
+                <button class="action-btn" onclick="toggleBookmark(this)">
+                    <i class="far fa-bookmark"></i>
+                </button>
+            </div>
+            <div class="post-caption">
+                <span class="font-semibold">阿明</span> 澎湖的海鮮真的超新鮮！推薦大家一定要試試看 🦐🦀🐟
+                <br>#澎湖 #海鮮 #美食 #新鮮 #推薦
+            </div>
+            <div class="post-meta">
+                45個讚 · 12則留言
+            </div>
+        </div>
+
+        <!-- 貼文 3 -->
+        <div class="post-card">
+            <div class="flex items-center p-4">
+                <div class="user-avatar">小</div>
+                <div class="ml-3">
+                    <div class="font-semibold text-sm">小華</div>
+                    <div class="text-xs text-gray-500">吉貝沙尾 · 6小時前</div>
+                </div>
+                <div class="ml-auto">
+                    <i class="fas fa-ellipsis-h text-gray-400"></i>
+                </div>
+            </div>
+            <div class="post-image flex items-center justify-center text-white text-4xl" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
+                <i class="fas fa-camera"></i>
+            </div>
+            <div class="post-actions">
+                <button class="action-btn" onclick="toggleLike(this)">
+                    <i class="far fa-heart"></i>
+                </button>
+                <button class="action-btn" onclick="toggleComment(this)">
+                    <i class="far fa-comment"></i>
+                </button>
+                <button class="action-btn" onclick="sharePost(this)">
+                    <i class="far fa-paper-plane"></i>
+                </button>
+                <button class="action-btn" onclick="toggleBookmark(this)">
+                    <i class="far fa-bookmark"></i>
+                </button>
+            </div>
+            <div class="post-caption">
+                <span class="font-semibold">小華</span> 澎湖的風景太美了，每一張照片都是藝術品！📸✨
+                <br>#澎湖 #攝影 #風景 #藝術 #吉貝沙尾
+            </div>
+            <div class="post-meta">
+                67個讚 · 8則留言
+            </div>
+        </div>
+
+        <!-- 貼文 4 -->
+        <div class="post-card">
+            <div class="flex items-center p-4">
+                <div class="user-avatar">李</div>
+                <div class="ml-3">
+                    <div class="font-semibold text-sm">李老師</div>
+                    <div class="text-xs text-gray-500">馬公市 · 1天前</div>
+                </div>
+                <div class="ml-auto">
+                    <i class="fas fa-ellipsis-h text-gray-400"></i>
+                </div>
+            </div>
+            <div class="post-image flex items-center justify-center text-white text-4xl" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);">
+                <i class="fas fa-umbrella-beach"></i>
+            </div>
+            <div class="post-actions">
+                <button class="action-btn" onclick="toggleLike(this)">
+                    <i class="far fa-heart"></i>
+                </button>
+                <button class="action-btn" onclick="toggleComment(this)">
+                    <i class="far fa-comment"></i>
+                </button>
+                <button class="action-btn" onclick="sharePost(this)">
+                    <i class="far fa-paper-plane"></i>
+                </button>
+                <button class="action-btn" onclick="toggleBookmark(this)">
+                    <i class="far fa-bookmark"></i>
+                </button>
+            </div>
+            <div class="post-caption">
+                <span class="font-semibold">李老師</span> 帶著學生們來澎湖戶外教學，大家都玩得很開心！🏖️📚
+                <br>#澎湖 #戶外教學 #學生 #海邊 #教育
+            </div>
+            <div class="post-meta">
+                89個讚 · 15則留言
+            </div>
+        </div>
+
+        <!-- 載入更多 -->
+        <div class="text-center py-8">
+            <div class="inline-flex items-center px-4 py-2 bg-gray-100 rounded-full text-gray-600">
+                <i class="fas fa-spinner fa-spin mr-2"></i>
+                載入更多內容...
+            </div>
+        </div>
+    </div>
+
+    <!-- 浮動上傳按鈕 -->
+    <div class="floating-upload" onclick="window.location.href='upload.html'">
+        <i class="fas fa-plus"></i>
+    </div>
+
+    <script>
+        // 點讚功能
+        function toggleLike(btn) {
+            const icon = btn.querySelector('i');
+            const isLiked = btn.classList.contains('liked');
+            
+            if (isLiked) {
+                btn.classList.remove('liked');
+                icon.className = 'far fa-heart';
+            } else {
+                btn.classList.add('liked');
+                icon.className = 'fas fa-heart';
+            }
+        }
+        
+        // 收藏功能
+        function toggleBookmark(btn) {
+            const icon = btn.querySelector('i');
+            const isBookmarked = btn.classList.contains('bookmarked');
+            
+            if (isBookmarked) {
+                btn.classList.remove('bookmarked');
+                icon.className = 'far fa-bookmark';
+            } else {
+                btn.classList.add('bookmarked');
+                icon.className = 'fas fa-bookmark';
+            }
+        }
+        
+        // 評論功能
+        function toggleComment(btn) {
+            // 這裡可以添加評論功能
+            console.log('開啟評論');
+        }
+        
+        // 分享功能
+        function sharePost(btn) {
+            if (navigator.share) {
+                navigator.share({
+                    title: '澎湖分享',
+                    text: '來看看這個澎湖的分享！',
+                    url: window.location.href
+                });
+            } else {
+                navigator.clipboard.writeText(window.location.href).then(() => {
+                    alert('連結已複製到剪貼板');
+                });
+            }
+        }
+        
+        // 無限滾動載入
+        let loading = false;
+        window.addEventListener('scroll', function() {
+            if (loading) return;
+            
+            if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 1000) {
+                loading = true;
+                setTimeout(() => {
+                    // 這裡可以添加載入更多內容的邏輯
+                    loading = false;
+                }, 1000);
+            }
+        });
+    </script>
+</body>
+</html>

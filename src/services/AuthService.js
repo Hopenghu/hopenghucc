@@ -1,7 +1,7 @@
 import { hashPassword, verifyPassword } from '../utils/password.js'; // Updated path
 
 export class AuthService {
-  constructor(userService, sessionService, googleAuthService, businessService) {
+  constructor(userService, sessionService, googleAuthService) {
     if (!userService || !sessionService || !googleAuthService) {
       // Note: businessService is optional for initial login, but required for GMB flow
       throw new Error('UserService, SessionService, and GoogleAuthService are required.');
@@ -9,7 +9,6 @@ export class AuthService {
     this.userService = userService;
     this.sessionService = sessionService;
     this.googleAuthService = googleAuthService;
-    this.businessService = businessService; // Store it
   }
 
   /**
@@ -108,30 +107,18 @@ export class AuthService {
         googleUserData.picture
       );
       
-      // --- Check for GMB Access using the obtained token --- 
-      let hasBusinessAccess = false;
-      if (this.businessService && accessToken) {
-          try {
-              console.log(`[AuthService] Checking GMB access for user ${user.email}...`);
-              hasBusinessAccess = await this.businessService.checkHasBusinessAccess(accessToken);
-              console.log(`[AuthService] GMB access check result for ${user.email}: ${hasBusinessAccess}`);
-              
-              // TODO: Update user record in DB with this status
-              // if (hasBusinessAccess) {
-              //    await this.userService.updateUserGmbStatus(user.id, true);
-              // }
-          } catch (gmbError) {
-              console.error('[AuthService] Error during GMB access check:', gmbError);
-              // Decide how to handle this - fail login? Or just log and continue?
-              // For now, we'll log and assume no access on error.
-              hasBusinessAccess = false;
-          }
-      } else {
-          console.warn('[AuthService] BusinessService not available or no access token, skipping GMB check.');
-      }
-      // --- End GMB Check --- 
+      // --- REMOVE GMB Check --- 
+      // The entire block related to hasBusinessAccess and this.businessService has been removed.
+      // --- End REMOVE GMB Check --- 
 
+      console.log(`[AuthService.handleGoogleLogin] Attempting to create session for user ID: ${user.id}, email: ${user.email}`);
       const session = await this.sessionService.createSession(user.id);
+      console.log(`[AuthService.handleGoogleLogin] Session creation result:`, session); // Log the whole session object
+      
+      if (!session || !session.id) {
+          console.error(`[AuthService.handleGoogleLogin] CRITICAL: Session creation failed or returned invalid session object for user ID: ${user.id}`);
+          throw new Error('Session creation failed internally.'); // This will be caught by the outer try-catch
+      }
 
       // Return user data - potentially add hasBusinessAccess flag if needed by frontend immediately
       return {
@@ -175,26 +162,40 @@ export class AuthService {
    * @returns {Promise<object | null>} The user object (non-sensitive data) or null.
    */
   async getUserFromSession(sessionId) {
+    console.log('[AuthService.getUserFromSession] Received sessionId:', sessionId); // Log sessionId
     try {
       if (!sessionId) {
+          console.log('[AuthService.getUserFromSession] No sessionId provided, returning null.');
           return null; // No session ID provided
       }
       const session = await this.sessionService.getSession(sessionId);
+      console.log('[AuthService.getUserFromSession] Session from sessionService:', session); // Log session object
+
       if (!session) {
+        console.log('[AuthService.getUserFromSession] Session not found or expired, returning null.');
         return null; // Session not found or expired
       }
 
-      const user = await this.userService.findUserById(session.userId);
+      const userFromDb = await this.userService.findUserById(session.userId);
+      console.log('[AuthService.getUserFromSession] User from userService.findUserById:', userFromDb); // Log user from DB
 
-      // Return non-sensitive user data
-      return user ? { 
-          id: user.id, 
-          email: user.email, 
-          name: user.name, 
-          avatar_url: user.avatar_url 
-      } : null;
+      if (!userFromDb) {
+          console.log('[AuthService.getUserFromSession] User not found by ID from session, returning null.');
+          return null;
+      }
+      
+      const userToReturn = { 
+          id: userFromDb.id, 
+          email: userFromDb.email, 
+          name: userFromDb.name, 
+          avatar_url: userFromDb.avatar_url, 
+          role: userFromDb.role 
+      };
+      console.log('[AuthService.getUserFromSession] Returning user object:', userToReturn);
+      return userToReturn;
+
     } catch (error) {
-      console.error('AuthService - getUserFromSession error:', error);
+      console.error('[AuthService.getUserFromSession] Error:', error);
       // Decide whether to throw or return null on internal errors
       // Returning null might be safer for middleware checks
       return null; 

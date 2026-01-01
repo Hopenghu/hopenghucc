@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>發現朋友 - HOPENGHU好澎湖</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;600;700&display=swap');
+        body { 
+            font-family: 'Noto Sans TC', sans-serif; 
+            background: #f8fafc;
+        }
+        
+        .discover-container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 1rem;
+        }
+        
+        .search-bar {
+            background: white;
+            border-radius: 25px;
+            padding: 0.75rem 1rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            margin-bottom: 1.5rem;
+        }
+        
+        .search-input {
+            border: none;
+            outline: none;
+            width: 100%;
+            font-size: 1rem;
+            background: transparent;
+        }
+        
+        .filter-tabs {
+            display: flex;
+            background: white;
+            border-radius: 12px;
+            padding: 0.25rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .filter-tab {
+            flex: 1;
+            text-align: center;
+            padding: 0.75rem;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .filter-tab.active {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+        }
+        
+        .friend-card {
+            background: white;
+            border-radius: 16px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            transition: transform 0.2s;
+        }
+        
+        .friend-card:hover {
+            transform: translateY(-2px);
+        }
+        
+        .friend-avatar {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 1.2rem;
+        }
+        
+        .follow-btn {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 0.5rem 1.5rem;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .follow-btn:hover {
+            transform: scale(1.05);
+        }
+        
+        .follow-btn.following {
+            background: #e5e7eb;
+            color: #6b7280;
+        }
+        
+        .common-interest {
+            background: #f3f4f6;
+            color: #374151;
+            padding: 0.25rem 0.75rem;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            margin-right: 0.5rem;
+            margin-bottom: 0.5rem;
+            display: inline-block;
+        }
+        
+        .relevance-score {
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+        
+        .location-tag {
+            background: #dbeafe;
+            color: #1e40af;
+            padding: 0.25rem 0.75rem;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            margin-right: 0.5rem;
+            margin-bottom: 0.5rem;
+            display: inline-block;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+        
+        .stat-item {
+            text-align: center;
+            padding: 0.75rem;
+            background: #f9fafb;
+            border-radius: 8px;
+        }
+        
+        .stat-number {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #374151;
+        }
+        
+        .stat-label {
+            font-size: 0.8rem;
+            color: #6b7280;
+            margin-top: 0.25rem;
+        }
+        
+        /* 手機版優化 */
+        @media (max-width: 768px) {
+            .discover-container {
+                padding: 0.5rem;
+            }
+            
+            .friend-card {
+                padding: 1rem;
+            }
+            
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- 頂部導航 -->
+    <nav class="bg-white shadow-sm sticky top-0 z-50">
+        <div class="max-w-600px mx-auto px-4 py-3">
+            <div class="flex items-center justify-between">
+                <a href="index.html" class="text-xl font-bold text-blue-600">🏝️ HOPENGHU</a>
+                <div class="flex items-center space-x-4">
+                    <a href="feed.html" class="text-gray-600">
+                        <i class="fas fa-home text-xl"></i>
+                    </a>
+                    <a href="discover.html" class="text-blue-600">
+                        <i class="fas fa-search text-xl"></i>
+                    </a>
+                    <a href="upload.html" class="text-gray-600">
+                        <i class="fas fa-plus-square text-xl"></i>
+                    </a>
+                    <a href="profile.html" class="text-gray-600">
+                        <i class="fas fa-user text-xl"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="discover-container">
+        <!-- 搜尋欄 -->
+        <div class="search-bar">
+            <div class="flex items-center">
+                <i class="fas fa-search text-gray-400 mr-3"></i>
+                <input type="text" class="search-input" placeholder="搜尋朋友、地點或興趣...">
+            </div>
+        </div>
+
+        <!-- 篩選標籤 -->
+        <div class="filter-tabs">
+            <div class="filter-tab active" onclick="switchFilter(this, 'all')">全部</div>
+            <div class="filter-tab" onclick="switchFilter(this, 'high')">高相關度</div>
+            <div class="filter-tab" onclick="switchFilter(this, 'nearby')">附近的人</div>
+            <div class="filter-tab" onclick="switchFilter(this, 'recent')">最近活躍</div>
+        </div>
+
+        <!-- 朋友推薦列表 -->
+        <div id="friend-list">
+            <!-- 朋友卡片 1 -->
+            <div class="friend-card" data-relevance="95" data-location="七美">
+                <div class="flex items-start justify-between">
+                    <div class="flex items-start space-x-3">
+                        <div class="friend-avatar">小</div>
+                        <div class="flex-1">
+                            <div class="flex items-center space-x-2 mb-1">
+                                <h3 class="font-semibold text-lg">小美</h3>
+                                <span class="relevance-score">95% 相關</span>
+                            </div>
+                            <p class="text-gray-600 text-sm mb-2">澎湖愛好者 · 攝影達人</p>
+                            <div class="mb-2">
+                                <span class="location-tag">七美雙心石滬</span>
+                                <span class="location-tag">澎湖跨海大橋</span>
+                            </div>
+                            <div class="mb-3">
+                                <span class="common-interest">攝影</span>
+                                <span class="common-interest">夕陽</span>
+                                <span class="common-interest">浪漫景點</span>
+                            </div>
+                            <p class="text-sm text-gray-500">"我們都在七美看過夕陽，而且都喜歡攝影！"</p>
+                        </div>
+                    </div>
+                    <button class="follow-btn" onclick="toggleFollow(this)">關注</button>
+                </div>
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <div class="stat-number">156</div>
+                        <div class="stat-label">貼文</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number">2.3k</div>
+                        <div class="stat-label">粉絲</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number">89</div>
+                        <div class="stat-label">共同朋友</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 朋友卡片 2 -->
+            <div class="friend-card" data-relevance="87" data-location="馬公">
+                <div class="flex items-start justify-between">
+                    <div class="flex items-start space-x-3">
+                        <div class="friend-avatar">阿</div>
+                        <div class="flex-1">
+                            <div class="flex items-center space-x-2 mb-1">
+                                <h3 class="font-semibold text-lg">阿明</h3>
+                                <span class="relevance-score">87% 相關</span>
+                            </div>
+                            <p class="text-gray-600 text-sm mb-2">美食探索者 · 海鮮愛好者</p>
+                            <div class="mb-2">
+                                <span class="location-tag">馬公市</span>
+                                <span class="location-tag">西嶼</span>
+                            </div>
+                            <div class="mb-3">
+                                <span class="common-interest">美食</span>
+                                <span class="common-interest">海鮮</span>
+                                <span class="common-interest">餐廳</span>
+                            </div>
+                            <p class="text-sm text-gray-500">"我們都愛澎湖的海鮮，而且都住在馬公附近！"</p>
+                        </div>
+                    </div>
+                    <button class="follow-btn" onclick="toggleFollow(this)">關注</button>
+                </div>
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <div class="stat-number">89</div>
+                        <div class="stat-label">貼文</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number">1.8k</div>
+                        <div class="stat-label">粉絲</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number">45</div>
+                        <div class="stat-label">共同朋友</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 朋友卡片 3 -->
+            <div class="friend-card" data-relevance="92" data-location="吉貝">
+                <div class="flex items-start justify-between">
+                    <div class="flex items-start space-x-3">
+                        <div class="friend-avatar">小</div>
+                        <div class="flex-1">
+                            <div class="flex items-center space-x-2 mb-1">
+                                <h3 class="font-semibold text-lg">小華</h3>
+                                <span class="relevance-score">92% 相關</span>
+                            </div>
+                            <p class="text-gray-600 text-sm mb-2">攝影愛好者 · 風景達人</p>
+                            <div class="mb-2">
+                                <span class="location-tag">吉貝沙尾</span>
+                                <span class="location-tag">七美</span>
+                            </div>
+                            <div class="mb-3">
+                                <span class="common-interest">攝影</span>
+                                <span class="common-interest">風景</span>
+                                <span class="common-interest">自然</span>
+                            </div>
+                            <p class="text-sm text-gray-500">"我們都喜歡拍澎湖風景，而且都去過吉貝！"</p>
+                        </div>
+                    </div>
+                    <button class="follow-btn" onclick="toggleFollow(this)">關注</button>
+                </div>
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <div class="stat-number">234</div>
+                        <div class="stat-label">貼文</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number">3.1k</div>
+                        <div class="stat-label">粉絲</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number">67</div>
+                        <div class="stat-label">共同朋友</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 朋友卡片 4 -->
+            <div class="friend-card" data-relevance="78" data-location="白沙">
+                <div class="flex items-start justify-between">
+                    <div class="flex items-start space-x-3">
+                        <div class="friend-avatar">李</div>
+                        <div class="flex-1">
+                            <div class="flex items-center space-x-2 mb-1">
+                                <h3 class="font-semibold text-lg">李老師</h3>
+                                <span class="relevance-score">78% 相關</span>
+                            </div>
+                            <p class="text-gray-600 text-sm mb-2">教育工作者 · 戶外活動愛好者</p>
+                            <div class="mb-2">
+                                <span class="location-tag">白沙</span>
+                                <span class="location-tag">馬公市</span>
+                            </div>
+                            <div class="mb-3">
+                                <span class="common-interest">教育</span>
+                                <span class="common-interest">戶外活動</span>
+                                <span class="common-interest">家庭</span>
+                            </div>
+                            <p class="text-sm text-gray-500">"我們都喜歡帶家人來澎湖，而且都重視教育！"</p>
+                        </div>
+                    </div>
+                    <button class="follow-btn" onclick="toggleFollow(this)">關注</button>
+                </div>
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <div class="stat-number">67</div>
+                        <div class="stat-label">貼文</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number">1.2k</div>
+                        <div class="stat-label">粉絲</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number">23</div>
+                        <div class="stat-label">共同朋友</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 朋友卡片 5 -->
+            <div class="friend-card" data-relevance="85" data-location="望安">
+                <div class="flex items-start justify-between">
+                    <div class="flex items-start space-x-3">
+                        <div class="friend-avatar">王</div>
+                        <div class="flex-1">
+                            <div class="flex items-center space-x-2 mb-1">
+                                <h3 class="font-semibold text-lg">王大哥</h3>
+                                <span class="relevance-score">85% 相關</span>
+                            </div>
+                            <p class="text-gray-600 text-sm mb-2">在地導遊 · 澎湖專家</p>
+                            <div class="mb-2">
+                                <span class="location-tag">望安</span>
+                                <span class="location-tag">七美</span>
+                            </div>
+                            <div class="mb-3">
+                                <span class="common-interest">導遊</span>
+                                <span class="common-interest">歷史</span>
+                                <span class="common-interest">文化</span>
+                            </div>
+                            <p class="text-sm text-gray-500">"我們都對澎湖的歷史文化很感興趣！"</p>
+                        </div>
+                    </div>
+                    <button class="follow-btn" onclick="toggleFollow(this)">關注</button>
+                </div>
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <div class="stat-number">123</div>
+                        <div class="stat-label">貼文</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number">2.7k</div>
+                        <div class="stat-label">粉絲</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number">34</div>
+                        <div class="stat-label">共同朋友</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 載入更多 -->
+        <div class="text-center py-8">
+            <button class="bg-white border border-gray-300 text-gray-700 px-6 py-3 rounded-full hover:bg-gray-50 transition-colors">
+                載入更多朋友
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // 篩選功能
+        function switchFilter(tab, filter) {
+            // 移除所有active類
+            document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
+            // 添加active類到當前選中的標籤
+            tab.classList.add('active');
+            
+            // 根據篩選條件顯示朋友
+            const friendCards = document.querySelectorAll('.friend-card');
+            
+            friendCards.forEach(card => {
+                const relevance = parseInt(card.dataset.relevance);
+                const location = card.dataset.location;
+                
+                let show = true;
+                
+                switch(filter) {
+                    case 'high':
+                        show = relevance >= 90;
+                        break;
+                    case 'nearby':
+                        show = location === '馬公' || location === '白沙';
+                        break;
+                    case 'recent':
+                        // 這裡可以根據最後活躍時間篩選
+                        show = true;
+                        break;
+                    default:
+                        show = true;
+                }
+                
+                card.style.display = show ? 'block' : 'none';
+            });
+        }
+        
+        // 關注功能
+        function toggleFollow(btn) {
+            const isFollowing = btn.classList.contains('following');
+            
+            if (isFollowing) {
+                btn.classList.remove('following');
+                btn.textContent = '關注';
+            } else {
+                btn.classList.add('following');
+                btn.textContent = '已關注';
+            }
+        }
+        
+        // 搜尋功能
+        const searchInput = document.querySelector('.search-input');
+        searchInput.addEventListener('input', function() {
+            const query = this.value.toLowerCase();
+            const friendCards = document.querySelectorAll('.friend-card');
+            
+            friendCards.forEach(card => {
+                const name = card.querySelector('h3').textContent.toLowerCase();
+                const description = card.querySelector('p').textContent.toLowerCase();
+                const interests = Array.from(card.querySelectorAll('.common-interest')).map(el => el.textContent.toLowerCase()).join(' ');
+                const locations = Array.from(card.querySelectorAll('.location-tag')).map(el => el.textContent.toLowerCase()).join(' ');
+                
+                const searchText = name + ' ' + description + ' ' + interests + ' ' + locations;
+                
+                if (searchText.includes(query)) {
+                    card.style.display = 'block';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+        });
+    </script>
+</body>
+</html>

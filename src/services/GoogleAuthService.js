@@ -2,14 +2,21 @@ export class GoogleAuthService {
   constructor(env) {
     // Check for required environment variables
     if (!env || !env.GOOGLE_CLIENT_ID || !env.GOOGLE_CLIENT_SECRET || !env.GOOGLE_REDIRECT_URI) {
-      throw new Error("Google OAuth environment variables (GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REDIRECT_URI) are required for GoogleAuthService.");
+      console.warn("Google OAuth environment variables not fully configured. Google authentication will be disabled.");
+      this.enabled = false;
+      return;
     }
     this.clientId = env.GOOGLE_CLIENT_ID;
     this.clientSecret = env.GOOGLE_CLIENT_SECRET;
     this.redirectUri = env.GOOGLE_REDIRECT_URI;
+    this.enabled = true;
   }
 
   async exchangeCodeForToken(code) {
+    if (!this.enabled) {
+      throw new Error("Google authentication is disabled due to missing environment variables.");
+    }
+    
     try {
         const requestBody = new URLSearchParams({
             code,
@@ -49,6 +56,10 @@ export class GoogleAuthService {
   }
 
   async verifyGoogleToken(idToken) {
+    if (!this.enabled) {
+      throw new Error("Google authentication is disabled due to missing environment variables.");
+    }
+    
     try {
       const response = await fetch(
         `https://oauth2.googleapis.com/tokeninfo?id_token=${idToken}`
@@ -84,6 +95,10 @@ export class GoogleAuthService {
    * @returns {Promise<{userData: object, accessToken: string}>} Object containing verified Google user data and the access token.
    */
   async authenticate(code) {
+    if (!this.enabled) {
+      throw new Error("Google authentication is disabled due to missing environment variables.");
+    }
+    
     try {
         const tokens = await this.exchangeCodeForToken(code);
         if (!tokens.id_token) {

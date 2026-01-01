@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>小美的個人資料 - HOPENGHU好澎湖</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;600;700&display=swap');
+        body { 
+            font-family: 'Noto Sans TC', sans-serif; 
+            background: #f8fafc;
+        }
+        
+        .profile-container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 0;
+        }
+        
+        .profile-header {
+            background: white;
+            padding: 1.5rem;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        
+        .profile-info {
+            display: flex;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+        
+        .profile-avatar {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 2rem;
+            margin-right: 1rem;
+        }
+        
+        .profile-details {
+            flex: 1;
+        }
+        
+        .profile-name {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #111827;
+            margin-bottom: 0.25rem;
+        }
+        
+        .profile-bio {
+            color: #6b7280;
+            font-size: 0.9rem;
+            line-height: 1.4;
+        }
+        
+        .profile-stats {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid #e5e7eb;
+        }
+        
+        .stat-item {
+            text-align: center;
+        }
+        
+        .stat-number {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #111827;
+        }
+        
+        .stat-label {
+            font-size: 0.8rem;
+            color: #6b7280;
+            margin-top: 0.25rem;
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+        
+        .btn-primary {
+            flex: 1;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 0.75rem;
+            border-radius: 8px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-1px);
+        }
+        
+        .btn-secondary {
+            background: white;
+            color: #374151;
+            border: 1px solid #d1d5db;
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .btn-secondary:hover {
+            background: #f9fafb;
+        }
+        
+        .btn-following {
+            background: #e5e7eb;
+            color: #6b7280;
+        }
+        
+        .content-tabs {
+            display: flex;
+            background: white;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        
+        .content-tab {
+            flex: 1;
+            padding: 1rem;
+            text-align: center;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            transition: all 0.3s;
+        }
+        
+        .content-tab.active {
+            border-bottom-color: #667eea;
+            color: #667eea;
+        }
+        
+        .content-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 2px;
+            background: #e5e7eb;
+        }
+        
+        .content-item {
+            aspect-ratio: 1;
+            background: white;
+            position: relative;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        
+        .content-item:hover {
+            transform: scale(0.98);
+        }
+        
+        .content-image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 2rem;
+        }
+        
+        .content-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.2rem;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+        
+        .content-item:hover .content-overlay {
+            opacity: 1;
+        }
+        
+        .highlight-stories {
+            background: white;
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+        
+        .highlight-title {
+            font-weight: 600;
+            color: #111827;
+            margin-bottom: 1rem;
+        }
+        
+        .highlight-list {
+            display: flex;
+            gap: 1rem;
+            overflow-x: auto;
+        }
+        
+        .highlight-item {
+            flex-shrink: 0;
+            text-align: center;
+            cursor: pointer;
+        }
+        
+        .highlight-avatar {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #f59e0b, #ef4444);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+            border: 2px solid #e5e7eb;
+        }
+        
+        .highlight-name {
+            font-size: 0.8rem;
+            color: #6b7280;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 3rem 1rem;
+            color: #6b7280;
+        }
+        
+        .empty-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+        }
+        
+        /* 手機版優化 */
+        @media (max-width: 768px) {
+            .profile-container {
+                max-width: 100%;
+            }
+            
+            .profile-header {
+                padding: 1rem;
+            }
+            
+            .profile-info {
+                flex-direction: column;
+                text-align: center;
+            }
+            
+            .profile-avatar {
+                margin-right: 0;
+                margin-bottom: 1rem;
+            }
+            
+            .action-buttons {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- 頂部導航 -->
+    <nav class="bg-white shadow-sm sticky top-0 z-50">
+        <div class="max-w-600px mx-auto px-4 py-3">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center">
+                    <a href="discover.html" class="mr-4">
+                        <i class="fas fa-arrow-left text-xl text-gray-600"></i>
+                    </a>
+                    <span class="text-lg font-semibold">小美</span>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <button class="text-gray-600">
+                        <i class="fas fa-share text-xl"></i>
+                    </button>
+                    <button class="text-gray-600">
+                        <i class="fas fa-ellipsis-h text-xl"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="profile-container">
+        <!-- 個人資料頭部 -->
+        <div class="profile-header">
+            <div class="profile-info">
+                <div class="profile-avatar">小</div>
+                <div class="profile-details">
+                    <div class="profile-name">小美</div>
+                    <div class="profile-bio">
+                        澎湖愛好者 📸<br>
+                        喜歡攝影和分享澎湖美景<br>
+                        📍 七美 · 馬公
+                    </div>
+                </div>
+            </div>
+            
+            <div class="profile-stats">
+                <div class="stat-item">
+                    <div class="stat-number">156</div>
+                    <div class="stat-label">貼文</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number">2.3k</div>
+                    <div class="stat-label">粉絲</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number">89</div>
+                    <div class="stat-label">關注</div>
+                </div>
+            </div>
+            
+            <div class="action-buttons">
+                <button class="btn-primary" id="followBtn" onclick="toggleFollow()">
+                    <i class="fas fa-user-plus mr-2"></i>關注
+                </button>
+                <button class="btn-secondary">
+                    <i class="fas fa-comment mr-2"></i>訊息
+                </button>
+                <button class="btn-secondary">
+                    <i class="fas fa-share mr-2"></i>分享
+                </button>
+            </div>
+        </div>
+
+        <!-- 精選動態 -->
+        <div class="highlight-stories">
+            <div class="highlight-title">精選動態</div>
+            <div class="highlight-list">
+                <div class="highlight-item">
+                    <div class="highlight-avatar">七</div>
+                    <div class="highlight-name">七美之旅</div>
+                </div>
+                <div class="highlight-item">
+                    <div class="highlight-avatar">夕</div>
+                    <div class="highlight-name">夕陽攝影</div>
+                </div>
+                <div class="highlight-item">
+                    <div class="highlight-avatar">美</div>
+                    <div class="highlight-name">美食探索</div>
+                </div>
+                <div class="highlight-item">
+                    <div class="highlight-avatar">+</div>
+                    <div class="highlight-name">新增</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 內容標籤 -->
+        <div class="content-tabs">
+            <div class="content-tab active" onclick="switchTab(this, 'posts')">
+                <i class="fas fa-th-large mr-1"></i>貼文
+            </div>
+            <div class="content-tab" onclick="switchTab(this, 'tagged')">
+                <i class="fas fa-user-tag mr-1"></i>標記
+            </div>
+            <div class="content-tab" onclick="switchTab(this, 'saved')">
+                <i class="fas fa-bookmark mr-1"></i>收藏
+            </div>
+        </div>
+
+        <!-- 內容網格 -->
+        <div class="content-grid" id="contentGrid">
+            <!-- 貼文項目 -->
+            <div class="content-item" onclick="viewPost(1)">
+                <div class="content-image">
+                    <i class="fas fa-heart"></i>
+                </div>
+                <div class="content-overlay">
+                    <div class="flex items-center space-x-4">
+                        <span><i class="fas fa-heart mr-1"></i>23</span>
+                        <span><i class="fas fa-comment mr-1"></i>5</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="content-item" onclick="viewPost(2)">
+                <div class="content-image" style="background: linear-gradient(135deg, #06b6d4 0%, #3b82f6 100%);">
+                    <i class="fas fa-fish"></i>
+                </div>
+                <div class="content-overlay">
+                    <div class="flex items-center space-x-4">
+                        <span><i class="fas fa-heart mr-1"></i>45</span>
+                        <span><i class="fas fa-comment mr-1"></i>12</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="content-item" onclick="viewPost(3)">
+                <div class="content-image" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
+                    <i class="fas fa-camera"></i>
+                </div>
+                <div class="content-overlay">
+                    <div class="flex items-center space-x-4">
+                        <span><i class="fas fa-heart mr-1"></i>67</span>
+                        <span><i class="fas fa-comment mr-1"></i>8</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="content-item" onclick="viewPost(4)">
+                <div class="content-image" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);">
+                    <i class="fas fa-umbrella-beach"></i>
+                </div>
+                <div class="content-overlay">
+                    <div class="flex items-center space-x-4">
+                        <span><i class="fas fa-heart mr-1"></i>89</span>
+                        <span><i class="fas fa-comment mr-1"></i>15</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="content-item" onclick="viewPost(5)">
+                <div class="content-image" style="background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);">
+                    <i class="fas fa-mountain"></i>
+                </div>
+                <div class="content-overlay">
+                    <div class="flex items-center space-x-4">
+                        <span><i class="fas fa-heart mr-1"></i>34</span>
+                        <span><i class="fas fa-comment mr-1"></i>3</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="content-item" onclick="viewPost(6)">
+                <div class="content-image" style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);">
+                    <i class="fas fa-sun"></i>
+                </div>
+                <div class="content-overlay">
+                    <div class="flex items-center space-x-4">
+                        <span><i class="fas fa-heart mr-1"></i>56</span>
+                        <span><i class="fas fa-comment mr-1"></i>7</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let isFollowing = false;
+        
+        // 關注功能
+        function toggleFollow() {
+            const btn = document.getElementById('followBtn');
+            isFollowing = !isFollowing;
+            
+            if (isFollowing) {
+                btn.innerHTML = '<i class="fas fa-check mr-2"></i>已關注';
+                btn.classList.add('btn-following');
+                btn.classList.remove('btn-primary');
+            } else {
+                btn.innerHTML = '<i class="fas fa-user-plus mr-2"></i>關注';
+                btn.classList.remove('btn-following');
+                btn.classList.add('btn-primary');
+            }
+        }
+        
+        // 切換標籤
+        function switchTab(tab, type) {
+            // 移除所有active類
+            document.querySelectorAll('.content-tab').forEach(t => t.classList.remove('active'));
+            // 添加active類到當前選中的標籤
+            tab.classList.add('active');
+            
+            // 根據類型顯示不同內容
+            const contentGrid = document.getElementById('contentGrid');
+            
+            if (type === 'tagged') {
+                contentGrid.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-icon">📷</div>
+                        <div>還沒有被標記的照片</div>
+                    </div>
+                `;
+            } else if (type === 'saved') {
+                contentGrid.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-icon">🔒</div>
+                        <div>收藏的內容是私人的</div>
+                    </div>
+                `;
+            } else {
+                // 恢復原始內容
+                contentGrid.innerHTML = `
+                    <div class="content-item" onclick="viewPost(1)">
+                        <div class="content-image">
+                            <i class="fas fa-heart"></i>
+                        </div>
+                        <div class="content-overlay">
+                            <div class="flex items-center space-x-4">
+                                <span><i class="fas fa-heart mr-1"></i>23</span>
+                                <span><i class="fas fa-comment mr-1"></i>5</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="content-item" onclick="viewPost(2)">
+                        <div class="content-image" style="background: linear-gradient(135deg, #06b6d4 0%, #3b82f6 100%);">
+                            <i class="fas fa-fish"></i>
+                        </div>
+                        <div class="content-overlay">
+                            <div class="flex items-center space-x-4">
+                                <span><i class="fas fa-heart mr-1"></i>45</span>
+                                <span><i class="fas fa-comment mr-1"></i>12</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="content-item" onclick="viewPost(3)">
+                        <div class="content-image" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
+                            <i class="fas fa-camera"></i>
+                        </div>
+                        <div class="content-overlay">
+                            <div class="flex items-center space-x-4">
+                                <span><i class="fas fa-heart mr-1"></i>67</span>
+                                <span><i class="fas fa-comment mr-1"></i>8</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="content-item" onclick="viewPost(4)">
+                        <div class="content-image" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);">
+                            <i class="fas fa-umbrella-beach"></i>
+                        </div>
+                        <div class="content-overlay">
+                            <div class="flex items-center space-x-4">
+                                <span><i class="fas fa-heart mr-1"></i>89</span>
+                                <span><i class="fas fa-comment mr-1"></i>15</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="content-item" onclick="viewPost(5)">
+                        <div class="content-image" style="background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);">
+                            <i class="fas fa-mountain"></i>
+                        </div>
+                        <div class="content-overlay">
+                            <div class="flex items-center space-x-4">
+                                <span><i class="fas fa-heart mr-1"></i>34</span>
+                                <span><i class="fas fa-comment mr-1"></i>3</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="content-item" onclick="viewPost(6)">
+                        <div class="content-image" style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);">
+                            <i class="fas fa-sun"></i>
+                        </div>
+                        <div class="content-overlay">
+                            <div class="flex items-center space-x-4">
+                                <span><i class="fas fa-heart mr-1"></i>56</span>
+                                <span><i class="fas fa-comment mr-1"></i>7</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+        
+        // 查看貼文
+        function viewPost(postId) {
+            // 跳轉到貼文詳情頁面
+            window.location.href = `post-detail.html?id=${postId}`;
+        }
+    </script>
+</body>
+</html>

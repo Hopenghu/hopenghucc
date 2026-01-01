@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "Hopenghu Cloudflare Worker",
   "main": "dist/worker.js",
+  "type": "module",
   "private": true,
   "dependencies": {
     "@heroicons/react": "^2.1.1",
@@ -11,7 +12,7 @@
     "@testing-library/react": "^13.4.0",
     "@testing-library/user-event": "^13.5.0",
     "esbuild": "^0.19.0",
-    "hono": "^3.12.8",
+    "hono": "^4.9.9",
     "jose": "^5.2.2",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
@@ -22,8 +23,28 @@
   },
   "scripts": {
     "start": "wrangler dev",
+    "dev": "wrangler dev",
     "deploy": "wrangler deploy",
-    "build": "./node_modules/.bin/tailwindcss -i ./src/styles/globals.css -o ./src/styles/tailwind.output.css --minify && esbuild src/worker.js --bundle --format=esm --outfile=dist/worker.js --target=node16 --loader:.js=jsx --loader:.jsx=jsx --loader:.css=text --loader:.jpg=dataurl --external:react --external:react-dom --external:node:*"
+    "deploy:v2": "wrangler deploy --config wrangler-v2.toml",
+    "build": "./node_modules/.bin/tailwindcss -i ./src/styles/globals.css -o ./src/styles/tailwind.output.css --minify && esbuild src/worker.js --bundle --format=esm --outfile=dist/worker.js --target=node16 --loader:.js=jsx --loader:.jsx=jsx --loader:.css=text --loader:.jpg=dataurl --external:react --external:react-dom --external:node:*",
+    "build:v2": "esbuild src/worker-v2.js --bundle --format=esm --outfile=dist/worker-v2.js --target=node16",
+    "build:itinerary": "cd ai-smart-itinerary-planner && npm run build",
+    "embed:assets": "node scripts/embed-itinerary-assets.js",
+    "build:all": "npm run build:itinerary && npm run embed:assets && npm run build",
+    "deploy:all": "npm run build:all && npm run deploy",
+    "migrate": "node scripts/migrate.js",
+    "migrate:remote": "node scripts/migrate.js --remote",
+    "migrate:help": "node scripts/migrate.js --help",
+    "test:relationship-depth": "node scripts/test-relationship-depth.js",
+    "verify:db": "node scripts/quick-verify.js",
+    "verify:db:remote": "node scripts/quick-verify.js --remote",
+    "dev:tools": "node scripts/dev-tools.js",
+    "dev:validate": "node scripts/dev-tools.js validate",
+    "dev:status": "node scripts/dev-tools.js status",
+    "lint": "echo 'Linting...' && node -e \"console.log('Add ESLint configuration')\"",
+    "format": "echo 'Formatting...' && node -e \"console.log('Add Prettier configuration')\"",
+    "clean": "rm -rf dist node_modules/.cache",
+    "clean:all": "npm run clean && rm -rf static-site/ai-smart-itinerary-planner"
   },
   "eslintConfig": {
     "extends": [

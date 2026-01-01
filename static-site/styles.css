@@ -1,0 +1,319 @@
+/* 澎湖時光機 - 統一樣式表 */
+
+/* 字體設定 */
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;600;700&display=swap');
+body { 
+    font-family: 'Noto Sans TC', sans-serif; 
+}
+
+/* 漸層背景 */
+.ocean-gradient {
+    background: linear-gradient(135deg, #0066CC 0%, #E8F0FE 100%);
+}
+
+.coral-gradient {
+    background: linear-gradient(135deg, #FF6B6B 0%, #FFD166 100%);
+}
+
+.gradient-bg {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+/* 卡片樣式 */
+.time-machine-card {
+    background: linear-gradient(145deg, #f0f9ff 0%, #e0f2fe 100%);
+    border: 2px solid #0ea5e9;
+    box-shadow: 0 10px 25px rgba(14, 165, 233, 0.1);
+}
+
+.returning-guest-card {
+    background: linear-gradient(145deg, #fef3c7 0%, #fde68a 100%);
+    border: 2px solid #f59e0b;
+    box-shadow: 0 10px 25px rgba(245, 158, 11, 0.1);
+}
+
+.community-card {
+    background: linear-gradient(145deg, #f3e8ff 0%, #e9d5ff 100%);
+    border: 2px solid #8b5cf6;
+    box-shadow: 0 10px 25px rgba(139, 92, 246, 0.1);
+}
+
+.card-hover {
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.card-hover:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+/* 時間軸樣式 */
+.timeline-item {
+    position: relative;
+    padding-left: 2rem;
+}
+
+.timeline-item::before {
+    content: '';
+    position: absolute;
+    left: 0.5rem;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: linear-gradient(to bottom, #667eea, #764ba2);
+}
+
+.timeline-dot {
+    position: absolute;
+    left: 0.25rem;
+    top: 0.5rem;
+    width: 0.75rem;
+    height: 0.75rem;
+    background: #667eea;
+    border-radius: 50%;
+    border: 3px solid white;
+    box-shadow: 0 0 0 3px #667eea;
+}
+
+/* 評分星星 */
+.rating-stars {
+    color: #fbbf24;
+}
+
+/* 標籤樣式 */
+.tag {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    padding: 0.25rem 0.75rem;
+    border-radius: 9999px;
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+/* 英雄圖片背景 */
+.hero-image {
+    background: linear-gradient(rgba(0,0,0,0.4), rgba(0,0,0,0.4)), url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 600"><rect fill="%23667eea" width="1200" height="600"/><circle fill="%23764ba2" cx="200" cy="150" r="100"/><circle fill="%23667eea" cx="800" cy="300" r="150"/><circle fill="%23764ba2" cx="1000" cy="100" r="80"/></svg>');
+    background-size: cover;
+    background-position: center;
+}
+
+/* 響應式設計 - 手機版優化 */
+@media (max-width: 768px) {
+    /* 手機版導航 */
+    .mobile-nav {
+        display: block;
+    }
+    
+    .desktop-nav {
+        display: none;
+    }
+    
+    /* 手機版按鈕 */
+    .btn-mobile {
+        width: 100%;
+        padding: 1rem;
+        font-size: 1.1rem;
+        margin-bottom: 0.5rem;
+    }
+    
+    /* 手機版卡片 */
+    .card-mobile {
+        margin-bottom: 1rem;
+        padding: 1.5rem;
+    }
+    
+    /* 手機版文字大小 */
+    .text-mobile-lg {
+        font-size: 1.5rem;
+        line-height: 1.4;
+    }
+    
+    .text-mobile-xl {
+        font-size: 2rem;
+        line-height: 1.3;
+    }
+    
+    /* 手機版間距 */
+    .section-mobile {
+        padding: 2rem 1rem;
+    }
+    
+    /* 手機版按鈕樣式 */
+    .btn-mobile {
+        padding: 1rem 2rem;
+        font-size: 1.1rem;
+        width: 100%;
+        margin-bottom: 0.5rem;
+    }
+    
+    /* 時間軸手機版 */
+    .timeline-item {
+        padding-left: 1.5rem;
+    }
+    
+    .timeline-item::before {
+        left: 0.25rem;
+    }
+    
+    .timeline-dot {
+        left: 0;
+        width: 0.5rem;
+        height: 0.5rem;
+    }
+}
+
+/* 響應式設計 - 桌機版優化 */
+@media (min-width: 1025px) {
+    /* 桌機版導航 */
+    .desktop-nav {
+        display: flex;
+    }
+    
+    .mobile-nav {
+        display: none;
+    }
+    
+    /* 桌機版按鈕 */
+    .btn-desktop {
+        padding: 0.75rem 1.5rem;
+        font-size: 1rem;
+    }
+    
+    /* 桌機版卡片 */
+    .card-desktop {
+        padding: 2rem;
+        margin-bottom: 2rem;
+    }
+    
+    /* 桌機版文字大小 */
+    .text-desktop-lg {
+        font-size: 1.875rem;
+        line-height: 1.2;
+    }
+    
+    .text-desktop-xl {
+        font-size: 3rem;
+        line-height: 1.1;
+    }
+    
+    /* 桌機版間距 */
+    .section-desktop {
+        padding: 5rem 2rem;
+    }
+    
+    /* 桌機版網格 */
+    .grid-desktop {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 2rem;
+    }
+}
+
+/* 動畫效果 */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.fade-in-up {
+    animation: fadeInUp 0.6s ease-out;
+}
+
+/* 按鈕樣式 */
+.btn-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 0.75rem 1.5rem;
+    border-radius: 0.5rem;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    border: none;
+    cursor: pointer;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+}
+
+.btn-secondary {
+    background: white;
+    color: #667eea;
+    padding: 0.75rem 1.5rem;
+    border-radius: 0.5rem;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    border: 2px solid #667eea;
+    cursor: pointer;
+}
+
+.btn-secondary:hover {
+    background: #667eea;
+    color: white;
+    transform: translateY(-2px);
+}
+
+/* 表單樣式 */
+.form-input {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border: 2px solid #e5e7eb;
+    border-radius: 0.5rem;
+    font-size: 1rem;
+    transition: border-color 0.3s ease;
+}
+
+.form-input:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+/* 載入動畫 */
+.loading-spinner {
+    border: 4px solid #f3f4f6;
+    border-top: 4px solid #667eea;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* 工具提示 */
+.tooltip {
+    position: relative;
+    display: inline-block;
+}
+
+.tooltip .tooltiptext {
+    visibility: hidden;
+    width: 120px;
+    background-color: #374151;
+    color: #fff;
+    text-align: center;
+    border-radius: 6px;
+    padding: 5px 0;
+    position: absolute;
+    z-index: 1;
+    bottom: 125%;
+    left: 50%;
+    margin-left: -60px;
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+
+.tooltip:hover .tooltiptext {
+    visibility: visible;
+    opacity: 1;
+}

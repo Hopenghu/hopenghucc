@@ -1,0 +1,117 @@
+/**
+ * Responsive Design Utilities
+ * 響應式設計輔助類別和斷點
+ */
+
+/* 斷點定義 */
+/* sm: 640px, md: 768px, lg: 1024px, xl: 1280px, 2xl: 1536px */
+
+/* 觸控優化 */
+@media (hover: none) and (pointer: coarse) {
+  /* 行動裝置觸控優化 */
+  button, a, [role="button"] {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  /* 增加點擊目標大小 */
+  .touch-target {
+    min-height: 44px;
+    min-width: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+}
+
+/* 平板優化 */
+@media (min-width: 768px) and (max-width: 1023px) {
+  /* 平板特定樣式 */
+  .tablet-optimized {
+    padding: 1.5rem;
+  }
+}
+
+/* 行動裝置優化 */
+@media (max-width: 767px) {
+  /* 隱藏桌面專用元素 */
+  .desktop-only {
+    display: none !important;
+  }
+  
+  /* 行動裝置專用間距 */
+  .mobile-spacing {
+    padding: 1rem;
+  }
+  
+  /* 行動裝置字體大小調整 */
+  .mobile-text {
+    font-size: 0.875rem;
+  }
+  
+  /* 行動裝置按鈕全寬 */
+  .mobile-full-width {
+    width: 100%;
+  }
+}
+
+/* 桌面優化 */
+@media (min-width: 1024px) {
+  /* 隱藏行動裝置專用元素 */
+  .mobile-only {
+    display: none !important;
+  }
+  
+  /* 桌面專用間距 */
+  .desktop-spacing {
+    padding: 2rem;
+  }
+}
+
+/* 大螢幕優化 */
+@media (min-width: 1536px) {
+  /* 限制最大寬度以保持可讀性 */
+  .container-xl {
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+}
+
+/* 橫向模式優化 */
+@media (orientation: landscape) and (max-height: 500px) {
+  /* 橫向模式下的特殊處理 */
+  .landscape-compact {
+    padding: 0.5rem;
+  }
+}
+
+/* 高解析度螢幕優化 */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+  /* 高解析度螢幕的邊框和陰影調整 */
+  .retina-border {
+    border-width: 0.5px;
+  }
+}
+
+/* 可訪問性優化 */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* 列印樣式 */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  
+  .print-break {
+    page-break-after: always;
+  }
+}
+

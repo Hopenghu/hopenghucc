@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>聯絡客服 - HOPENGHU好澎湖</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;600;700&display=swap');
+        body { 
+            font-family: 'Noto Sans TC', sans-serif; 
+            background: #f8fafc;
+        }
+        
+        .contact-container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 1rem;
+        }
+        
+        .contact-section {
+            background: white;
+            border-radius: 12px;
+            margin-bottom: 1rem;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        .section-header {
+            padding: 1rem 1.5rem;
+            background: #f9fafb;
+            border-bottom: 1px solid #e5e7eb;
+            font-weight: 600;
+            color: #374151;
+        }
+        
+        .contact-method {
+            display: flex;
+            align-items: center;
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid #f3f4f6;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        
+        .contact-method:hover {
+            background: #f9fafb;
+        }
+        
+        .contact-method:last-child {
+            border-bottom: none;
+        }
+        
+        .method-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 1rem;
+            font-size: 1.5rem;
+            color: white;
+        }
+        
+        .method-icon.chat {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+        }
+        
+        .method-icon.email {
+            background: linear-gradient(135deg, #10b981, #059669);
+        }
+        
+        .method-icon.phone {
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+        }
+        
+        .method-icon.faq {
+            background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+        }
+        
+        .method-info {
+            flex: 1;
+        }
+        
+        .method-name {
+            font-weight: 500;
+            color: #111827;
+            margin-bottom: 0.25rem;
+        }
+        
+        .method-description {
+            font-size: 0.8rem;
+            color: #6b7280;
+        }
+        
+        .method-arrow {
+            color: #9ca3af;
+            font-size: 1.2rem;
+        }
+        
+        .form-section {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        .form-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #111827;
+            margin-bottom: 1.5rem;
+        }
+        
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+        
+        .form-label {
+            display: block;
+            font-weight: 500;
+            color: #374151;
+            margin-bottom: 0.5rem;
+        }
+        
+        .form-input {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.3s;
+        }
+        
+        .form-input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        .form-textarea {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            font-size: 1rem;
+            resize: vertical;
+            min-height: 120px;
+            transition: border-color 0.3s;
+        }
+        
+        .form-textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        .form-select {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            font-size: 1rem;
+            background: white;
+            cursor: pointer;
+        }
+        
+        .form-select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        .submit-btn {
+            width: 100%;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 1rem;
+            border-radius: 12px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.3s;
+        }
+        
+        .submit-btn:hover {
+            transform: translateY(-2px);
+        }
+        
+        .submit-btn:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .hours-section {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        .hours-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #111827;
+            margin-bottom: 1rem;
+        }
+        
+        .hours-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        
+        .hours-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid #f3f4f6;
+        }
+        
+        .hours-item:last-child {
+            border-bottom: none;
+        }
+        
+        .hours-day {
+            font-weight: 500;
+            color: #374151;
+        }
+        
+        .hours-time {
+            color: #6b7280;
+            font-size: 0.9rem;
+        }
+        
+        .status-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.25rem 0.75rem;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            margin-left: 0.5rem;
+        }
+        
+        .status-online {
+            background: #d1fae5;
+            color: #059669;
+        }
+        
+        .status-offline {
+            background: #fee2e2;
+            color: #dc2626;
+        }
+        
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+        
+        .status-dot.online {
+            background: #10b981;
+        }
+        
+        .status-dot.offline {
+            background: #ef4444;
+        }
+        
+        .info-text {
+            background: #f0f4ff;
+            border: 1px solid #c7d2fe;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-top: 1rem;
+            font-size: 0.9rem;
+            color: #3730a3;
+        }
+        
+        /* 手機版優化 */
+        @media (max-width: 768px) {
+            .contact-container {
+                padding: 0.5rem;
+            }
+            
+            .contact-method {
+                padding: 0.75rem 1rem;
+            }
+            
+            .method-icon {
+                width: 40px;
+                height: 40px;
+                font-size: 1.2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- 頂部導航 -->
+    <nav class="bg-white shadow-sm sticky top-0 z-50">
+        <div class="max-w-600px mx-auto px-4 py-3">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center">
+                    <a href="settings.html" class="mr-4">
+                        <i class="fas fa-arrow-left text-xl text-gray-600"></i>
+                    </a>
+                    <span class="text-lg font-semibold">聯絡客服</span>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="contact-container">
+        <!-- 聯絡方式 -->
+        <div class="contact-section">
+            <div class="section-header">
+                <i class="fas fa-headset mr-2"></i>
+                聯絡方式
+            </div>
+            
+            <!-- 線上客服 -->
+            <div class="contact-method" onclick="openChat()">
+                <div class="method-icon chat">
+                    <i class="fas fa-comments"></i>
+                </div>
+                <div class="method-info">
+                    <div class="method-name">
+                        線上客服
+                        <span class="status-indicator status-online">
+                            <div class="status-dot online"></div>
+                            線上
+                        </span>
+                    </div>
+                    <div class="method-description">即時聊天支援，平均回應時間 2 分鐘</div>
+                </div>
+                <div class="method-arrow">
+                    <i class="fas fa-chevron-right"></i>
+                </div>
+            </div>
+            
+            <!-- 電子郵件 -->
+            <div class="contact-method" onclick="openEmail()">
+                <div class="method-icon email">
+                    <i class="fas fa-envelope"></i>
+                </div>
+                <div class="method-info">
+                    <div class="method-name">電子郵件</div>
+                    <div class="method-description">support@hopenghu.cc，24小時內回覆</div>
+                </div>
+                <div class="method-arrow">
+                    <i class="fas fa-chevron-right"></i>
+                </div>
+            </div>
+            
+            <!-- 電話客服 -->
+            <div class="contact-method" onclick="openPhone()">
+                <div class="method-icon phone">
+                    <i class="fas fa-phone"></i>
+                </div>
+                <div class="method-info">
+                    <div class="method-name">
+                        電話客服
+                        <span class="status-indicator status-offline">
+                            <div class="status-dot offline"></div>
+                            離線
+                        </span>
+                    </div>
+                    <div class="method-description">0800-123-456，週一至週五 9:00-18:00</div>
+                </div>
+                <div class="method-arrow">
+                    <i class="fas fa-chevron-right"></i>
+                </div>
+            </div>
+            
+            <!-- 常見問題 -->
+            <div class="contact-method" onclick="openFAQ()">
+                <div class="method-icon faq">
+                    <i class="fas fa-question-circle"></i>
+                </div>
+                <div class="method-info">
+                    <div class="method-name">常見問題</div>
+                    <div class="method-description">查看常見問題解答，快速找到解決方案</div>
+                </div>
+                <div class="method-arrow">
+                    <i class="fas fa-chevron-right"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- 客服時間 -->
+        <div class="hours-section">
+            <div class="hours-title">客服時間</div>
+            <ul class="hours-list">
+                <li class="hours-item">
+                    <span class="hours-day">週一至週五</span>
+                    <span class="hours-time">09:00 - 18:00</span>
+                </li>
+                <li class="hours-item">
+                    <span class="hours-day">週六</span>
+                    <span class="hours-time">10:00 - 16:00</span>
+                </li>
+                <li class="hours-item">
+                    <span class="hours-day">週日</span>
+                    <span class="hours-time">休息</span>
+                </li>
+                <li class="hours-item">
+                    <span class="hours-day">國定假日</span>
+                    <span class="hours-time">休息</span>
+                </li>
+            </ul>
+        </div>
+
+        <!-- 問題回報表單 -->
+        <div class="form-section">
+            <div class="form-title">問題回報</div>
+            
+            <form id="supportForm">
+                <div class="form-group">
+                    <label class="form-label">問題類型</label>
+                    <select class="form-select" id="issueType" required>
+                        <option value="">請選擇問題類型</option>
+                        <option value="account">帳戶問題</option>
+                        <option value="technical">技術問題</option>
+                        <option value="payment">付款問題</option>
+                        <option value="feature">功能建議</option>
+                        <option value="bug">錯誤回報</option>
+                        <option value="other">其他</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">優先級</label>
+                    <select class="form-select" id="priority" required>
+                        <option value="">請選擇優先級</option>
+                        <option value="low">低 - 一般問題</option>
+                        <option value="medium">中 - 影響使用</option>
+                        <option value="high">高 - 無法使用</option>
+                        <option value="urgent">緊急 - 需要立即處理</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">電子郵件</label>
+                    <input type="email" class="form-input" id="email" placeholder="請輸入您的電子郵件" required>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">問題描述</label>
+                    <textarea class="form-textarea" id="description" placeholder="請詳細描述您遇到的問題，包括操作步驟和錯誤訊息..." required></textarea>
+                </div>
+                
+                <button type="submit" class="submit-btn" id="submitBtn">
+                    <i class="fas fa-paper-plane mr-2"></i>提交問題
+                </button>
+            </form>
+        </div>
+
+        <!-- 說明文字 -->
+        <div class="info-text">
+            <i class="fas fa-info-circle mr-2"></i>
+            我們致力於為您提供最佳的客戶服務體驗。如果您遇到任何問題，請隨時聯絡我們，我們會盡快為您解決。
+        </div>
+    </div>
+
+    <script>
+        // 開啟線上客服
+        function openChat() {
+            alert('開啟線上客服聊天視窗');
+            // 這裡可以整合第三方客服系統
+        }
+        
+        // 開啟電子郵件
+        function openEmail() {
+            const subject = encodeURIComponent('HOPENGHU好澎湖 - 客服諮詢');
+            const body = encodeURIComponent('您好，\n\n我想諮詢以下問題：\n\n');
+            window.location.href = `mailto:support@hopenghu.cc?subject=${subject}&body=${body}`;
+        }
+        
+        // 開啟電話
+        function openPhone() {
+            window.location.href = 'tel:0800-123-456';
+        }
+        
+        // 開啟常見問題
+        function openFAQ() {
+            window.location.href = 'help-center.html';
+        }
+        
+        // 表單提交
+        document.getElementById('supportForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const submitBtn = document.getElementById('submitBtn');
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>提交中...';
+            
+            // 收集表單數據
+            const formData = {
+                issueType: document.getElementById('issueType').value,
+                priority: document.getElementById('priority').value,
+                email: document.getElementById('email').value,
+                description: document.getElementById('description').value,
+                timestamp: new Date().toISOString()
+            };
+            
+            // 模擬提交過程
+            setTimeout(() => {
+                // 這裡應該發送到後端API
+                console.log('問題回報提交:', formData);
+                
+                alert('問題已成功提交！我們會在24小時內回覆您。');
+                
+                // 重置表單
+                document.getElementById('supportForm').reset();
+                
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="fas fa-paper-plane mr-2"></i>提交問題';
+            }, 2000);
+        });
+        
+        // 初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            // 檢查客服狀態
+            checkSupportStatus();
+        });
+        
+        // 檢查客服狀態
+        function checkSupportStatus() {
+            const now = new Date();
+            const hour = now.getHours();
+            const day = now.getDay();
+            
+            // 週一至週五 9:00-18:00
+            const isWeekday = day >= 1 && day <= 5;
+            const isWorkingHours = hour >= 9 && hour < 18;
+            
+            const chatStatus = document.querySelector('.contact-method .status-indicator');
+            const phoneStatus = document.querySelectorAll('.contact-method .status-indicator')[1];
+            
+            if (isWeekday && isWorkingHours) {
+                // 工作時間
+                chatStatus.className = 'status-indicator status-online';
+                chatStatus.innerHTML = '<div class="status-dot online"></div>線上';
+                
+                phoneStatus.className = 'status-indicator status-online';
+                phoneStatus.innerHTML = '<div class="status-dot online"></div>線上';
+            } else {
+                // 非工作時間
+                chatStatus.className = 'status-indicator status-offline';
+                chatStatus.innerHTML = '<div class="status-dot offline"></div>離線';
+                
+                phoneStatus.className = 'status-indicator status-offline';
+                phoneStatus.innerHTML = '<div class="status-dot offline"></div>離線';
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,7 @@
+
+name = "penghu-dual-ai"
+main = "src/index.ts"
+compatibility_date = "2025-01-01"
+
+[d1_databases]
+  db = { binding = "DB", database_name = "penghu_ai_db" }

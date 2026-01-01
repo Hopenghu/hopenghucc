@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>封鎖的使用者 - HOPENGHU好澎湖</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;600;700&display=swap');
+        body { 
+            font-family: 'Noto Sans TC', sans-serif; 
+            background: #f8fafc;
+        }
+        
+        .blocked-container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 1rem;
+        }
+        
+        .blocked-section {
+            background: white;
+            border-radius: 12px;
+            margin-bottom: 1rem;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        .section-header {
+            padding: 1rem 1.5rem;
+            background: #f9fafb;
+            border-bottom: 1px solid #e5e7eb;
+            font-weight: 600;
+            color: #374151;
+        }
+        
+        .blocked-user {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid #f3f4f6;
+        }
+        
+        .blocked-user:last-child {
+            border-bottom: none;
+        }
+        
+        .user-info {
+            display: flex;
+            align-items: center;
+            flex: 1;
+        }
+        
+        .user-avatar {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 1.2rem;
+            margin-right: 1rem;
+        }
+        
+        .user-details {
+            flex: 1;
+        }
+        
+        .username {
+            font-weight: 500;
+            color: #111827;
+            margin-bottom: 0.25rem;
+        }
+        
+        .block-date {
+            font-size: 0.8rem;
+            color: #6b7280;
+        }
+        
+        .unblock-btn {
+            background: #ef4444;
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        
+        .unblock-btn:hover {
+            background: #dc2626;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 3rem 1rem;
+            color: #6b7280;
+        }
+        
+        .empty-icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+        }
+        
+        .empty-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #374151;
+            margin-bottom: 0.5rem;
+        }
+        
+        .empty-description {
+            font-size: 0.9rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        .block-user-section {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        .block-form {
+            display: flex;
+            gap: 1rem;
+            align-items: end;
+        }
+        
+        .form-group {
+            flex: 1;
+        }
+        
+        .form-label {
+            display: block;
+            font-weight: 500;
+            color: #374151;
+            margin-bottom: 0.5rem;
+        }
+        
+        .form-input {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.3s;
+        }
+        
+        .form-input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        .block-btn {
+            background: #ef4444;
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        
+        .block-btn:hover {
+            background: #dc2626;
+        }
+        
+        .block-btn:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+        }
+        
+        .info-text {
+            background: #f0f4ff;
+            border: 1px solid #c7d2fe;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-top: 1rem;
+            font-size: 0.9rem;
+            color: #3730a3;
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .modal-content {
+            background: white;
+            border-radius: 12px;
+            padding: 2rem;
+            max-width: 400px;
+            width: 90%;
+            text-align: center;
+        }
+        
+        .modal-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #111827;
+            margin-bottom: 1rem;
+        }
+        
+        .modal-buttons {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+        
+        .modal-btn {
+            flex: 1;
+            padding: 0.75rem;
+            border-radius: 8px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .modal-btn-primary {
+            background: #ef4444;
+            color: white;
+            border: none;
+        }
+        
+        .modal-btn-secondary {
+            background: #f3f4f6;
+            color: #374151;
+            border: 1px solid #d1d5db;
+        }
+        
+        /* 手機版優化 */
+        @media (max-width: 768px) {
+            .blocked-container {
+                padding: 0.5rem;
+            }
+            
+            .blocked-user {
+                padding: 0.75rem 1rem;
+            }
+            
+            .block-form {
+                flex-direction: column;
+            }
+            
+            .modal-buttons {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- 頂部導航 -->
+    <nav class="bg-white shadow-sm sticky top-0 z-50">
+        <div class="max-w-600px mx-auto px-4 py-3">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center">
+                    <a href="settings.html" class="mr-4">
+                        <i class="fas fa-arrow-left text-xl text-gray-600"></i>
+                    </a>
+                    <span class="text-lg font-semibold">封鎖的使用者</span>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="blocked-container">
+        <!-- 封鎖新用戶 -->
+        <div class="block-user-section">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4">封鎖用戶</h2>
+            <div class="block-form">
+                <div class="form-group">
+                    <label class="form-label">用戶名稱或電子郵件</label>
+                    <input type="text" class="form-input" id="blockInput" placeholder="輸入要封鎖的用戶名稱或電子郵件">
+                </div>
+                <button class="block-btn" onclick="blockUser()" id="blockBtn" disabled>
+                    <i class="fas fa-ban mr-2"></i>封鎖
+                </button>
+            </div>
+            <div class="info-text">
+                <i class="fas fa-info-circle mr-2"></i>
+                封鎖用戶後，他們將無法查看您的個人資料、貼文或與您互動。
+            </div>
+        </div>
+
+        <!-- 已封鎖的用戶列表 -->
+        <div class="blocked-section">
+            <div class="section-header">
+                <i class="fas fa-user-slash mr-2"></i>
+                已封鎖的用戶 (3)
+            </div>
+            
+            <!-- 封鎖用戶 1 -->
+            <div class="blocked-user">
+                <div class="user-info">
+                    <div class="user-avatar">惡</div>
+                    <div class="user-details">
+                        <div class="username">惡意用戶</div>
+                        <div class="block-date">封鎖於 2024年10月1日</div>
+                    </div>
+                </div>
+                <button class="unblock-btn" onclick="showUnblockModal('惡意用戶')">
+                    <i class="fas fa-unlock mr-1"></i>解除封鎖
+                </button>
+            </div>
+            
+            <!-- 封鎖用戶 2 -->
+            <div class="blocked-user">
+                <div class="user-info">
+                    <div class="user-avatar">騷</div>
+                    <div class="user-details">
+                        <div class="username">騷擾者</div>
+                        <div class="block-date">封鎖於 2024年9月28日</div>
+                    </div>
+                </div>
+                <button class="unblock-btn" onclick="showUnblockModal('騷擾者')">
+                    <i class="fas fa-unlock mr-1"></i>解除封鎖
+                </button>
+            </div>
+            
+            <!-- 封鎖用戶 3 -->
+            <div class="blocked-user">
+                <div class="user-info">
+                    <div class="user-avatar">垃</div>
+                    <div class="user-details">
+                        <div class="username">垃圾訊息</div>
+                        <div class="block-date">封鎖於 2024年9月25日</div>
+                    </div>
+                </div>
+                <button class="unblock-btn" onclick="showUnblockModal('垃圾訊息')">
+                    <i class="fas fa-unlock mr-1"></i>解除封鎖
+                </button>
+            </div>
+        </div>
+
+        <!-- 空狀態（當沒有封鎖用戶時顯示） -->
+        <div class="blocked-section" id="emptyState" style="display: none;">
+            <div class="empty-state">
+                <div class="empty-icon">🚫</div>
+                <div class="empty-title">沒有封鎖的用戶</div>
+                <div class="empty-description">
+                    您目前沒有封鎖任何用戶。如果遇到騷擾或不當行為，您可以在這裡封鎖相關用戶。
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 解除封鎖確認模態框 -->
+    <div class="modal" id="unblockModal">
+        <div class="modal-content">
+            <div class="modal-title">解除封鎖確認</div>
+            <p class="text-gray-600 mb-4" id="unblockMessage">
+                您確定要解除封鎖這個用戶嗎？解除後，他們將能夠再次查看您的個人資料和貼文。
+            </p>
+            <div class="modal-buttons">
+                <button class="modal-btn modal-btn-secondary" onclick="hideUnblockModal()">取消</button>
+                <button class="modal-btn modal-btn-primary" onclick="confirmUnblock()">解除封鎖</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let blockedUsers = [
+            { name: '惡意用戶', avatar: '惡', date: '2024年10月1日' },
+            { name: '騷擾者', avatar: '騷', date: '2024年9月28日' },
+            { name: '垃圾訊息', avatar: '垃', date: '2024年9月25日' }
+        ];
+        let currentUnblockUser = null;
+        
+        // 監聽封鎖輸入框
+        document.getElementById('blockInput').addEventListener('input', function() {
+            const blockBtn = document.getElementById('blockBtn');
+            if (this.value.trim()) {
+                blockBtn.disabled = false;
+            } else {
+                blockBtn.disabled = true;
+            }
+        });
+        
+        // 封鎖用戶
+        function blockUser() {
+            const input = document.getElementById('blockInput');
+            const username = input.value.trim();
+            
+            if (!username) return;
+            
+            // 檢查是否已經封鎖
+            if (blockedUsers.some(user => user.name === username)) {
+                alert('此用戶已經被封鎖');
+                return;
+            }
+            
+            // 添加到封鎖列表
+            const newUser = {
+                name: username,
+                avatar: username.charAt(0),
+                date: new Date().toLocaleDateString('zh-TW')
+            };
+            
+            blockedUsers.unshift(newUser);
+            updateBlockedList();
+            
+            // 清空輸入框
+            input.value = '';
+            document.getElementById('blockBtn').disabled = true;
+            
+            alert(`已成功封鎖用戶：${username}`);
+        }
+        
+        // 顯示解除封鎖模態框
+        function showUnblockModal(username) {
+            currentUnblockUser = username;
+            document.getElementById('unblockMessage').textContent = 
+                `您確定要解除封鎖「${username}」嗎？解除後，他們將能夠再次查看您的個人資料和貼文。`;
+            document.getElementById('unblockModal').style.display = 'flex';
+        }
+        
+        // 隱藏解除封鎖模態框
+        function hideUnblockModal() {
+            document.getElementById('unblockModal').style.display = 'none';
+            currentUnblockUser = null;
+        }
+        
+        // 確認解除封鎖
+        function confirmUnblock() {
+            if (currentUnblockUser) {
+                // 從封鎖列表中移除
+                blockedUsers = blockedUsers.filter(user => user.name !== currentUnblockUser);
+                updateBlockedList();
+                
+                alert(`已成功解除封鎖用戶：${currentUnblockUser}`);
+                hideUnblockModal();
+            }
+        }
+        
+        // 更新封鎖列表顯示
+        function updateBlockedList() {
+            const blockedSection = document.querySelector('.blocked-section');
+            const emptyState = document.getElementById('emptyState');
+            
+            if (blockedUsers.length === 0) {
+                blockedSection.style.display = 'none';
+                emptyState.style.display = 'block';
+            } else {
+                blockedSection.style.display = 'block';
+                emptyState.style.display = 'none';
+                
+                // 更新用戶數量
+                const header = blockedSection.querySelector('.section-header');
+                header.innerHTML = `<i class="fas fa-user-slash mr-2"></i>已封鎖的用戶 (${blockedUsers.length})`;
+                
+                // 更新用戶列表
+                const userList = blockedSection.querySelector('.blocked-user').parentNode;
+                userList.innerHTML = '';
+                
+                blockedUsers.forEach(user => {
+                    const userElement = document.createElement('div');
+                    userElement.className = 'blocked-user';
+                    userElement.innerHTML = `
+                        <div class="user-info">
+                            <div class="user-avatar">${user.avatar}</div>
+                            <div class="user-details">
+                                <div class="username">${user.name}</div>
+                                <div class="block-date">封鎖於 ${user.date}</div>
+                            </div>
+                        </div>
+                        <button class="unblock-btn" onclick="showUnblockModal('${user.name}')">
+                            <i class="fas fa-unlock mr-1"></i>解除封鎖
+                        </button>
+                    `;
+                    userList.appendChild(userElement);
+                });
+            }
+        }
+        
+        // 點擊模態框外部關閉
+        document.getElementById('unblockModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                hideUnblockModal();
+            }
+        });
+        
+        // 初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            updateBlockedList();
+        });
+    </script>
+</body>
+</html>

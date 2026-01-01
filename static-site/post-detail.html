@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>貼文詳情 - HOPENGHU好澎湖</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;600;700&display=swap');
+        body { 
+            font-family: 'Noto Sans TC', sans-serif; 
+            background: #f8fafc;
+        }
+        
+        .post-container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            min-height: 100vh;
+        }
+        
+        .post-image {
+            width: 100%;
+            height: 400px;
+            object-fit: cover;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        
+        .post-header {
+            padding: 1rem;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        
+        .user-info {
+            display: flex;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+        
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            margin-right: 0.75rem;
+        }
+        
+        .user-details {
+            flex: 1;
+        }
+        
+        .username {
+            font-weight: 600;
+            color: #111827;
+            margin-bottom: 0.25rem;
+        }
+        
+        .post-time {
+            font-size: 0.8rem;
+            color: #6b7280;
+        }
+        
+        .post-actions {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+        
+        .action-btn {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            transition: transform 0.2s;
+            color: #374151;
+        }
+        
+        .action-btn:hover {
+            transform: scale(1.1);
+        }
+        
+        .action-btn.liked {
+            color: #ef4444;
+        }
+        
+        .action-btn.bookmarked {
+            color: #f59e0b;
+        }
+        
+        .likes-count {
+            font-weight: 600;
+            color: #111827;
+            margin-bottom: 0.5rem;
+        }
+        
+        .post-caption {
+            margin-bottom: 1rem;
+            line-height: 1.5;
+        }
+        
+        .caption-username {
+            font-weight: 600;
+            color: #111827;
+        }
+        
+        .view-comments {
+            color: #6b7280;
+            font-size: 0.9rem;
+            margin-bottom: 1rem;
+            cursor: pointer;
+        }
+        
+        .comments-section {
+            border-top: 1px solid #e5e7eb;
+            padding: 1rem;
+        }
+        
+        .comment {
+            display: flex;
+            margin-bottom: 1rem;
+        }
+        
+        .comment-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #10b981, #059669);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 0.8rem;
+            margin-right: 0.75rem;
+        }
+        
+        .comment-content {
+            flex: 1;
+        }
+        
+        .comment-username {
+            font-weight: 600;
+            color: #111827;
+            margin-right: 0.5rem;
+        }
+        
+        .comment-text {
+            color: #374151;
+            line-height: 1.4;
+        }
+        
+        .comment-time {
+            font-size: 0.8rem;
+            color: #6b7280;
+            margin-top: 0.25rem;
+        }
+        
+        .comment-input {
+            display: flex;
+            align-items: center;
+            margin-top: 1rem;
+        }
+        
+        .comment-input input {
+            flex: 1;
+            border: none;
+            outline: none;
+            padding: 0.75rem 0;
+            font-size: 0.9rem;
+        }
+        
+        .comment-input input::placeholder {
+            color: #9ca3af;
+        }
+        
+        .post-button {
+            background: none;
+            border: none;
+            color: #667eea;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+        
+        .post-button:disabled {
+            color: #9ca3af;
+            cursor: not-allowed;
+        }
+        
+        .location-info {
+            display: flex;
+            align-items: center;
+            color: #6b7280;
+            font-size: 0.9rem;
+            margin-bottom: 1rem;
+        }
+        
+        .location-icon {
+            margin-right: 0.5rem;
+        }
+        
+        /* 手機版優化 */
+        @media (max-width: 768px) {
+            .post-image {
+                height: 300px;
+            }
+            
+            .post-header {
+                padding: 0.75rem;
+            }
+            
+            .comments-section {
+                padding: 0.75rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- 頂部導航 -->
+    <nav class="bg-white shadow-sm sticky top-0 z-50">
+        <div class="max-w-600px mx-auto px-4 py-3">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center">
+                    <a href="feed.html" class="mr-4">
+                        <i class="fas fa-arrow-left text-xl text-gray-600"></i>
+                    </a>
+                    <span class="text-lg font-semibold">貼文</span>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <button class="text-gray-600">
+                        <i class="fas fa-share text-xl"></i>
+                    </button>
+                    <button class="text-gray-600">
+                        <i class="fas fa-ellipsis-h text-xl"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="post-container">
+        <!-- 貼文圖片 -->
+        <div class="post-image flex items-center justify-center text-white text-6xl">
+            <i class="fas fa-heart"></i>
+        </div>
+
+        <!-- 貼文內容 -->
+        <div class="post-header">
+            <!-- 用戶資訊 -->
+            <div class="user-info">
+                <div class="user-avatar">小</div>
+                <div class="user-details">
+                    <div class="username">小美</div>
+                    <div class="post-time">2小時前</div>
+                </div>
+            </div>
+
+            <!-- 地點資訊 -->
+            <div class="location-info">
+                <i class="fas fa-map-marker-alt location-icon"></i>
+                <span>七美雙心石滬</span>
+            </div>
+
+            <!-- 互動按鈕 -->
+            <div class="post-actions">
+                <button class="action-btn" onclick="toggleLike(this)">
+                    <i class="far fa-heart"></i>
+                </button>
+                <button class="action-btn" onclick="toggleComment()">
+                    <i class="far fa-comment"></i>
+                </button>
+                <button class="action-btn" onclick="sharePost()">
+                    <i class="far fa-paper-plane"></i>
+                </button>
+                <button class="action-btn bookmarked" onclick="toggleBookmark(this)">
+                    <i class="fas fa-bookmark"></i>
+                </button>
+            </div>
+
+            <!-- 按讚數 -->
+            <div class="likes-count">23個讚</div>
+
+            <!-- 貼文描述 -->
+            <div class="post-caption">
+                <span class="caption-username">小美</span> 在七美雙心石滬看夕陽，是我最美好的回憶！💕 
+                <br><br>
+                今天和家人一起來到這個浪漫的地方，看著夕陽西下，石滬在金色的陽光下顯得格外美麗。這裡真的是澎湖最浪漫的景點之一！
+                <br><br>
+                #七美 #雙心石滬 #澎湖 #夕陽 #浪漫 #家庭時光
+            </div>
+
+            <!-- 查看留言 -->
+            <div class="view-comments" onclick="toggleComments()">
+                查看全部 5 則留言
+            </div>
+        </div>
+
+        <!-- 留言區 -->
+        <div class="comments-section" id="commentsSection">
+            <!-- 留言 1 -->
+            <div class="comment">
+                <div class="comment-avatar">阿</div>
+                <div class="comment-content">
+                    <div>
+                        <span class="comment-username">阿明</span>
+                        <span class="comment-text">太美了！我也想去七美看夕陽 😍</span>
+                    </div>
+                    <div class="comment-time">1小時前</div>
+                </div>
+            </div>
+
+            <!-- 留言 2 -->
+            <div class="comment">
+                <div class="comment-avatar">小</div>
+                <div class="comment-content">
+                    <div>
+                        <span class="comment-username">小華</span>
+                        <span class="comment-text">雙心石滬真的很浪漫，拍照效果超棒！</span>
+                    </div>
+                    <div class="comment-time">45分鐘前</div>
+                </div>
+            </div>
+
+            <!-- 留言 3 -->
+            <div class="comment">
+                <div class="comment-avatar">李</div>
+                <div class="comment-content">
+                    <div>
+                        <span class="comment-username">李老師</span>
+                        <span class="comment-text">和家人一起的時光最珍貴了 ❤️</span>
+                    </div>
+                    <div class="comment-time">30分鐘前</div>
+                </div>
+            </div>
+
+            <!-- 留言輸入 -->
+            <div class="comment-input">
+                <input type="text" placeholder="新增留言..." id="commentInput" onkeypress="handleCommentInput(event)">
+                <button class="post-button" onclick="postComment()" id="postButton" disabled>發布</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let isLiked = false;
+        let isBookmarked = true;
+        let commentsVisible = true;
+        
+        // 點讚功能
+        function toggleLike(btn) {
+            const icon = btn.querySelector('i');
+            const likesCount = document.querySelector('.likes-count');
+            let count = parseInt(likesCount.textContent);
+            
+            if (isLiked) {
+                btn.classList.remove('liked');
+                icon.className = 'far fa-heart';
+                count--;
+                isLiked = false;
+            } else {
+                btn.classList.add('liked');
+                icon.className = 'fas fa-heart';
+                count++;
+                isLiked = true;
+            }
+            
+            likesCount.textContent = count + '個讚';
+        }
+        
+        // 收藏功能
+        function toggleBookmark(btn) {
+            const icon = btn.querySelector('i');
+            
+            if (isBookmarked) {
+                btn.classList.remove('bookmarked');
+                icon.className = 'far fa-bookmark';
+                isBookmarked = false;
+            } else {
+                btn.classList.add('bookmarked');
+                icon.className = 'fas fa-bookmark';
+                isBookmarked = true;
+            }
+        }
+        
+        // 評論功能
+        function toggleComment() {
+            const commentsSection = document.getElementById('commentsSection');
+            if (commentsVisible) {
+                commentsSection.style.display = 'none';
+                commentsVisible = false;
+            } else {
+                commentsSection.style.display = 'block';
+                commentsVisible = true;
+            }
+        }
+        
+        // 切換留言顯示
+        function toggleComments() {
+            const commentsSection = document.getElementById('commentsSection');
+            const viewComments = document.querySelector('.view-comments');
+            
+            if (commentsVisible) {
+                commentsSection.style.display = 'none';
+                viewComments.textContent = '查看全部 5 則留言';
+                commentsVisible = false;
+            } else {
+                commentsSection.style.display = 'block';
+                viewComments.textContent = '隱藏留言';
+                commentsVisible = true;
+            }
+        }
+        
+        // 分享功能
+        function sharePost() {
+            if (navigator.share) {
+                navigator.share({
+                    title: '澎湖分享',
+                    text: '來看看這個澎湖的分享！',
+                    url: window.location.href
+                });
+            } else {
+                navigator.clipboard.writeText(window.location.href).then(() => {
+                    alert('連結已複製到剪貼板');
+                });
+            }
+        }
+        
+        // 留言輸入處理
+        function handleCommentInput(event) {
+            const input = event.target;
+            const postButton = document.getElementById('postButton');
+            
+            if (input.value.trim()) {
+                postButton.disabled = false;
+            } else {
+                postButton.disabled = true;
+            }
+            
+            if (event.key === 'Enter') {
+                postComment();
+            }
+        }
+        
+        // 發布留言
+        function postComment() {
+            const input = document.getElementById('commentInput');
+            const commentText = input.value.trim();
+            
+            if (!commentText) return;
+            
+            // 創建新留言元素
+            const commentsSection = document.getElementById('commentsSection');
+            const newComment = document.createElement('div');
+            newComment.className = 'comment';
+            newComment.innerHTML = `
+                <div class="comment-avatar">我</div>
+                <div class="comment-content">
+                    <div>
+                        <span class="comment-username">我</span>
+                        <span class="comment-text">${commentText}</span>
+                    </div>
+                    <div class="comment-time">剛剛</div>
+                </div>
+            `;
+            
+            // 插入到留言輸入框之前
+            const commentInput = commentsSection.querySelector('.comment-input');
+            commentsSection.insertBefore(newComment, commentInput);
+            
+            // 清空輸入框
+            input.value = '';
+            document.getElementById('postButton').disabled = true;
+            
+            // 更新留言數量
+            const viewComments = document.querySelector('.view-comments');
+            const currentCount = parseInt(viewComments.textContent.match(/\d+/)[0]);
+            viewComments.textContent = `查看全部 ${currentCount + 1} 則留言`;
+        }
+        
+        // 監聽輸入框變化
+        document.getElementById('commentInput').addEventListener('input', function() {
+            const postButton = document.getElementById('postButton');
+            if (this.value.trim()) {
+                postButton.disabled = false;
+            } else {
+                postButton.disabled = true;
+            }
+        });
+    </script>
+</body>
+</html>

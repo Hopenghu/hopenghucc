@@ -1,11 +1,12 @@
 // src/modules/auth/google.js
 // Module dedicated to Google OAuth flow and related DB operations
 
-import { randomBytes } from 'node:crypto';
-
 // Helper to generate secure random strings (e.g., for session IDs)
+// Use Web Crypto API for Cloudflare Workers compatibility
 function generateSecureId(length = 32) {
-  return randomBytes(length).toString('hex');
+  const randomBytes = new Uint8Array(length);
+  crypto.getRandomValues(randomBytes);
+  return Array.from(randomBytes).map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
 /**
@@ -22,11 +23,11 @@ export function initiateGoogleAuth(requestUrl, env) {
   const clientId = env.GOOGLE_CLIENT_ID;
   if (!clientId) throw new Error('[Auth Google Module] GOOGLE_CLIENT_ID missing in environment.');
 
-  const redirectUri = 'https://www.hopenghu.cc/api/auth/google/callback';
+  const redirectUri = `${requestUrl.origin}/api/auth/google/callback`;
   const scope = 'openid email profile';
   const state = crypto.randomUUID();
   // State cookie: REMOVED SameSite=Lax for testing
-  const stateCookie = `google_oauth_state=${state}; Path=/; HttpOnly; Secure; Max-Age=300`;
+  const stateCookie = `google_oauth_state=${state}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=300`;
 
   console.log('[Auth Google Module] Setting state cookie header (No SameSite):', stateCookie);
 
@@ -170,7 +171,8 @@ export async function handleGoogleCallback(request, env) {
     const googleId = String(userInfo.id); // Ensure string
     const userName = userInfo.name || 'Google User';
     const avatarUrl = userInfo.picture || ''; // Use empty string
-    const now = Math.floor(Date.now() / 1000);
+    const now = new Date();
+    const nowIso = now.toISOString();
     let userId;
     let isNewUser = false;
 
@@ -181,32 +183,49 @@ export async function handleGoogleCallback(request, env) {
       userId = existingUser.id;
       console.log(`[Auth Google Callback Module] Updating existing user: ${userId}`);
       const stmt = db.prepare('UPDATE users SET name = ?, google_id = ?, avatar_url = ?, updated_at = ? WHERE id = ?');
-      await stmt.bind(userName, googleId, avatarUrl, now, userId).run();
+      await stmt.bind(userName, googleId, avatarUrl, nowIso, userId).run();
     } else {
       isNewUser = true;
-      userId = crypto.randomUUID();
-      console.log(`[Auth Google Callback Module] Creating new user: ${userId}`);
-      const stmt = db.prepare('INSERT INTO users (id, email, name, google_id, avatar_url, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)');
+      // Removed manual UUID generation for ID, letting DB auto-increment handle it
+      console.log(`[Auth Google Callback Module] Creating new user (Auto-ID)`);
+      
+      // Prepare statement WITHOUT id
+      const stmt = db.prepare('INSERT INTO users (email, name, google_id, avatar_url, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)');
+      
       // Log before attempting insert
-      console.log('[Auth Google Callback Module] Binding INSERT values:', { id: userId, email: userEmail, name: userName, google_id: googleId, avatar_url: avatarUrl, created_at: now, updated_at: now });
-      await stmt.bind(userId, userEmail, userName, googleId, avatarUrl, now, now).run();
-      console.log('[Auth Google Callback Module] New user created successfully.');
+      console.log('[Auth Google Callback Module] Binding INSERT values:', { email: userEmail, name: userName, google_id: googleId, avatar_url: avatarUrl, created_at: nowIso, updated_at: nowIso });
+      
+      const result = await stmt.bind(userEmail, userName, googleId, avatarUrl, nowIso, nowIso).run();
+      
+      // Retrieve the auto-generated ID
+      if (result.meta && result.meta.last_row_id) {
+          userId = result.meta.last_row_id;
+          console.log('[Auth Google Callback Module] New user created successfully. ID:', userId);
+      } else {
+          console.error('[Auth Google Callback Module] Failed to retrieve new user ID from insert result:', result);
+          throw new Error('Failed to create new user: Could not retrieve ID.');
+      }
     }
 
     // --- 5. Create Session --- 
     console.log(`[Auth Google Callback Module] Creating session for user: ${userId}`);
     const sessionId = generateSecureId();
-    const expiresAt = now + (7 * 24 * 60 * 60); // 7 days
+    // Use Date object for expiration calculation to match SessionService format
+    const expiresAt = new Date(now.getTime() + (7 * 24 * 60 * 60 * 1000)); 
+    const expiresAtIso = expiresAt.toISOString();
+    
     const sessionStmt = db.prepare('INSERT INTO sessions (id, user_id, expires_at, created_at) VALUES (?, ?, ?, ?)');
-    await sessionStmt.bind(sessionId, userId, expiresAt, now).run();
+    await sessionStmt.bind(sessionId, userId, expiresAtIso, nowIso).run();
     console.log(`[Auth Google Callback Module] Session created: ${sessionId}`);
 
     // --- 6. Set Session Cookie & Redirect --- 
-    const sessionCookie = `session=${sessionId}; Path=/; HttpOnly; Secure; Max-Age=${7 * 24 * 60 * 60}`;
+    const sessionCookie = `session=${sessionId}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${7 * 24 * 60 * 60}`;
     responseHeaders.append('Set-Cookie', sessionCookie); // Add session cookie (state cookie clear already set)
-    responseHeaders.append('Location', '/google-info'); // Or maybe just '/' or '/dashboard'
+    responseHeaders.append('Location', '/'); // Redirect to homepage to show logged in state
 
-    console.log('[Auth Google Callback Module] Success. Redirecting...');
+    console.log('[Auth Google Callback Module] Success. Session created:', sessionId);
+    console.log('[Auth Google Callback Module] User created/updated:', { userId, email: userEmail, name: userName, avatar_url: avatarUrl });
+    console.log('[Auth Google Callback Module] Redirecting to homepage with session cookie...');
     return new Response(null, { status: 302, headers: responseHeaders });
 
   } catch (error) {

@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>個人檔案 - HOPENGHU好澎湖 v2.0</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="../styles.css">
+</head>
+<body class="bg-gray-50">
+    <!-- 導航欄 -->
+    <nav class="bg-white shadow-lg sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center">
+                    <a href="index.html" class="text-2xl font-bold text-blue-600">🏝️ HOPENGHU好澎湖</a>
+                </div>
+                <div class="hidden md:block">
+                    <div class="ml-10 flex items-baseline space-x-4">
+                        <a href="index.html" class="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium">首頁</a>
+                        <a href="feed.html" class="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium">內容流</a>
+                        <a href="discover.html" class="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium">發現朋友</a>
+                        <a href="profile.html" class="bg-blue-600 text-white px-3 py-2 rounded-md text-sm font-medium">個人檔案</a>
+                        <button id="uploadBtn" class="bg-green-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-green-700">
+                            <i class="fas fa-plus mr-2"></i>上傳
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 主要內容 -->
+    <main class="max-w-6xl mx-auto py-8 px-4">
+        <!-- 個人檔案頭部 -->
+        <div class="bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl shadow-lg p-8 mb-8 text-white">
+            <div class="flex items-center space-x-6">
+                <div class="w-24 h-24 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
+                    <i class="fas fa-user text-4xl"></i>
+                </div>
+                <div>
+                    <h1 class="text-3xl font-bold mb-2">歡迎回來，澎湖的朋友！</h1>
+                    <p class="text-lg opacity-90">發現與您相關的澎湖朋友！像小紅書、IG一樣簡單</p>
+                    <div class="flex items-center space-x-6 mt-4">
+                        <div class="text-center">
+                            <div class="text-2xl font-bold">23</div>
+                            <div class="text-sm opacity-80">內容分享</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="text-2xl font-bold">156</div>
+                            <div class="text-sm opacity-80">相關朋友</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="text-2xl font-bold">8</div>
+                            <div class="text-sm opacity-80">已關注</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid lg:grid-cols-3 gap-8">
+            <!-- 左側：個人資訊 -->
+            <div class="lg:col-span-1 space-y-6">
+                <!-- 個人資訊卡片 -->
+                <div class="bg-white rounded-xl shadow-lg p-6">
+                    <h3 class="text-xl font-bold text-gray-900 mb-4">個人資訊</h3>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">暱稱</label>
+                            <input type="text" value="澎湖愛好者" class="w-full p-3 border border-gray-300 rounded-lg">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">個人簡介</label>
+                            <textarea class="w-full p-3 border border-gray-300 rounded-lg resize-none" rows="3" placeholder="分享您的澎湖故事...">熱愛澎湖的風景和美食，喜歡與朋友分享美好的回憶！</textarea>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">興趣標籤</label>
+                            <div class="flex flex-wrap gap-2">
+                                <span class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded">攝影</span>
+                                <span class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded">美食</span>
+                                <span class="bg-purple-100 text-purple-800 text-xs px-2 py-1 rounded">風景</span>
+                                <button class="bg-gray-100 text-gray-600 text-xs px-2 py-1 rounded hover:bg-gray-200">
+                                    <i class="fas fa-plus"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <button class="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors">
+                            <i class="fas fa-save mr-2"></i>儲存變更
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 快速操作 -->
+                <div class="bg-white rounded-xl shadow-lg p-6">
+                    <h3 class="text-xl font-bold text-gray-900 mb-4">快速操作</h3>
+                    <div class="space-y-3">
+                        <button class="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors">
+                            <i class="fas fa-plus mr-2"></i>分享內容
+                        </button>
+                        <button class="w-full bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 transition-colors">
+                            <i class="fas fa-eye mr-2"></i>查看內容流
+                        </button>
+                        <button class="w-full bg-purple-600 text-white py-2 px-4 rounded-lg hover:bg-purple-700 transition-colors">
+                            <i class="fas fa-users mr-2"></i>發現朋友
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 成就徽章 -->
+                <div class="bg-white rounded-xl shadow-lg p-6">
+                    <h3 class="text-xl font-bold text-gray-900 mb-4">成就徽章</h3>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="text-center p-4 bg-yellow-50 rounded-lg">
+                            <div class="text-3xl mb-2">🏆</div>
+                            <div class="text-sm font-semibold text-gray-700">澎湖探索者</div>
+                            <div class="text-xs text-gray-500">已解鎖</div>
+                        </div>
+                        <div class="text-center p-4 bg-blue-50 rounded-lg">
+                            <div class="text-3xl mb-2">📸</div>
+                            <div class="text-sm font-semibold text-gray-700">回憶記錄者</div>
+                            <div class="text-xs text-gray-500">已解鎖</div>
+                        </div>
+                        <div class="text-center p-4 bg-green-50 rounded-lg">
+                            <div class="text-3xl mb-2">👥</div>
+                            <div class="text-sm font-semibold text-gray-700">澎湖朋友</div>
+                            <div class="text-xs text-gray-500">已解鎖</div>
+                        </div>
+                        <div class="text-center p-4 bg-purple-50 rounded-lg">
+                            <div class="text-3xl mb-2">🔄</div>
+                            <div class="text-sm font-semibold text-gray-700">重遊愛好者</div>
+                            <div class="text-xs text-gray-500">已解鎖</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 右側：內容和活動 -->
+            <div class="lg:col-span-2 space-y-6">
+                <!-- 我的內容 -->
+                <div class="bg-white rounded-xl shadow-lg p-6">
+                    <div class="flex justify-between items-center mb-6">
+                        <h3 class="text-xl font-bold text-gray-900">我的內容</h3>
+                        <div class="flex space-x-2">
+                            <button class="px-3 py-1 bg-blue-100 text-blue-600 rounded-lg text-sm font-medium">全部</button>
+                            <button class="px-3 py-1 text-gray-600 rounded-lg text-sm font-medium hover:bg-gray-100">照片</button>
+                            <button class="px-3 py-1 text-gray-600 rounded-lg text-sm font-medium hover:bg-gray-100">回憶</button>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+                        <!-- 內容縮圖1 -->
+                        <div class="aspect-square bg-gradient-to-br from-blue-400 to-purple-500 rounded-lg flex items-center justify-center text-white cursor-pointer hover:opacity-80 transition-opacity">
+                            <i class="fas fa-image text-2xl"></i>
+                        </div>
+                        <!-- 內容縮圖2 -->
+                        <div class="aspect-square bg-gradient-to-br from-green-400 to-teal-500 rounded-lg flex items-center justify-center text-white cursor-pointer hover:opacity-80 transition-opacity">
+                            <i class="fas fa-image text-2xl"></i>
+                        </div>
+                        <!-- 內容縮圖3 -->
+                        <div class="aspect-square bg-gradient-to-br from-purple-400 to-pink-500 rounded-lg flex items-center justify-center text-white cursor-pointer hover:opacity-80 transition-opacity">
+                            <i class="fas fa-image text-2xl"></i>
+                        </div>
+                        <!-- 內容縮圖4 -->
+                        <div class="aspect-square bg-gradient-to-br from-orange-400 to-red-500 rounded-lg flex items-center justify-center text-white cursor-pointer hover:opacity-80 transition-opacity">
+                            <i class="fas fa-image text-2xl"></i>
+                        </div>
+                        <!-- 內容縮圖5 -->
+                        <div class="aspect-square bg-gradient-to-br from-teal-400 to-cyan-500 rounded-lg flex items-center justify-center text-white cursor-pointer hover:opacity-80 transition-opacity">
+                            <i class="fas fa-image text-2xl"></i>
+                        </div>
+                        <!-- 內容縮圖6 -->
+                        <div class="aspect-square bg-gradient-to-br from-pink-400 to-rose-500 rounded-lg flex items-center justify-center text-white cursor-pointer hover:opacity-80 transition-opacity">
+                            <i class="fas fa-image text-2xl"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 相關朋友 -->
+                <div class="bg-white rounded-xl shadow-lg p-6">
+                    <div class="flex justify-between items-center mb-6">
+                        <h3 class="text-xl font-bold text-gray-900">相關朋友</h3>
+                        <a href="discover.html" class="text-blue-600 hover:text-blue-700 text-sm font-medium">查看全部</a>
+                    </div>
+                    <div class="space-y-4">
+                        <!-- 朋友1 -->
+                        <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                            <div class="flex items-center space-x-3">
+                                <div class="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold">
+                                    小美
+                                </div>
+                                <div>
+                                    <h4 class="font-semibold text-gray-900">小美</h4>
+                                    <p class="text-sm text-gray-500">相關度：95% • 共同回憶：5個</p>
+                                </div>
+                            </div>
+                            <div class="flex space-x-2">
+                                <button class="px-3 py-1 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700">
+                                    <i class="fas fa-eye mr-1"></i>查看
+                                </button>
+                                <button class="px-3 py-1 border border-gray-300 text-gray-700 rounded-lg text-sm hover:bg-gray-50">
+                                    <i class="fas fa-comment mr-1"></i>聊天
+                                </button>
+                            </div>
+                        </div>
+                        <!-- 朋友2 -->
+                        <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                            <div class="flex items-center space-x-3">
+                                <div class="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center text-white font-bold">
+                                    阿明
+                                </div>
+                                <div>
+                                    <h4 class="font-semibold text-gray-900">阿明</h4>
+                                    <p class="text-sm text-gray-500">相關度：87% • 共同回憶：3個</p>
+                                </div>
+                            </div>
+                            <div class="flex space-x-2">
+                                <button class="px-3 py-1 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700">
+                                    <i class="fas fa-eye mr-1"></i>查看
+                                </button>
+                                <button class="px-3 py-1 border border-gray-300 text-gray-700 rounded-lg text-sm hover:bg-gray-50">
+                                    <i class="fas fa-comment mr-1"></i>聊天
+                                </button>
+                            </div>
+                        </div>
+                        <!-- 朋友3 -->
+                        <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                            <div class="flex items-center space-x-3">
+                                <div class="w-12 h-12 bg-purple-500 rounded-full flex items-center justify-center text-white font-bold">
+                                    小華
+                                </div>
+                                <div>
+                                    <h4 class="font-semibold text-gray-900">小華</h4>
+                                    <p class="text-sm text-gray-500">相關度：92% • 共同回憶：4個</p>
+                                </div>
+                            </div>
+                            <div class="flex space-x-2">
+                                <button class="px-3 py-1 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700">
+                                    <i class="fas fa-eye mr-1"></i>查看
+                                </button>
+                                <button class="px-3 py-1 border border-gray-300 text-gray-700 rounded-lg text-sm hover:bg-gray-50">
+                                    <i class="fas fa-comment mr-1"></i>聊天
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 最近活動 -->
+                <div class="bg-white rounded-xl shadow-lg p-6">
+                    <h3 class="text-xl font-bold text-gray-900 mb-6">最近活動</h3>
+                    <div class="space-y-4">
+                        <!-- 活動1 -->
+                        <div class="flex items-start space-x-3 p-4 bg-gray-50 rounded-lg">
+                            <div class="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white text-sm">
+                                <i class="fas fa-heart"></i>
+                            </div>
+                            <div class="flex-1">
+                                <p class="text-gray-700">
+                                    <span class="font-semibold">小美</span> 點讚了您的照片
+                                    <span class="text-gray-500">"七美雙心石滬的夕陽"</span>
+                                </p>
+                                <p class="text-sm text-gray-500">2小時前</p>
+                            </div>
+                        </div>
+                        <!-- 活動2 -->
+                        <div class="flex items-start space-x-3 p-4 bg-gray-50 rounded-lg">
+                            <div class="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center text-white text-sm">
+                                <i class="fas fa-comment"></i>
+                            </div>
+                            <div class="flex-1">
+                                <p class="text-gray-700">
+                                    <span class="font-semibold">阿明</span> 評論了您的照片
+                                    <span class="text-gray-500">"我也去過這裡！"</span>
+                                </p>
+                                <p class="text-sm text-gray-500">4小時前</p>
+                            </div>
+                        </div>
+                        <!-- 活動3 -->
+                        <div class="flex items-start space-x-3 p-4 bg-gray-50 rounded-lg">
+                            <div class="w-8 h-8 bg-purple-500 rounded-full flex items-center justify-center text-white text-sm">
+                                <i class="fas fa-user-plus"></i>
+                            </div>
+                            <div class="flex-1">
+                                <p class="text-gray-700">
+                                    <span class="font-semibold">小華</span> 開始關注您
+                                </p>
+                                <p class="text-sm text-gray-500">6小時前</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- 上傳模態框 -->
+    <div id="uploadModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden z-50">
+        <div class="flex items-center justify-center min-h-screen p-4">
+            <div class="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-semibold text-gray-900">分享澎湖回憶</h3>
+                    <button id="closeUploadModal" class="text-gray-400 hover:text-gray-600">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="space-y-4">
+                    <div class="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
+                        <i class="fas fa-cloud-upload-alt text-4xl text-gray-400 mb-4"></i>
+                        <p class="text-gray-600 mb-2">點擊上傳照片</p>
+                        <input type="file" id="photoUpload" accept="image/*" multiple class="hidden">
+                        <button id="selectPhotosBtn" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
+                            選擇照片
+                        </button>
+                    </div>
+                    <textarea id="photoDescription" placeholder="分享您的澎湖回憶..." class="w-full p-3 border border-gray-300 rounded-lg resize-none" rows="3"></textarea>
+                    <div class="flex space-x-2">
+                        <input type="text" id="locationInput" placeholder="地點 (例如：七美雙心石滬)" class="flex-1 p-3 border border-gray-300 rounded-lg">
+                        <button id="getLocationBtn" class="bg-green-600 text-white px-4 py-3 rounded-lg hover:bg-green-700">
+                            <i class="fas fa-map-marker-alt"></i>
+                        </button>
+                    </div>
+                    <button id="shareBtn" class="w-full bg-blue-600 text-white py-3 px-4 rounded-lg font-semibold hover:bg-blue-700 transition-colors">
+                        <i class="fas fa-share mr-2"></i>分享回憶
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            initProfileFeatures();
+        });
+
+        function initProfileFeatures() {
+            // 上傳功能
+            const uploadBtn = document.getElementById('uploadBtn');
+            const uploadModal = document.getElementById('uploadModal');
+            const closeUploadModal = document.getElementById('closeUploadModal');
+            const selectPhotosBtn = document.getElementById('selectPhotosBtn');
+            const photoUpload = document.getElementById('photoUpload');
+            const shareBtn = document.getElementById('shareBtn');
+
+            uploadBtn.addEventListener('click', () => {
+                uploadModal.classList.remove('hidden');
+            });
+
+            closeUploadModal.addEventListener('click', () => {
+                uploadModal.classList.add('hidden');
+            });
+
+            selectPhotosBtn.addEventListener('click', () => {
+                photoUpload.click();
+            });
+
+            photoUpload.addEventListener('change', (e) => {
+                if (e.target.files.length > 0) {
+                    selectPhotosBtn.textContent = `已選擇 ${e.target.files.length} 張照片`;
+                    selectPhotosBtn.classList.add('bg-green-600', 'hover:bg-green-700');
+                    selectPhotosBtn.classList.remove('bg-blue-600', 'hover:bg-blue-700');
+                }
+            });
+
+            shareBtn.addEventListener('click', () => {
+                const description = document.getElementById('photoDescription').value;
+                const location = document.getElementById('locationInput').value;
+                
+                if (description || photoUpload.files.length > 0) {
+                    showNotification('回憶分享成功！', 'success');
+                    uploadModal.classList.add('hidden');
+                    // 重置表單
+                    document.getElementById('photoDescription').value = '';
+                    document.getElementById('locationInput').value = '';
+                    photoUpload.value = '';
+                    selectPhotosBtn.textContent = '選擇照片';
+                    selectPhotosBtn.classList.remove('bg-green-600', 'hover:bg-green-700');
+                    selectPhotosBtn.classList.add('bg-blue-600', 'hover:bg-blue-700');
+                } else {
+                    showNotification('請至少上傳照片或添加描述', 'error');
+                }
+            });
+
+            // 內容縮圖點擊
+            document.querySelectorAll('.aspect-square').forEach(thumb => {
+                thumb.addEventListener('click', () => {
+                    showNotification('正在查看內容詳情...', 'info');
+                });
+            });
+
+            // 朋友操作按鈕
+            document.querySelectorAll('.bg-blue-600').forEach(btn => {
+                if (btn.textContent.includes('查看')) {
+                    btn.addEventListener('click', () => {
+                        showNotification('正在查看朋友檔案...', 'info');
+                    });
+                }
+            });
+
+            document.querySelectorAll('.border-gray-300').forEach(btn => {
+                if (btn.textContent.includes('聊天')) {
+                    btn.addEventListener('click', () => {
+                        showNotification('正在開啟聊天...', 'info');
+                    });
+                }
+            });
+        }
+
+        function showNotification(message, type = 'info') {
+            const notification = document.createElement('div');
+            notification.className = `fixed top-4 right-4 p-4 rounded-lg shadow-lg z-50 ${
+                type === 'success' ? 'bg-green-500' : 
+                type === 'error' ? 'bg-red-500' : 'bg-blue-500'
+            } text-white`;
+            notification.textContent = message;
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.remove();
+            }, 3000);
+        }
+    </script>
+</body>
+</html>

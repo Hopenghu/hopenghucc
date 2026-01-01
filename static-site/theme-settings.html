@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>主題設定 - HOPENGHU好澎湖</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;600;700&display=swap');
+        body { 
+            font-family: 'Noto Sans TC', sans-serif; 
+            background: #f8fafc;
+        }
+        
+        .theme-container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 1rem;
+        }
+        
+        .theme-section {
+            background: white;
+            border-radius: 12px;
+            margin-bottom: 1rem;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        .section-header {
+            padding: 1rem 1.5rem;
+            background: #f9fafb;
+            border-bottom: 1px solid #e5e7eb;
+            font-weight: 600;
+            color: #374151;
+        }
+        
+        .theme-option {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid #f3f4f6;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        
+        .theme-option:hover {
+            background: #f9fafb;
+        }
+        
+        .theme-option:last-child {
+            border-bottom: none;
+        }
+        
+        .theme-option.selected {
+            background: #f0f4ff;
+            border-left: 4px solid #667eea;
+        }
+        
+        .theme-info {
+            display: flex;
+            align-items: center;
+            flex: 1;
+        }
+        
+        .theme-preview {
+            width: 60px;
+            height: 40px;
+            border-radius: 8px;
+            margin-right: 1rem;
+            border: 2px solid #e5e7eb;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .theme-preview.light {
+            background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+        }
+        
+        .theme-preview.dark {
+            background: linear-gradient(135deg, #1f2937 0%, #111827 100%);
+        }
+        
+        .theme-preview.blue {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        
+        .theme-preview.green {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        }
+        
+        .theme-preview.purple {
+            background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+        }
+        
+        .theme-preview.auto {
+            background: linear-gradient(135deg, #ffffff 0%, #1f2937 100%);
+        }
+        
+        .theme-preview::after {
+            content: '';
+            position: absolute;
+            top: 8px;
+            left: 8px;
+            right: 8px;
+            height: 8px;
+            background: rgba(255,255,255,0.3);
+            border-radius: 4px;
+        }
+        
+        .theme-preview::before {
+            content: '';
+            position: absolute;
+            bottom: 8px;
+            left: 8px;
+            right: 8px;
+            height: 4px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 2px;
+        }
+        
+        .theme-details {
+            flex: 1;
+        }
+        
+        .theme-name {
+            font-weight: 500;
+            color: #111827;
+            margin-bottom: 0.25rem;
+        }
+        
+        .theme-description {
+            font-size: 0.8rem;
+            color: #6b7280;
+        }
+        
+        .theme-status {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .status-badge {
+            padding: 0.25rem 0.5rem;
+            border-radius: 12px;
+            font-size: 0.7rem;
+            font-weight: 500;
+        }
+        
+        .status-current {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+        
+        .status-new {
+            background: #fef3c7;
+            color: #d97706;
+        }
+        
+        .radio-button {
+            width: 20px;
+            height: 20px;
+            border: 2px solid #d1d5db;
+            border-radius: 50%;
+            position: relative;
+            transition: all 0.3s;
+        }
+        
+        .radio-button.selected {
+            border-color: #667eea;
+        }
+        
+        .radio-button.selected::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 10px;
+            height: 10px;
+            background: #667eea;
+            border-radius: 50%;
+        }
+        
+        .preview-section {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        .preview-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #111827;
+            margin-bottom: 1rem;
+        }
+        
+        .preview-content {
+            background: #f8fafc;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 1rem;
+            transition: all 0.3s;
+        }
+        
+        .preview-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.75rem;
+            background: white;
+            border-radius: 6px;
+            margin-bottom: 0.5rem;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        }
+        
+        .preview-logo {
+            font-weight: 600;
+            color: #667eea;
+        }
+        
+        .preview-nav {
+            display: flex;
+            gap: 0.5rem;
+        }
+        
+        .preview-nav-item {
+            padding: 0.25rem 0.5rem;
+            background: #f3f4f6;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            color: #374151;
+        }
+        
+        .preview-card {
+            background: white;
+            border-radius: 6px;
+            padding: 0.75rem;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        }
+        
+        .preview-card-title {
+            font-weight: 500;
+            color: #111827;
+            margin-bottom: 0.25rem;
+        }
+        
+        .preview-card-text {
+            font-size: 0.8rem;
+            color: #6b7280;
+        }
+        
+        .save-btn {
+            width: 100%;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 1rem;
+            border-radius: 12px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.3s;
+            margin-top: 1rem;
+        }
+        
+        .save-btn:hover {
+            transform: translateY(-2px);
+        }
+        
+        .save-btn:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .info-text {
+            background: #f0f4ff;
+            border: 1px solid #c7d2fe;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-top: 1rem;
+            font-size: 0.9rem;
+            color: #3730a3;
+        }
+        
+        /* 主題樣式 */
+        .theme-light .preview-content {
+            background: #f8fafc;
+            border-color: #e5e7eb;
+        }
+        
+        .theme-dark .preview-content {
+            background: #1f2937;
+            border-color: #374151;
+        }
+        
+        .theme-dark .preview-header {
+            background: #111827;
+            color: #f9fafb;
+        }
+        
+        .theme-dark .preview-card {
+            background: #1f2937;
+            color: #f9fafb;
+        }
+        
+        .theme-dark .preview-card-title {
+            color: #f9fafb;
+        }
+        
+        .theme-dark .preview-card-text {
+            color: #d1d5db;
+        }
+        
+        .theme-dark .preview-nav-item {
+            background: #374151;
+            color: #d1d5db;
+        }
+        
+        /* 手機版優化 */
+        @media (max-width: 768px) {
+            .theme-container {
+                padding: 0.5rem;
+            }
+            
+            .theme-option {
+                padding: 0.75rem 1rem;
+            }
+            
+            .theme-preview {
+                width: 50px;
+                height: 35px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- 頂部導航 -->
+    <nav class="bg-white shadow-sm sticky top-0 z-50">
+        <div class="max-w-600px mx-auto px-4 py-3">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center">
+                    <a href="settings.html" class="mr-4">
+                        <i class="fas fa-arrow-left text-xl text-gray-600"></i>
+                    </a>
+                    <span class="text-lg font-semibold">主題設定</span>
+                </div>
+                <button class="text-blue-600 font-semibold" onclick="saveTheme()">儲存</button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="theme-container">
+        <!-- 主題預覽 -->
+        <div class="preview-section">
+            <div class="preview-title">主題預覽</div>
+            <div class="preview-content" id="themePreview">
+                <div class="preview-header">
+                    <div class="preview-logo">🏝️ HOPENGHU好澎湖</div>
+                    <div class="preview-nav">
+                        <div class="preview-nav-item">首頁</div>
+                        <div class="preview-nav-item">發現</div>
+                        <div class="preview-nav-item">個人檔案</div>
+                    </div>
+                </div>
+                <div class="preview-card">
+                    <div class="preview-card-title">澎湖美景分享</div>
+                    <div class="preview-card-text">今天在七美雙心石滬看夕陽，真是太美了！</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 主題選項 -->
+        <div class="theme-section">
+            <div class="section-header">
+                <i class="fas fa-palette mr-2"></i>
+                選擇主題
+            </div>
+            
+            <!-- 淺色主題 -->
+            <div class="theme-option selected" onclick="selectTheme('light', this)">
+                <div class="theme-info">
+                    <div class="theme-preview light"></div>
+                    <div class="theme-details">
+                        <div class="theme-name">淺色主題</div>
+                        <div class="theme-description">清爽明亮的介面，適合日間使用</div>
+                    </div>
+                </div>
+                <div class="theme-status">
+                    <span class="status-badge status-current">目前</span>
+                    <div class="radio-button selected"></div>
+                </div>
+            </div>
+            
+            <!-- 深色主題 -->
+            <div class="theme-option" onclick="selectTheme('dark', this)">
+                <div class="theme-info">
+                    <div class="theme-preview dark"></div>
+                    <div class="theme-details">
+                        <div class="theme-name">深色主題</div>
+                        <div class="theme-description">護眼的深色介面，適合夜間使用</div>
+                    </div>
+                </div>
+                <div class="theme-status">
+                    <span class="status-badge status-new">新功能</span>
+                    <div class="radio-button"></div>
+                </div>
+            </div>
+            
+            <!-- 自動主題 -->
+            <div class="theme-option" onclick="selectTheme('auto', this)">
+                <div class="theme-info">
+                    <div class="theme-preview auto"></div>
+                    <div class="theme-details">
+                        <div class="theme-name">自動主題</div>
+                        <div class="theme-description">根據系統設定自動切換淺色/深色</div>
+                    </div>
+                </div>
+                <div class="theme-status">
+                    <span class="status-badge status-new">新功能</span>
+                    <div class="radio-button"></div>
+                </div>
+            </div>
+            
+            <!-- 藍色主題 -->
+            <div class="theme-option" onclick="selectTheme('blue', this)">
+                <div class="theme-info">
+                    <div class="theme-preview blue"></div>
+                    <div class="theme-details">
+                        <div class="theme-name">海洋藍</div>
+                        <div class="theme-description">澎湖海洋風格的藍色主題</div>
+                    </div>
+                </div>
+                <div class="theme-status">
+                    <span class="status-badge status-new">新功能</span>
+                    <div class="radio-button"></div>
+                </div>
+            </div>
+            
+            <!-- 綠色主題 -->
+            <div class="theme-option" onclick="selectTheme('green', this)">
+                <div class="theme-info">
+                    <div class="theme-preview green"></div>
+                    <div class="theme-details">
+                        <div class="theme-name">自然綠</div>
+                        <div class="theme-description">清新自然的綠色主題</div>
+                    </div>
+                </div>
+                <div class="theme-status">
+                    <span class="status-badge status-new">新功能</span>
+                    <div class="radio-button"></div>
+                </div>
+            </div>
+            
+            <!-- 紫色主題 -->
+            <div class="theme-option" onclick="selectTheme('purple', this)">
+                <div class="theme-info">
+                    <div class="theme-preview purple"></div>
+                    <div class="theme-details">
+                        <div class="theme-name">夢幻紫</div>
+                        <div class="theme-description">浪漫夢幻的紫色主題</div>
+                    </div>
+                </div>
+                <div class="theme-status">
+                    <span class="status-badge status-new">新功能</span>
+                    <div class="radio-button"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 儲存按鈕 -->
+        <button class="save-btn" onclick="saveTheme()">
+            <i class="fas fa-save mr-2"></i>儲存主題設定
+        </button>
+
+        <!-- 說明文字 -->
+        <div class="info-text">
+            <i class="fas fa-info-circle mr-2"></i>
+            主題變更會立即生效。自動主題會根據您的系統設定（淺色/深色模式）自動切換。
+        </div>
+    </div>
+
+    <script>
+        let selectedTheme = 'light';
+        let hasChanges = false;
+        
+        // 選擇主題
+        function selectTheme(themeName, element) {
+            // 移除所有選中狀態
+            document.querySelectorAll('.theme-option').forEach(option => {
+                option.classList.remove('selected');
+                option.querySelector('.radio-button').classList.remove('selected');
+            });
+            
+            // 設置新的選中狀態
+            element.classList.add('selected');
+            element.querySelector('.radio-button').classList.add('selected');
+            
+            // 更新選中的主題
+            selectedTheme = themeName;
+            hasChanges = true;
+            
+            // 更新預覽
+            updatePreview(themeName);
+        }
+        
+        // 更新預覽
+        function updatePreview(themeName) {
+            const preview = document.getElementById('themePreview');
+            
+            // 移除所有主題類別
+            preview.className = 'preview-content';
+            
+            // 添加新主題類別
+            if (themeName !== 'light') {
+                preview.classList.add(`theme-${themeName}`);
+            }
+            
+            // 如果是自動主題，根據系統偏好設定
+            if (themeName === 'auto') {
+                if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                    preview.classList.add('theme-dark');
+                }
+            }
+        }
+        
+        // 儲存主題設定
+        function saveTheme() {
+            if (!hasChanges) {
+                alert('沒有變更需要儲存');
+                return;
+            }
+            
+            const saveBtn = document.querySelector('.save-btn');
+            saveBtn.disabled = true;
+            saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>儲存中...';
+            
+            // 模擬儲存過程
+            setTimeout(() => {
+                // 這裡應該發送到後端API
+                console.log('主題設定儲存:', selectedTheme);
+                
+                // 更新本地存儲
+                localStorage.setItem('selectedTheme', selectedTheme);
+                
+                // 應用主題到整個頁面
+                applyTheme(selectedTheme);
+                
+                alert('主題設定已成功更新！');
+                
+                saveBtn.disabled = false;
+                saveBtn.innerHTML = '<i class="fas fa-save mr-2"></i>儲存主題設定';
+                hasChanges = false;
+            }, 1500);
+        }
+        
+        // 應用主題
+        function applyTheme(themeName) {
+            document.body.className = `theme-${themeName}`;
+            
+            // 如果是自動主題，監聽系統主題變化
+            if (themeName === 'auto') {
+                if (window.matchMedia) {
+                    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+                    mediaQuery.addListener(function(e) {
+                        if (selectedTheme === 'auto') {
+                            document.body.className = e.matches ? 'theme-dark' : 'theme-light';
+                        }
+                    });
+                }
+            }
+        }
+        
+        // 初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            // 從本地存儲載入主題設定
+            const savedTheme = localStorage.getItem('selectedTheme');
+            if (savedTheme && savedTheme !== 'light') {
+                const themeOption = document.querySelector(`[onclick*="${savedTheme}"]`);
+                if (themeOption) {
+                    selectTheme(savedTheme, themeOption);
+                }
+            }
+            
+            // 監聽系統主題變化（用於自動主題）
+            if (window.matchMedia) {
+                const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+                mediaQuery.addListener(function(e) {
+                    if (selectedTheme === 'auto') {
+                        updatePreview('auto');
+                    }
+                });
+            }
+        });
+    </script>
+</body>
+</html>

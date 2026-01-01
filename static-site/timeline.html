@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>我的時光機 - 澎湖時光機</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Noto Sans TC', sans-serif; }
+        
+        .timeline-item {
+            position: relative;
+            padding-left: 2rem;
+        }
+        
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #3b82f6;
+            border: 3px solid white;
+            box-shadow: 0 0 0 3px #e5e7eb;
+        }
+        
+        .timeline-item::after {
+            content: '';
+            position: absolute;
+            left: 5px;
+            top: 12px;
+            width: 2px;
+            height: calc(100% + 1rem);
+            background: #e5e7eb;
+        }
+        
+        .timeline-item:last-child::after {
+            display: none;
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- 導航欄 -->
+    <nav class="bg-white shadow-lg sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center">
+                    <a href="index.html" class="text-2xl font-bold text-blue-600">🏝️ HOPENGHU好澎湖</a>
+                </div>
+                <div class="hidden md:block">
+                    <div class="ml-10 flex items-baseline space-x-4">
+                        <a href="index.html" class="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium">首頁</a>
+                        <a href="timeline.html" class="text-blue-600 px-3 py-2 rounded-md text-sm font-medium">我的時光機</a>
+                        <a href="community.html" class="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium">澎湖朋友們</a>
+                        <a href="profile.html" class="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium">個人檔案</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 主要內容 -->
+    <main class="py-8">
+        <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+            <!-- 頁面標題 -->
+            <div class="text-center mb-12">
+                <h1 class="text-4xl font-bold text-gray-900 mb-4">我的時光機</h1>
+                <p class="text-xl text-gray-600">記錄您在澎湖的每個美好時刻</p>
+            </div>
+
+            <!-- 統計卡片 -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+                <div class="bg-white p-6 rounded-xl shadow-md text-center">
+                    <div class="text-3xl font-bold text-blue-600 mb-2">12</div>
+                    <div class="text-gray-600">已訪問地點</div>
+                </div>
+                <div class="bg-white p-6 rounded-xl shadow-md text-center">
+                    <div class="text-3xl font-bold text-green-600 mb-2">8</div>
+                    <div class="text-gray-600">想來地點</div>
+                </div>
+                <div class="bg-white p-6 rounded-xl shadow-md text-center">
+                    <div class="text-3xl font-bold text-purple-600 mb-2">5</div>
+                    <div class="text-gray-600">想再來地點</div>
+                </div>
+            </div>
+
+            <!-- 時間軸 -->
+            <div class="bg-white rounded-xl shadow-md p-8">
+                <h2 class="text-2xl font-bold text-gray-900 mb-8">我的澎湖足跡</h2>
+                
+                <!-- 過去 -->
+                <div class="mb-8">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+                        <span class="w-3 h-3 bg-blue-500 rounded-full mr-3"></span>
+                        過去 - 美好回憶
+                    </h3>
+                    
+                    <div class="timeline-item mb-6">
+                        <div class="bg-blue-50 p-6 rounded-lg">
+                            <div class="flex justify-between items-start mb-2">
+                                <h4 class="font-semibold text-blue-800">七美雙心石滬</h4>
+                                <span class="text-sm text-gray-500">2024年8月</span>
+                            </div>
+                            <p class="text-gray-700 mb-3">與家人一起欣賞浪漫的雙心石滬，夕陽西下的美景令人難忘。</p>
+                            <div class="flex space-x-2">
+                                <span class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded">夕陽</span>
+                                <span class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded">家人</span>
+                                <span class="bg-purple-100 text-purple-800 text-xs px-2 py-1 rounded">浪漫</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="timeline-item mb-6">
+                        <div class="bg-blue-50 p-6 rounded-lg">
+                            <div class="flex justify-between items-start mb-2">
+                                <h4 class="font-semibold text-blue-800">澎湖跨海大橋</h4>
+                                <span class="text-sm text-gray-500">2024年7月</span>
+                            </div>
+                            <p class="text-gray-700 mb-3">騎機車經過跨海大橋，感受海風的涼爽與壯觀的景色。</p>
+                            <div class="flex space-x-2">
+                                <span class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded">騎車</span>
+                                <span class="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded">海風</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 現在 -->
+                <div class="mb-8">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+                        <span class="w-3 h-3 bg-green-500 rounded-full mr-3"></span>
+                        現在 - 正在進行
+                    </h3>
+                    
+                    <div class="timeline-item mb-6">
+                        <div class="bg-green-50 p-6 rounded-lg">
+                            <div class="flex justify-between items-start mb-2">
+                                <h4 class="font-semibold text-green-800">吉貝沙尾</h4>
+                                <span class="text-sm text-gray-500">計劃中</span>
+                            </div>
+                            <p class="text-gray-700 mb-3">正在規劃下一次的澎湖之旅，想要體驗吉貝沙尾的水上活動。</p>
+                            <div class="flex space-x-2">
+                                <span class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded">水上活動</span>
+                                <span class="bg-orange-100 text-orange-800 text-xs px-2 py-1 rounded">沙灘</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 未來 -->
+                <div class="mb-8">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+                        <span class="w-3 h-3 bg-purple-500 rounded-full mr-3"></span>
+                        未來 - 願望清單
+                    </h3>
+                    
+                    <div class="timeline-item mb-6">
+                        <div class="bg-purple-50 p-6 rounded-lg">
+                            <div class="flex justify-between items-start mb-2">
+                                <h4 class="font-semibold text-purple-800">觀音亭休閒園區</h4>
+                                <span class="text-sm text-gray-500">2025年春天</span>
+                            </div>
+                            <p class="text-gray-700 mb-3">想要在觀音亭欣賞花火節，體驗澎湖的夜間美景。</p>
+                            <div class="flex space-x-2">
+                                <span class="bg-purple-100 text-purple-800 text-xs px-2 py-1 rounded">花火節</span>
+                                <span class="bg-pink-100 text-pink-800 text-xs px-2 py-1 rounded">夜景</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="timeline-item mb-6">
+                        <div class="bg-purple-50 p-6 rounded-lg">
+                            <div class="flex justify-between items-start mb-2">
+                                <h4 class="font-semibold text-purple-800">澎湖水族館</h4>
+                                <span class="text-sm text-gray-500">2025年夏天</span>
+                            </div>
+                            <p class="text-gray-700 mb-3">想要帶孩子參觀澎湖水族館，認識海洋生物。</p>
+                            <div class="flex space-x-2">
+                                <span class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded">水族館</span>
+                                <span class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded">親子</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 添加新回憶按鈕 -->
+            <div class="text-center mt-8">
+                <button class="bg-blue-600 text-white px-8 py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors">
+                    + 添加新回憶
+                </button>
+            </div>
+        </div>
+    </main>
+
+    <!-- 頁腳 -->
+    <footer class="bg-gray-900 text-white py-8 mt-16">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            <p class="text-gray-400">🕰️ 澎湖時光機 - 記錄您的澎湖時光</p>
+        </div>
+    </footer>
+</body>
+</html>

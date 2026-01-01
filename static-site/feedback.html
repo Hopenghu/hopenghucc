@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>意見回饋 - HOPENGHU好澎湖</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;600;700&display=swap');
+        body { 
+            font-family: 'Noto Sans TC', sans-serif; 
+            background: #f8fafc;
+        }
+        
+        .feedback-container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 1rem;
+        }
+        
+        .feedback-section {
+            background: white;
+            border-radius: 12px;
+            margin-bottom: 1rem;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        .section-header {
+            padding: 1rem 1.5rem;
+            background: #f9fafb;
+            border-bottom: 1px solid #e5e7eb;
+            font-weight: 600;
+            color: #374151;
+        }
+        
+        .feedback-form {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        .form-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: #111827;
+            margin-bottom: 1.5rem;
+            text-align: center;
+        }
+        
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+        
+        .form-label {
+            display: block;
+            font-weight: 500;
+            color: #374151;
+            margin-bottom: 0.5rem;
+        }
+        
+        .form-input {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.3s;
+        }
+        
+        .form-input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        .form-textarea {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            font-size: 1rem;
+            resize: vertical;
+            min-height: 120px;
+            transition: border-color 0.3s;
+        }
+        
+        .form-textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        .form-select {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            font-size: 1rem;
+            background: white;
+            cursor: pointer;
+        }
+        
+        .form-select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        .rating-section {
+            margin-bottom: 1.5rem;
+        }
+        
+        .rating-title {
+            font-weight: 500;
+            color: #374151;
+            margin-bottom: 1rem;
+        }
+        
+        .rating-stars {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .star {
+            font-size: 2rem;
+            color: #d1d5db;
+            cursor: pointer;
+            transition: color 0.3s;
+        }
+        
+        .star.active {
+            color: #fbbf24;
+        }
+        
+        .star:hover {
+            color: #fbbf24;
+        }
+        
+        .rating-text {
+            font-size: 0.9rem;
+            color: #6b7280;
+        }
+        
+        .checkbox-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            margin-top: 0.5rem;
+        }
+        
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .checkbox-input {
+            width: 18px;
+            height: 18px;
+            accent-color: #667eea;
+        }
+        
+        .checkbox-label {
+            font-size: 0.9rem;
+            color: #374151;
+            cursor: pointer;
+        }
+        
+        .submit-btn {
+            width: 100%;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 1rem;
+            border-radius: 12px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.3s;
+        }
+        
+        .submit-btn:hover {
+            transform: translateY(-2px);
+        }
+        
+        .submit-btn:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .feedback-types {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        .types-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #111827;
+            margin-bottom: 1rem;
+        }
+        
+        .type-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+        }
+        
+        .type-item {
+            padding: 1rem;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .type-item:hover {
+            border-color: #667eea;
+            background: #f0f4ff;
+        }
+        
+        .type-item.selected {
+            border-color: #667eea;
+            background: #f0f4ff;
+        }
+        
+        .type-icon {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .type-name {
+            font-weight: 500;
+            color: #111827;
+            font-size: 0.9rem;
+        }
+        
+        .recent-feedback {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        .recent-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #111827;
+            margin-bottom: 1rem;
+        }
+        
+        .feedback-item {
+            padding: 1rem;
+            background: #f8fafc;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+        }
+        
+        .feedback-item:last-child {
+            margin-bottom: 0;
+        }
+        
+        .feedback-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+        
+        .feedback-type {
+            background: #dbeafe;
+            color: #1e40af;
+            padding: 0.25rem 0.5rem;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+        
+        .feedback-date {
+            font-size: 0.8rem;
+            color: #6b7280;
+        }
+        
+        .feedback-content {
+            color: #374151;
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+        
+        .info-text {
+            background: #f0f4ff;
+            border: 1px solid #c7d2fe;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-top: 1rem;
+            font-size: 0.9rem;
+            color: #3730a3;
+        }
+        
+        /* 手機版優化 */
+        @media (max-width: 768px) {
+            .feedback-container {
+                padding: 0.5rem;
+            }
+            
+            .type-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .checkbox-group {
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- 頂部導航 -->
+    <nav class="bg-white shadow-sm sticky top-0 z-50">
+        <div class="max-w-600px mx-auto px-4 py-3">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center">
+                    <a href="settings.html" class="mr-4">
+                        <i class="fas fa-arrow-left text-xl text-gray-600"></i>
+                    </a>
+                    <span class="text-lg font-semibold">意見回饋</span>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="feedback-container">
+        <!-- 回饋類型選擇 -->
+        <div class="feedback-types">
+            <div class="types-title">選擇回饋類型</div>
+            <div class="type-grid">
+                <div class="type-item" onclick="selectType('bug', this)">
+                    <div class="type-icon">🐛</div>
+                    <div class="type-name">錯誤回報</div>
+                </div>
+                <div class="type-item" onclick="selectType('feature', this)">
+                    <div class="type-icon">💡</div>
+                    <div class="type-name">功能建議</div>
+                </div>
+                <div class="type-item" onclick="selectType('improvement', this)">
+                    <div class="type-icon">⚡</div>
+                    <div class="type-name">改進建議</div>
+                </div>
+                <div class="type-item" onclick="selectType('praise', this)">
+                    <div class="type-icon">👍</div>
+                    <div class="type-name">讚美回饋</div>
+                </div>
+                <div class="type-item" onclick="selectType('complaint', this)">
+                    <div class="type-icon">😞</div>
+                    <div class="type-name">投訴建議</div>
+                </div>
+                <div class="type-item" onclick="selectType('other', this)">
+                    <div class="type-icon">💬</div>
+                    <div class="type-name">其他</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 回饋表單 -->
+        <div class="feedback-form">
+            <div class="form-title">分享您的想法</div>
+            
+            <form id="feedbackForm">
+                <div class="form-group">
+                    <label class="form-label">回饋類型</label>
+                    <select class="form-select" id="feedbackType" required>
+                        <option value="">請選擇回饋類型</option>
+                        <option value="bug">錯誤回報</option>
+                        <option value="feature">功能建議</option>
+                        <option value="improvement">改進建議</option>
+                        <option value="praise">讚美回饋</option>
+                        <option value="complaint">投訴建議</option>
+                        <option value="other">其他</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">整體滿意度</label>
+                    <div class="rating-section">
+                        <div class="rating-title">請為應用程式評分</div>
+                        <div class="rating-stars" id="ratingStars">
+                            <span class="star" data-rating="1">★</span>
+                            <span class="star" data-rating="2">★</span>
+                            <span class="star" data-rating="3">★</span>
+                            <span class="star" data-rating="4">★</span>
+                            <span class="star" data-rating="5">★</span>
+                        </div>
+                        <div class="rating-text" id="ratingText">點擊星星進行評分</div>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">電子郵件（選填）</label>
+                    <input type="email" class="form-input" id="email" placeholder="如果您希望收到回覆，請留下電子郵件">
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">詳細描述</label>
+                    <textarea class="form-textarea" id="description" placeholder="請詳細描述您的想法、建議或遇到的問題..." required></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">相關功能（可多選）</label>
+                    <div class="checkbox-group">
+                        <div class="checkbox-item">
+                            <input type="checkbox" class="checkbox-input" id="feature1" value="朋友推薦">
+                            <label class="checkbox-label" for="feature1">朋友推薦</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" class="checkbox-input" id="feature2" value="照片分享">
+                            <label class="checkbox-label" for="feature2">照片分享</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" class="checkbox-input" id="feature3" value="地點標記">
+                            <label class="checkbox-label" for="feature3">地點標記</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" class="checkbox-input" id="feature4" value="社交互動">
+                            <label class="checkbox-label" for="feature4">社交互動</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" class="checkbox-input" id="feature5" value="隱私設定">
+                            <label class="checkbox-label" for="feature5">隱私設定</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" class="checkbox-input" id="feature6" value="其他">
+                            <label class="checkbox-label" for="feature6">其他</label>
+                        </div>
+                    </div>
+                </div>
+                
+                <button type="submit" class="submit-btn" id="submitBtn">
+                    <i class="fas fa-paper-plane mr-2"></i>提交回饋
+                </button>
+            </form>
+        </div>
+
+        <!-- 最近回饋 -->
+        <div class="recent-feedback">
+            <div class="recent-title">最近回饋</div>
+            
+            <div class="feedback-item">
+                <div class="feedback-header">
+                    <span class="feedback-type">功能建議</span>
+                    <span class="feedback-date">2天前</span>
+                </div>
+                <div class="feedback-content">
+                    希望能增加照片編輯功能，讓用戶可以直接在應用程式中調整照片的亮度、對比度等。
+                </div>
+            </div>
+            
+            <div class="feedback-item">
+                <div class="feedback-header">
+                    <span class="feedback-type">錯誤回報</span>
+                    <span class="feedback-date">5天前</span>
+                </div>
+                <div class="feedback-content">
+                    在iOS設備上，有時會出現照片上傳失敗的問題，希望能盡快修復。
+                </div>
+            </div>
+            
+            <div class="feedback-item">
+                <div class="feedback-header">
+                    <span class="feedback-type">讚美回饋</span>
+                    <span class="feedback-date">1週前</span>
+                </div>
+                <div class="feedback-content">
+                    朋友推薦功能很棒！讓我認識了很多志同道合的澎湖朋友，感謝開發團隊！
+                </div>
+            </div>
+        </div>
+
+        <!-- 說明文字 -->
+        <div class="info-text">
+            <i class="fas fa-info-circle mr-2"></i>
+            您的回饋對我們非常重要！我們會認真閱讀每一份回饋，並持續改進應用程式。感謝您的支持！
+        </div>
+    </div>
+
+    <script>
+        let selectedRating = 0;
+        let selectedType = '';
+        
+        // 選擇回饋類型
+        function selectType(type, element) {
+            // 移除所有選中狀態
+            document.querySelectorAll('.type-item').forEach(item => {
+                item.classList.remove('selected');
+            });
+            
+            // 設置新的選中狀態
+            element.classList.add('selected');
+            selectedType = type;
+            
+            // 更新表單中的選擇
+            document.getElementById('feedbackType').value = type;
+        }
+        
+        // 評分功能
+        document.getElementById('ratingStars').addEventListener('click', function(e) {
+            if (e.target.classList.contains('star')) {
+                const rating = parseInt(e.target.dataset.rating);
+                setRating(rating);
+            }
+        });
+        
+        // 設置評分
+        function setRating(rating) {
+            selectedRating = rating;
+            const stars = document.querySelectorAll('.star');
+            const ratingText = document.getElementById('ratingText');
+            
+            stars.forEach((star, index) => {
+                if (index < rating) {
+                    star.classList.add('active');
+                } else {
+                    star.classList.remove('active');
+                }
+            });
+            
+            const ratingTexts = [
+                '點擊星星進行評分',
+                '很不滿意',
+                '不滿意',
+                '一般',
+                '滿意',
+                '非常滿意'
+            ];
+            
+            ratingText.textContent = ratingTexts[rating];
+        }
+        
+        // 表單提交
+        document.getElementById('feedbackForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const submitBtn = document.getElementById('submitBtn');
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>提交中...';
+            
+            // 收集表單數據
+            const formData = {
+                type: document.getElementById('feedbackType').value,
+                rating: selectedRating,
+                email: document.getElementById('email').value,
+                description: document.getElementById('description').value,
+                features: Array.from(document.querySelectorAll('.checkbox-input:checked')).map(cb => cb.value),
+                timestamp: new Date().toISOString()
+            };
+            
+            // 模擬提交過程
+            setTimeout(() => {
+                // 這裡應該發送到後端API
+                console.log('意見回饋提交:', formData);
+                
+                alert('感謝您的回饋！我們會認真考慮您的建議。');
+                
+                // 重置表單
+                document.getElementById('feedbackForm').reset();
+                selectedRating = 0;
+                selectedType = '';
+                
+                // 重置評分顯示
+                document.querySelectorAll('.star').forEach(star => {
+                    star.classList.remove('active');
+                });
+                document.getElementById('ratingText').textContent = '點擊星星進行評分';
+                
+                // 重置類型選擇
+                document.querySelectorAll('.type-item').forEach(item => {
+                    item.classList.remove('selected');
+                });
+                
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="fas fa-paper-plane mr-2"></i>提交回饋';
+            }, 2000);
+        });
+        
+        // 初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('意見回饋頁面已載入');
+        });
+    </script>
+</body>
+</html>

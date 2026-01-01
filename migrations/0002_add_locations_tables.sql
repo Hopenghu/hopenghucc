@@ -5,9 +5,11 @@ CREATE TABLE IF NOT EXISTS locations (
     id TEXT PRIMARY KEY NOT NULL,
     google_place_id TEXT UNIQUE,
     name TEXT NOT NULL,
+    -- Using 'address' from original 0002, will handle mapping to formatted_address in service
     address TEXT,
     latitude REAL NOT NULL,
     longitude REAL NOT NULL,
+    -- Using 'source_type' from original 0002, will handle mapping in service
     source_type TEXT NOT NULL CHECK(source_type IN ('google_place', 'user_coordinate')),
     google_types TEXT, -- Store as JSON string or comma-separated
     created_by_user_id TEXT NOT NULL REFERENCES users(id),
@@ -22,8 +24,10 @@ CREATE INDEX IF NOT EXISTS idx_locations_coords ON locations (latitude, longitud
 -- Create user_locations table for user-specific data related to a location
 CREATE TABLE IF NOT EXISTS user_locations (
     id TEXT PRIMARY KEY NOT NULL,
+    -- Using TEXT ids from original 0002
     user_id TEXT NOT NULL REFERENCES users(id),
     location_id TEXT NOT NULL REFERENCES locations(id),
+    -- Using 'user_description' from original 0002
     user_description TEXT,
     status TEXT CHECK(status IN ('visited', 'want_to_go')), -- Example statuses
     added_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -37,6 +41,7 @@ CREATE INDEX IF NOT EXISTS idx_user_locations_location_id ON user_locations (loc
 -- Create user_location_links table
 CREATE TABLE IF NOT EXISTS user_location_links (
     id TEXT PRIMARY KEY NOT NULL,
+    -- Using TEXT id from original 0002
     user_location_id TEXT NOT NULL REFERENCES user_locations(id) ON DELETE CASCADE,
     url TEXT NOT NULL,
     label TEXT,

@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>儲存空間設定 - HOPENGHU好澎湖</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;600;700&display=swap');
+        body { 
+            font-family: 'Noto Sans TC', sans-serif; 
+            background: #f8fafc;
+        }
+        
+        .storage-container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 1rem;
+        }
+        
+        .storage-section {
+            background: white;
+            border-radius: 12px;
+            margin-bottom: 1rem;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        .section-header {
+            padding: 1rem 1.5rem;
+            background: #f9fafb;
+            border-bottom: 1px solid #e5e7eb;
+            font-weight: 600;
+            color: #374151;
+        }
+        
+        .storage-overview {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        .storage-chart {
+            position: relative;
+            width: 120px;
+            height: 120px;
+            margin: 0 auto 1rem;
+        }
+        
+        .storage-circle {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background: conic-gradient(#667eea 0deg 216deg, #e5e7eb 216deg 360deg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+        
+        .storage-circle::before {
+            content: '';
+            position: absolute;
+            width: 80px;
+            height: 80px;
+            background: white;
+            border-radius: 50%;
+        }
+        
+        .storage-percentage {
+            position: relative;
+            z-index: 1;
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #111827;
+        }
+        
+        .storage-info {
+            text-align: center;
+        }
+        
+        .storage-used {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #111827;
+            margin-bottom: 0.25rem;
+        }
+        
+        .storage-total {
+            color: #6b7280;
+            font-size: 0.9rem;
+        }
+        
+        .storage-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid #f3f4f6;
+        }
+        
+        .storage-item:last-child {
+            border-bottom: none;
+        }
+        
+        .item-info {
+            display: flex;
+            align-items: center;
+            flex: 1;
+        }
+        
+        .item-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 1rem;
+            font-size: 1.2rem;
+        }
+        
+        .item-icon.photos {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+        
+        .item-icon.videos {
+            background: #fef3c7;
+            color: #d97706;
+        }
+        
+        .item-icon.cache {
+            background: #f3f4f6;
+            color: #6b7280;
+        }
+        
+        .item-icon.documents {
+            background: #d1fae5;
+            color: #059669;
+        }
+        
+        .item-details {
+            flex: 1;
+        }
+        
+        .item-name {
+            font-weight: 500;
+            color: #111827;
+            margin-bottom: 0.25rem;
+        }
+        
+        .item-description {
+            font-size: 0.8rem;
+            color: #6b7280;
+        }
+        
+        .item-size {
+            font-weight: 500;
+            color: #374151;
+        }
+        
+        .clear-btn {
+            background: #ef4444;
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        
+        .clear-btn:hover {
+            background: #dc2626;
+        }
+        
+        .clear-btn:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+        }
+        
+        .auto-cleanup {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        .auto-cleanup-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #111827;
+            margin-bottom: 1rem;
+        }
+        
+        .cleanup-option {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.75rem 0;
+            border-bottom: 1px solid #f3f4f6;
+        }
+        
+        .cleanup-option:last-child {
+            border-bottom: none;
+        }
+        
+        .cleanup-info {
+            flex: 1;
+        }
+        
+        .cleanup-name {
+            font-weight: 500;
+            color: #111827;
+            margin-bottom: 0.25rem;
+        }
+        
+        .cleanup-description {
+            font-size: 0.8rem;
+            color: #6b7280;
+        }
+        
+        .toggle-switch {
+            position: relative;
+            width: 50px;
+            height: 28px;
+            background: #d1d5db;
+            border-radius: 14px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        
+        .toggle-switch.active {
+            background: #667eea;
+        }
+        
+        .toggle-switch::after {
+            content: '';
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 24px;
+            height: 24px;
+            background: white;
+            border-radius: 50%;
+            transition: transform 0.3s;
+        }
+        
+        .toggle-switch.active::after {
+            transform: translateX(22px);
+        }
+        
+        .save-btn {
+            width: 100%;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 1rem;
+            border-radius: 12px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.3s;
+            margin-top: 1rem;
+        }
+        
+        .save-btn:hover {
+            transform: translateY(-2px);
+        }
+        
+        .save-btn:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .info-text {
+            background: #f0f4ff;
+            border: 1px solid #c7d2fe;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-top: 1rem;
+            font-size: 0.9rem;
+            color: #3730a3;
+        }
+        
+        .warning-text {
+            background: #fef3c7;
+            border: 1px solid #fde68a;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-top: 1rem;
+            font-size: 0.9rem;
+            color: #92400e;
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .modal-content {
+            background: white;
+            border-radius: 12px;
+            padding: 2rem;
+            max-width: 400px;
+            width: 90%;
+            text-align: center;
+        }
+        
+        .modal-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #111827;
+            margin-bottom: 1rem;
+        }
+        
+        .modal-buttons {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+        
+        .modal-btn {
+            flex: 1;
+            padding: 0.75rem;
+            border-radius: 8px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .modal-btn-primary {
+            background: #ef4444;
+            color: white;
+            border: none;
+        }
+        
+        .modal-btn-secondary {
+            background: #f3f4f6;
+            color: #374151;
+            border: 1px solid #d1d5db;
+        }
+        
+        /* 手機版優化 */
+        @media (max-width: 768px) {
+            .storage-container {
+                padding: 0.5rem;
+            }
+            
+            .storage-item {
+                padding: 0.75rem 1rem;
+            }
+            
+            .modal-buttons {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- 頂部導航 -->
+    <nav class="bg-white shadow-sm sticky top-0 z-50">
+        <div class="max-w-600px mx-auto px-4 py-3">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center">
+                    <a href="settings.html" class="mr-4">
+                        <i class="fas fa-arrow-left text-xl text-gray-600"></i>
+                    </a>
+                    <span class="text-lg font-semibold">儲存空間設定</span>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="storage-container">
+        <!-- 儲存空間概覽 -->
+        <div class="storage-overview">
+            <div class="storage-chart">
+                <div class="storage-circle">
+                    <div class="storage-percentage">60%</div>
+                </div>
+            </div>
+            <div class="storage-info">
+                <div class="storage-used">1.2 GB 已使用</div>
+                <div class="storage-total">共 2.0 GB 可用空間</div>
+            </div>
+        </div>
+
+        <!-- 儲存空間詳情 -->
+        <div class="storage-section">
+            <div class="section-header">
+                <i class="fas fa-hdd mr-2"></i>
+                儲存空間詳情
+            </div>
+            
+            <!-- 照片 -->
+            <div class="storage-item">
+                <div class="item-info">
+                    <div class="item-icon photos">
+                        <i class="fas fa-images"></i>
+                    </div>
+                    <div class="item-details">
+                        <div class="item-name">照片</div>
+                        <div class="item-description">上傳的照片和圖片</div>
+                    </div>
+                </div>
+                <div class="item-size">850 MB</div>
+            </div>
+            
+            <!-- 影片 -->
+            <div class="storage-item">
+                <div class="item-info">
+                    <div class="item-icon videos">
+                        <i class="fas fa-video"></i>
+                    </div>
+                    <div class="item-details">
+                        <div class="item-name">影片</div>
+                        <div class="item-description">上傳的影片檔案</div>
+                    </div>
+                </div>
+                <div class="item-size">200 MB</div>
+            </div>
+            
+            <!-- 快取 -->
+            <div class="storage-item">
+                <div class="item-info">
+                    <div class="item-icon cache">
+                        <i class="fas fa-database"></i>
+                    </div>
+                    <div class="item-details">
+                        <div class="item-name">快取資料</div>
+                        <div class="item-description">應用程式快取和暫存檔案</div>
+                    </div>
+                </div>
+                <div class="item-size">120 MB</div>
+            </div>
+            
+            <!-- 文件 -->
+            <div class="storage-item">
+                <div class="item-info">
+                    <div class="item-icon documents">
+                        <i class="fas fa-file-alt"></i>
+                    </div>
+                    <div class="item-details">
+                        <div class="item-name">其他文件</div>
+                        <div class="item-description">個人資料和其他檔案</div>
+                    </div>
+                </div>
+                <div class="item-size">30 MB</div>
+            </div>
+        </div>
+
+        <!-- 自動清理設定 -->
+        <div class="auto-cleanup">
+            <div class="auto-cleanup-title">自動清理設定</div>
+            
+            <div class="cleanup-option">
+                <div class="cleanup-info">
+                    <div class="cleanup-name">自動清理快取</div>
+                    <div class="cleanup-description">每週自動清理應用程式快取</div>
+                </div>
+                <div class="toggle-switch active" onclick="toggleSwitch(this)"></div>
+            </div>
+            
+            <div class="cleanup-option">
+                <div class="cleanup-info">
+                    <div class="cleanup-name">壓縮舊照片</div>
+                    <div class="cleanup-description">自動壓縮30天前的照片以節省空間</div>
+                </div>
+                <div class="toggle-switch" onclick="toggleSwitch(this)"></div>
+            </div>
+            
+            <div class="cleanup-option">
+                <div class="cleanup-info">
+                    <div class="cleanup-name">刪除重複檔案</div>
+                    <div class="cleanup-description">自動檢測並刪除重複的照片和影片</div>
+                </div>
+                <div class="toggle-switch" onclick="toggleSwitch(this)"></div>
+            </div>
+        </div>
+
+        <!-- 手動清理 -->
+        <div class="storage-section">
+            <div class="section-header">
+                <i class="fas fa-broom mr-2"></i>
+                手動清理
+            </div>
+            
+            <div class="storage-item">
+                <div class="item-info">
+                    <div class="item-icon cache">
+                        <i class="fas fa-trash"></i>
+                    </div>
+                    <div class="item-details">
+                        <div class="item-name">清理快取</div>
+                        <div class="item-description">清理所有應用程式快取資料</div>
+                    </div>
+                </div>
+                <button class="clear-btn" onclick="showClearModal('cache', '120 MB')">
+                    清理
+                </button>
+            </div>
+            
+            <div class="storage-item">
+                <div class="item-info">
+                    <div class="item-icon photos">
+                        <i class="fas fa-compress"></i>
+                    </div>
+                    <div class="item-details">
+                        <div class="item-name">壓縮照片</div>
+                        <div class="item-description">壓縮所有照片以節省空間</div>
+                    </div>
+                </div>
+                <button class="clear-btn" onclick="showClearModal('photos', '約可節省 200 MB')">
+                    壓縮
+                </button>
+            </div>
+        </div>
+
+        <!-- 儲存按鈕 -->
+        <button class="save-btn" onclick="saveSettings()">
+            <i class="fas fa-save mr-2"></i>儲存設定
+        </button>
+
+        <!-- 說明文字 -->
+        <div class="info-text">
+            <i class="fas fa-info-circle mr-2"></i>
+            定期清理儲存空間可以提升應用程式效能。建議開啟自動清理功能以保持最佳使用體驗。
+        </div>
+
+        <!-- 警告文字 -->
+        <div class="warning-text">
+            <i class="fas fa-exclamation-triangle mr-2"></i>
+            清理操作無法復原，請確認後再執行。建議在清理前備份重要資料。
+        </div>
+    </div>
+
+    <!-- 清理確認模態框 -->
+    <div class="modal" id="clearModal">
+        <div class="modal-content">
+            <div class="modal-title">確認清理</div>
+            <p class="text-gray-600 mb-4" id="clearMessage">
+                您確定要執行此清理操作嗎？此操作無法復原。
+            </p>
+            <div class="modal-buttons">
+                <button class="modal-btn modal-btn-secondary" onclick="hideClearModal()">取消</button>
+                <button class="modal-btn modal-btn-primary" onclick="confirmClear()">確認清理</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentClearType = null;
+        let currentClearSize = null;
+        
+        // 切換開關
+        function toggleSwitch(element) {
+            element.classList.toggle('active');
+        }
+        
+        // 顯示清理確認模態框
+        function showClearModal(type, size) {
+            currentClearType = type;
+            currentClearSize = size;
+            
+            let message = '';
+            if (type === 'cache') {
+                message = `您確定要清理快取資料嗎？這將釋放 ${size} 的儲存空間。此操作無法復原。`;
+            } else if (type === 'photos') {
+                message = `您確定要壓縮照片嗎？這將 ${size}。壓縮後的照片品質可能會稍微降低。`;
+            }
+            
+            document.getElementById('clearMessage').textContent = message;
+            document.getElementById('clearModal').style.display = 'flex';
+        }
+        
+        // 隱藏清理確認模態框
+        function hideClearModal() {
+            document.getElementById('clearModal').style.display = 'none';
+            currentClearType = null;
+            currentClearSize = null;
+        }
+        
+        // 確認清理
+        function confirmClear() {
+            if (currentClearType) {
+                // 模擬清理過程
+                const modal = document.getElementById('clearModal');
+                const confirmBtn = modal.querySelector('.modal-btn-primary');
+                
+                confirmBtn.disabled = true;
+                confirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>清理中...';
+                
+                setTimeout(() => {
+                    // 這裡應該執行實際的清理操作
+                    console.log('清理操作:', currentClearType, currentClearSize);
+                    
+                    // 更新儲存空間顯示
+                    updateStorageDisplay();
+                    
+                    alert('清理完成！');
+                    hideClearModal();
+                    
+                    confirmBtn.disabled = false;
+                    confirmBtn.innerHTML = '確認清理';
+                }, 2000);
+            }
+        }
+        
+        // 更新儲存空間顯示
+        function updateStorageDisplay() {
+            // 這裡應該從後端獲取最新的儲存空間資訊
+            // 目前只是模擬更新
+            const percentage = document.querySelector('.storage-percentage');
+            const used = document.querySelector('.storage-used');
+            
+            // 模擬清理後的數據
+            if (currentClearType === 'cache') {
+                percentage.textContent = '54%';
+                used.textContent = '1.08 GB 已使用';
+            }
+        }
+        
+        // 儲存設定
+        function saveSettings() {
+            const saveBtn = document.querySelector('.save-btn');
+            saveBtn.disabled = true;
+            saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>儲存中...';
+            
+            // 模擬儲存過程
+            setTimeout(() => {
+                // 這裡應該發送到後端API
+                console.log('儲存空間設定儲存');
+                
+                alert('設定已成功儲存！');
+                
+                saveBtn.disabled = false;
+                saveBtn.innerHTML = '<i class="fas fa-save mr-2"></i>儲存設定';
+            }, 1500);
+        }
+        
+        // 點擊模態框外部關閉
+        document.getElementById('clearModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                hideClearModal();
+            }
+        });
+        
+        // 初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            // 這裡可以從後端載入儲存空間資訊
+            console.log('儲存空間設定頁面已載入');
+        });
+    </script>
+</body>
+</html>

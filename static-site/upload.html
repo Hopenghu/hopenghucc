@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>分享內容 - HOPENGHU好澎湖</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;600;700&display=swap');
+        body { 
+            font-family: 'Noto Sans TC', sans-serif; 
+            background: #f8fafc;
+        }
+        
+        .upload-container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 1rem;
+        }
+        
+        .upload-card {
+            background: white;
+            border-radius: 16px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            margin-bottom: 1rem;
+        }
+        
+        .upload-area {
+            border: 2px dashed #d1d5db;
+            border-radius: 12px;
+            padding: 3rem 2rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            background: #f9fafb;
+        }
+        
+        .upload-area:hover {
+            border-color: #667eea;
+            background: #f0f4ff;
+        }
+        
+        .upload-area.dragover {
+            border-color: #667eea;
+            background: #f0f4ff;
+            transform: scale(1.02);
+        }
+        
+        .upload-icon {
+            font-size: 3rem;
+            color: #9ca3af;
+            margin-bottom: 1rem;
+        }
+        
+        .upload-text {
+            color: #6b7280;
+            font-size: 1.1rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .upload-hint {
+            color: #9ca3af;
+            font-size: 0.9rem;
+        }
+        
+        .image-preview {
+            position: relative;
+            border-radius: 12px;
+            overflow: hidden;
+            margin-bottom: 1rem;
+        }
+        
+        .preview-image {
+            width: 100%;
+            height: 300px;
+            object-fit: cover;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        
+        .remove-image {
+            position: absolute;
+            top: 0.5rem;
+            right: 0.5rem;
+            background: rgba(0,0,0,0.5);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+        
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+        
+        .form-label {
+            display: block;
+            font-weight: 500;
+            color: #374151;
+            margin-bottom: 0.5rem;
+        }
+        
+        .form-input {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.3s;
+        }
+        
+        .form-input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        .form-textarea {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            font-size: 1rem;
+            resize: vertical;
+            min-height: 100px;
+            transition: border-color 0.3s;
+        }
+        
+        .form-textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        .location-selector {
+            position: relative;
+        }
+        
+        .location-input {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            font-size: 1rem;
+        }
+        
+        .location-suggestions {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 1px solid #d1d5db;
+            border-top: none;
+            border-radius: 0 0 8px 8px;
+            max-height: 200px;
+            overflow-y: auto;
+            z-index: 10;
+        }
+        
+        .location-suggestion {
+            padding: 0.75rem;
+            cursor: pointer;
+            border-bottom: 1px solid #f3f4f6;
+        }
+        
+        .location-suggestion:hover {
+            background: #f9fafb;
+        }
+        
+        .tag-input {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            padding: 0.75rem;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            min-height: 50px;
+            align-items: center;
+        }
+        
+        .tag {
+            background: #e0e7ff;
+            color: #3730a3;
+            padding: 0.25rem 0.75rem;
+            border-radius: 12px;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .tag-remove {
+            cursor: pointer;
+            color: #6b7280;
+        }
+        
+        .tag-input input {
+            border: none;
+            outline: none;
+            flex: 1;
+            min-width: 100px;
+        }
+        
+        .privacy-selector {
+            display: flex;
+            gap: 1rem;
+        }
+        
+        .privacy-option {
+            flex: 1;
+            padding: 0.75rem;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .privacy-option.selected {
+            border-color: #667eea;
+            background: #f0f4ff;
+        }
+        
+        .privacy-icon {
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .privacy-label {
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+        
+        .submit-btn {
+            width: 100%;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 1rem;
+            border-radius: 12px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.3s;
+        }
+        
+        .submit-btn:hover {
+            transform: translateY(-2px);
+        }
+        
+        .submit-btn:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 4px;
+            background: #e5e7eb;
+            border-radius: 2px;
+            overflow: hidden;
+            margin-top: 1rem;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            width: 0%;
+            transition: width 0.3s;
+        }
+        
+        /* 手機版優化 */
+        @media (max-width: 768px) {
+            .upload-container {
+                padding: 0.5rem;
+            }
+            
+            .upload-card {
+                padding: 1rem;
+            }
+            
+            .upload-area {
+                padding: 2rem 1rem;
+            }
+            
+            .privacy-selector {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- 頂部導航 -->
+    <nav class="bg-white shadow-sm sticky top-0 z-50">
+        <div class="max-w-600px mx-auto px-4 py-3">
+            <div class="flex items-center justify-between">
+                <a href="index.html" class="text-xl font-bold text-blue-600">🏝️ HOPENGHU</a>
+                <div class="flex items-center space-x-4">
+                    <a href="feed.html" class="text-gray-600">
+                        <i class="fas fa-home text-xl"></i>
+                    </a>
+                    <a href="discover.html" class="text-gray-600">
+                        <i class="fas fa-search text-xl"></i>
+                    </a>
+                    <a href="upload.html" class="text-blue-600">
+                        <i class="fas fa-plus-square text-xl"></i>
+                    </a>
+                    <a href="profile.html" class="text-gray-600">
+                        <i class="fas fa-user text-xl"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="upload-container">
+        <div class="upload-card">
+            <h2 class="text-xl font-bold text-gray-900 mb-4">分享您的澎湖時光</h2>
+            
+            <!-- 圖片上傳區域 -->
+            <div class="upload-area" id="uploadArea" onclick="document.getElementById('fileInput').click()">
+                <div class="upload-icon">
+                    <i class="fas fa-cloud-upload-alt"></i>
+                </div>
+                <div class="upload-text">點擊上傳或拖拽圖片到這裡</div>
+                <div class="upload-hint">支援 JPG、PNG 格式，最大 10MB</div>
+            </div>
+            
+            <input type="file" id="fileInput" accept="image/*" style="display: none;" onchange="handleFileSelect(event)">
+            
+            <!-- 圖片預覽 -->
+            <div class="image-preview" id="imagePreview" style="display: none;">
+                <img id="previewImage" class="preview-image" alt="預覽圖片">
+                <button class="remove-image" onclick="removeImage()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <!-- 上傳進度 -->
+            <div class="progress-bar" id="progressBar" style="display: none;">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+        </div>
+
+        <div class="upload-card">
+            <form id="uploadForm">
+                <!-- 標題 -->
+                <div class="form-group">
+                    <label class="form-label">標題</label>
+                    <input type="text" class="form-input" placeholder="為您的分享添加一個吸引人的標題..." maxlength="100">
+                </div>
+                
+                <!-- 描述 -->
+                <div class="form-group">
+                    <label class="form-label">描述</label>
+                    <textarea class="form-textarea" placeholder="分享您的澎湖故事，讓朋友們了解您的體驗..." maxlength="500"></textarea>
+                </div>
+                
+                <!-- 地點選擇 -->
+                <div class="form-group">
+                    <label class="form-label">地點</label>
+                    <div class="location-selector">
+                        <input type="text" class="location-input" id="locationInput" placeholder="選擇或輸入地點..." autocomplete="off">
+                        <div class="location-suggestions" id="locationSuggestions" style="display: none;"></div>
+                    </div>
+                </div>
+                
+                <!-- 標籤 -->
+                <div class="form-group">
+                    <label class="form-label">標籤</label>
+                    <div class="tag-input" id="tagInput">
+                        <input type="text" placeholder="添加標籤..." onkeypress="handleTagInput(event)">
+                    </div>
+                </div>
+                
+                <!-- 隱私設定 -->
+                <div class="form-group">
+                    <label class="form-label">隱私設定</label>
+                    <div class="privacy-selector">
+                        <div class="privacy-option selected" onclick="selectPrivacy(this, 'public')">
+                            <div class="privacy-icon">🌍</div>
+                            <div class="privacy-label">公開</div>
+                        </div>
+                        <div class="privacy-option" onclick="selectPrivacy(this, 'friends')">
+                            <div class="privacy-icon">👥</div>
+                            <div class="privacy-label">朋友</div>
+                        </div>
+                        <div class="privacy-option" onclick="selectPrivacy(this, 'private')">
+                            <div class="privacy-icon">🔒</div>
+                            <div class="privacy-label">私人</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 提交按鈕 -->
+                <button type="submit" class="submit-btn" id="submitBtn">
+                    <i class="fas fa-paper-plane mr-2"></i>
+                    發布分享
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        let selectedFile = null;
+        let selectedPrivacy = 'public';
+        let tags = [];
+        
+        // 地點建議
+        const locationSuggestions = [
+            '七美雙心石滬', '澎湖跨海大橋', '吉貝沙尾', '馬公市', '西嶼',
+            '白沙', '望安', '湖西', '七美', '吉貝', '桶盤', '虎井'
+        ];
+        
+        // 文件選擇處理
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (file) {
+                selectedFile = file;
+                showImagePreview(file);
+            }
+        }
+        
+        // 顯示圖片預覽
+        function showImagePreview(file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                document.getElementById('previewImage').src = e.target.result;
+                document.getElementById('imagePreview').style.display = 'block';
+                document.getElementById('uploadArea').style.display = 'none';
+            };
+            reader.readAsDataURL(file);
+        }
+        
+        // 移除圖片
+        function removeImage() {
+            selectedFile = null;
+            document.getElementById('imagePreview').style.display = 'none';
+            document.getElementById('uploadArea').style.display = 'block';
+            document.getElementById('fileInput').value = '';
+        }
+        
+        // 拖拽上傳
+        const uploadArea = document.getElementById('uploadArea');
+        
+        uploadArea.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            this.classList.add('dragover');
+        });
+        
+        uploadArea.addEventListener('dragleave', function(e) {
+            e.preventDefault();
+            this.classList.remove('dragover');
+        });
+        
+        uploadArea.addEventListener('drop', function(e) {
+            e.preventDefault();
+            this.classList.remove('dragover');
+            
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                selectedFile = files[0];
+                showImagePreview(files[0]);
+            }
+        });
+        
+        // 地點建議
+        const locationInput = document.getElementById('locationInput');
+        const locationSuggestionsDiv = document.getElementById('locationSuggestions');
+        
+        locationInput.addEventListener('input', function() {
+            const query = this.value.toLowerCase();
+            if (query.length > 0) {
+                const filtered = locationSuggestions.filter(loc => 
+                    loc.toLowerCase().includes(query)
+                );
+                showLocationSuggestions(filtered);
+            } else {
+                locationSuggestionsDiv.style.display = 'none';
+            }
+        });
+        
+        function showLocationSuggestions(suggestions) {
+            locationSuggestionsDiv.innerHTML = '';
+            suggestions.forEach(suggestion => {
+                const div = document.createElement('div');
+                div.className = 'location-suggestion';
+                div.textContent = suggestion;
+                div.onclick = () => {
+                    locationInput.value = suggestion;
+                    locationSuggestionsDiv.style.display = 'none';
+                };
+                locationSuggestionsDiv.appendChild(div);
+            });
+            locationSuggestionsDiv.style.display = 'block';
+        }
+        
+        // 點擊外部關閉建議
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('.location-selector')) {
+                locationSuggestionsDiv.style.display = 'none';
+            }
+        });
+        
+        // 標籤輸入
+        function handleTagInput(event) {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                const input = event.target;
+                const tag = input.value.trim();
+                
+                if (tag && !tags.includes(tag) && tags.length < 10) {
+                    tags.push(tag);
+                    updateTagDisplay();
+                    input.value = '';
+                }
+            }
+        }
+        
+        function updateTagDisplay() {
+            const tagInput = document.getElementById('tagInput');
+            const existingTags = tagInput.querySelectorAll('.tag');
+            existingTags.forEach(tag => tag.remove());
+            
+            tags.forEach(tag => {
+                const tagElement = document.createElement('div');
+                tagElement.className = 'tag';
+                tagElement.innerHTML = `
+                    ${tag}
+                    <span class="tag-remove" onclick="removeTag('${tag}')">×</span>
+                `;
+                tagInput.insertBefore(tagElement, tagInput.querySelector('input'));
+            });
+        }
+        
+        function removeTag(tag) {
+            tags = tags.filter(t => t !== tag);
+            updateTagDisplay();
+        }
+        
+        // 隱私設定
+        function selectPrivacy(element, privacy) {
+            document.querySelectorAll('.privacy-option').forEach(opt => opt.classList.remove('selected'));
+            element.classList.add('selected');
+            selectedPrivacy = privacy;
+        }
+        
+        // 表單提交
+        document.getElementById('uploadForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            if (!selectedFile) {
+                alert('請先選擇一張圖片');
+                return;
+            }
+            
+            const submitBtn = document.getElementById('submitBtn');
+            const progressBar = document.getElementById('progressBar');
+            const progressFill = document.getElementById('progressFill');
+            
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>發布中...';
+            progressBar.style.display = 'block';
+            
+            // 模擬上傳進度
+            let progress = 0;
+            const interval = setInterval(() => {
+                progress += Math.random() * 30;
+                if (progress > 100) progress = 100;
+                progressFill.style.width = progress + '%';
+                
+                if (progress >= 100) {
+                    clearInterval(interval);
+                    setTimeout(() => {
+                        alert('分享發布成功！');
+                        window.location.href = 'feed.html';
+                    }, 500);
+                }
+            }, 200);
+        });
+    </script>
+</body>
+</html>

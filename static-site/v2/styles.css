@@ -1,0 +1,422 @@
+/* HOPENGHU好澎湖 v2.0 樣式 */
+
+/* 海洋漸層背景 */
+.ocean-gradient {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+/* 響應式文字大小 */
+.text-mobile-xl {
+    font-size: 2rem;
+    line-height: 2.5rem;
+}
+
+.text-mobile-lg {
+    font-size: 1.125rem;
+    line-height: 1.75rem;
+}
+
+.text-desktop-xl {
+    font-size: 3rem;
+    line-height: 1;
+}
+
+.text-desktop-lg {
+    font-size: 1.25rem;
+    line-height: 1.75rem;
+}
+
+/* 響應式按鈕 */
+.btn-mobile {
+    padding: 0.75rem 1.5rem;
+    font-size: 1rem;
+}
+
+.btn-desktop {
+    padding: 1rem 2rem;
+    font-size: 1.125rem;
+}
+
+/* 響應式卡片 */
+.card-mobile {
+    padding: 1rem;
+    margin-bottom: 1rem;
+}
+
+.card-desktop {
+    padding: 2rem;
+    margin-bottom: 2rem;
+}
+
+/* 響應式區塊 */
+.section-mobile {
+    padding: 2rem 0;
+}
+
+.section-desktop {
+    padding: 5rem 0;
+}
+
+/* 時間軸樣式 */
+.timeline-item {
+    position: relative;
+    padding: 1rem 0;
+}
+
+.timeline-dot {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 1rem;
+    height: 1rem;
+    border-radius: 50%;
+    background: #3b82f6;
+    border: 4px solid white;
+    z-index: 10;
+}
+
+/* 網格佈局 */
+.grid-desktop {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 2rem;
+}
+
+/* 動畫效果 */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.fade-in-up {
+    animation: fadeInUp 0.6s ease-out;
+}
+
+/* 懸停效果 */
+.hover-scale {
+    transition: transform 0.3s ease;
+}
+
+.hover-scale:hover {
+    transform: scale(1.05);
+}
+
+/* 載入動畫 */
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.spin {
+    animation: spin 1s linear infinite;
+}
+
+/* 通知樣式 */
+.notification {
+    position: fixed;
+    top: 1rem;
+    right: 1rem;
+    padding: 1rem 1.5rem;
+    border-radius: 0.5rem;
+    color: white;
+    font-weight: 500;
+    z-index: 1000;
+    animation: slideInRight 0.3s ease-out;
+}
+
+@keyframes slideInRight {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+/* 模態框樣式 */
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 50;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-content {
+    background: white;
+    border-radius: 0.5rem;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    max-width: 28rem;
+    width: 100%;
+    padding: 1.5rem;
+    animation: modalSlideIn 0.3s ease-out;
+}
+
+@keyframes modalSlideIn {
+    from {
+        transform: scale(0.95);
+        opacity: 0;
+    }
+    to {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+/* 內容卡片樣式 */
+.content-card {
+    background: white;
+    border-radius: 0.75rem;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    padding: 1.5rem;
+    transition: box-shadow 0.3s ease;
+}
+
+.content-card:hover {
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+}
+
+/* 朋友卡片樣式 */
+.friend-card {
+    background: white;
+    border-radius: 0.75rem;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    padding: 1.5rem;
+    transition: all 0.3s ease;
+}
+
+.friend-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+}
+
+/* 標籤樣式 */
+.tag {
+    display: inline-block;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
+.tag-blue {
+    background-color: #dbeafe;
+    color: #1e40af;
+}
+
+.tag-green {
+    background-color: #dcfce7;
+    color: #166534;
+}
+
+.tag-purple {
+    background-color: #f3e8ff;
+    color: #7c3aed;
+}
+
+.tag-orange {
+    background-color: #fed7aa;
+    color: #ea580c;
+}
+
+.tag-red {
+    background-color: #fecaca;
+    color: #dc2626;
+}
+
+.tag-yellow {
+    background-color: #fef3c7;
+    color: #d97706;
+}
+
+/* 按鈕樣式 */
+.btn-primary {
+    background-color: #2563eb;
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: 0.5rem;
+    font-weight: 500;
+    transition: background-color 0.3s ease;
+}
+
+.btn-primary:hover {
+    background-color: #1d4ed8;
+}
+
+.btn-secondary {
+    background-color: white;
+    color: #374151;
+    border: 1px solid #d1d5db;
+    padding: 0.5rem 1rem;
+    border-radius: 0.5rem;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.btn-secondary:hover {
+    background-color: #f9fafb;
+    border-color: #9ca3af;
+}
+
+/* 輸入框樣式 */
+.input-field {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid #d1d5db;
+    border-radius: 0.5rem;
+    font-size: 1rem;
+    transition: border-color 0.3s ease;
+}
+
+.input-field:focus {
+    outline: none;
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+/* 載入狀態 */
+.loading {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+.loading::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 1rem;
+    height: 1rem;
+    margin: -0.5rem 0 0 -0.5rem;
+    border: 2px solid #f3f4f6;
+    border-top: 2px solid #2563eb;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+/* 響應式設計 */
+@media (max-width: 768px) {
+    .text-mobile-xl {
+        font-size: 1.5rem;
+        line-height: 2rem;
+    }
+    
+    .text-mobile-lg {
+        font-size: 1rem;
+        line-height: 1.5rem;
+    }
+    
+    .btn-mobile {
+        padding: 0.5rem 1rem;
+        font-size: 0.875rem;
+    }
+    
+    .card-mobile {
+        padding: 0.75rem;
+        margin-bottom: 0.75rem;
+    }
+    
+    .section-mobile {
+        padding: 1.5rem 0;
+    }
+    
+    .grid-desktop {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+    
+    .modal-content {
+        margin: 1rem;
+        max-width: calc(100% - 2rem);
+    }
+}
+
+@media (min-width: 769px) {
+    .text-desktop-xl {
+        font-size: 3.5rem;
+    }
+    
+    .text-desktop-lg {
+        font-size: 1.5rem;
+    }
+    
+    .btn-desktop {
+        padding: 1.25rem 2.5rem;
+        font-size: 1.25rem;
+    }
+    
+    .card-desktop {
+        padding: 2.5rem;
+        margin-bottom: 2.5rem;
+    }
+    
+    .section-desktop {
+        padding: 6rem 0;
+    }
+}
+
+/* 深色模式支援 */
+@media (prefers-color-scheme: dark) {
+    .content-card {
+        background: #1f2937;
+        color: #f9fafb;
+    }
+    
+    .friend-card {
+        background: #1f2937;
+        color: #f9fafb;
+    }
+    
+    .input-field {
+        background: #374151;
+        border-color: #4b5563;
+        color: #f9fafb;
+    }
+    
+    .input-field:focus {
+        border-color: #60a5fa;
+        box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.1);
+    }
+}
+
+/* 無障礙設計 */
+@media (prefers-reduced-motion: reduce) {
+    * {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
+/* 高對比度模式 */
+@media (prefers-contrast: high) {
+    .content-card {
+        border: 2px solid #000;
+    }
+    
+    .friend-card {
+        border: 2px solid #000;
+    }
+    
+    .btn-primary {
+        border: 2px solid #000;
+    }
+    
+    .btn-secondary {
+        border: 2px solid #000;
+    }
+}

@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>設定 - HOPENGHU好澎湖</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;600;700&display=swap');
+        body { 
+            font-family: 'Noto Sans TC', sans-serif; 
+            background: #f8fafc;
+        }
+        
+        .settings-container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 1rem;
+        }
+        
+        .settings-section {
+            background: white;
+            border-radius: 12px;
+            margin-bottom: 1rem;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        .section-header {
+            padding: 1rem 1.5rem;
+            background: #f9fafb;
+            border-bottom: 1px solid #e5e7eb;
+            font-weight: 600;
+            color: #374151;
+        }
+        
+        .settings-item {
+            display: flex;
+            align-items: center;
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid #f3f4f6;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        
+        .settings-item:hover {
+            background: #f9fafb;
+        }
+        
+        .settings-item:last-child {
+            border-bottom: none;
+        }
+        
+        .item-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 1rem;
+            font-size: 1.2rem;
+        }
+        
+        .item-content {
+            flex: 1;
+        }
+        
+        .item-title {
+            font-weight: 500;
+            color: #111827;
+            margin-bottom: 0.25rem;
+        }
+        
+        .item-description {
+            font-size: 0.9rem;
+            color: #6b7280;
+        }
+        
+        .item-arrow {
+            color: #9ca3af;
+            font-size: 0.9rem;
+        }
+        
+        .toggle-switch {
+            position: relative;
+            width: 50px;
+            height: 28px;
+            background: #d1d5db;
+            border-radius: 14px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        
+        .toggle-switch.active {
+            background: #667eea;
+        }
+        
+        .toggle-switch::after {
+            content: '';
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 24px;
+            height: 24px;
+            background: white;
+            border-radius: 50%;
+            transition: transform 0.3s;
+        }
+        
+        .toggle-switch.active::after {
+            transform: translateX(22px);
+        }
+        
+        .profile-preview {
+            display: flex;
+            align-items: center;
+            padding: 1rem 1.5rem;
+        }
+        
+        .profile-avatar {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 1.5rem;
+            margin-right: 1rem;
+        }
+        
+        .profile-info {
+            flex: 1;
+        }
+        
+        .profile-name {
+            font-weight: 600;
+            color: #111827;
+            margin-bottom: 0.25rem;
+        }
+        
+        .profile-email {
+            font-size: 0.9rem;
+            color: #6b7280;
+        }
+        
+        .version-info {
+            text-align: center;
+            padding: 2rem 1rem;
+            color: #9ca3af;
+            font-size: 0.9rem;
+        }
+        
+        .logout-btn {
+            width: 100%;
+            background: #ef4444;
+            color: white;
+            border: none;
+            padding: 1rem;
+            border-radius: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            margin-top: 1rem;
+        }
+        
+        .logout-btn:hover {
+            background: #dc2626;
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .modal-content {
+            background: white;
+            border-radius: 12px;
+            padding: 2rem;
+            max-width: 400px;
+            width: 90%;
+            text-align: center;
+        }
+        
+        .modal-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #111827;
+            margin-bottom: 1rem;
+        }
+        
+        .modal-buttons {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+        
+        .modal-btn {
+            flex: 1;
+            padding: 0.75rem;
+            border-radius: 8px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .modal-btn-primary {
+            background: #ef4444;
+            color: white;
+            border: none;
+        }
+        
+        .modal-btn-secondary {
+            background: #f3f4f6;
+            color: #374151;
+            border: 1px solid #d1d5db;
+        }
+        
+        /* 手機版優化 */
+        @media (max-width: 768px) {
+            .settings-container {
+                padding: 0.5rem;
+            }
+            
+            .settings-item {
+                padding: 0.75rem 1rem;
+            }
+            
+            .item-icon {
+                width: 35px;
+                height: 35px;
+                font-size: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- 頂部導航 -->
+    <nav class="bg-white shadow-sm sticky top-0 z-50">
+        <div class="max-w-600px mx-auto px-4 py-3">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center">
+                    <a href="profile.html" class="mr-4">
+                        <i class="fas fa-arrow-left text-xl text-gray-600"></i>
+                    </a>
+                    <span class="text-lg font-semibold">設定</span>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="settings-container">
+        <!-- 個人資料 -->
+        <div class="settings-section">
+            <div class="section-header">個人資料</div>
+            <div class="profile-preview">
+                <div class="profile-avatar">我</div>
+                <div class="profile-info">
+                    <div class="profile-name">我的澎湖時光</div>
+                    <div class="profile-email">user@example.com</div>
+                </div>
+            </div>
+            <div class="settings-item" onclick="window.location.href='edit-profile.html'">
+                <div class="item-icon" style="background: #dbeafe; color: #1e40af;">
+                    <i class="fas fa-user-edit"></i>
+                </div>
+                <div class="item-content">
+                    <div class="item-title">編輯個人資料</div>
+                    <div class="item-description">更新您的姓名、照片和個人資訊</div>
+                </div>
+                <div class="item-arrow">
+                    <i class="fas fa-chevron-right"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- 隱私與安全 -->
+        <div class="settings-section">
+            <div class="section-header">隱私與安全</div>
+            <div class="settings-item" onclick="window.location.href='privacy-settings.html'">
+                <div class="item-icon" style="background: #fef3c7; color: #d97706;">
+                    <i class="fas fa-shield-alt"></i>
+                </div>
+                <div class="item-content">
+                    <div class="item-title">隱私設定</div>
+                    <div class="item-description">管理您的隱私和可見性設定</div>
+                </div>
+                <div class="item-arrow">
+                    <i class="fas fa-chevron-right"></i>
+                </div>
+            </div>
+            <div class="settings-item" onclick="window.location.href='blocked-users.html'">
+                <div class="item-icon" style="background: #fee2e2; color: #dc2626;">
+                    <i class="fas fa-user-slash"></i>
+                </div>
+                <div class="item-content">
+                    <div class="item-title">封鎖的使用者</div>
+                    <div class="item-description">管理您封鎖的使用者清單</div>
+                </div>
+                <div class="item-arrow">
+                    <i class="fas fa-chevron-right"></i>
+                </div>
+            </div>
+            <div class="settings-item" onclick="window.location.href='change-password.html'">
+                <div class="item-icon" style="background: #e0e7ff; color: #3730a3;">
+                    <i class="fas fa-key"></i>
+                </div>
+                <div class="item-content">
+                    <div class="item-title">更改密碼</div>
+                    <div class="item-description">更新您的登入密碼</div>
+                </div>
+                <div class="item-arrow">
+                    <i class="fas fa-chevron-right"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- 通知設定 -->
+        <div class="settings-section">
+            <div class="section-header">通知設定</div>
+            <div class="settings-item">
+                <div class="item-icon" style="background: #d1fae5; color: #059669;">
+                    <i class="fas fa-bell"></i>
+                </div>
+                <div class="item-content">
+                    <div class="item-title">推播通知</div>
+                    <div class="item-description">接收新貼文和互動通知</div>
+                </div>
+                <div class="toggle-switch active" onclick="toggleSwitch(this)"></div>
+            </div>
+            <div class="settings-item">
+                <div class="item-icon" style="background: #fef3c7; color: #d97706;">
+                    <i class="fas fa-envelope"></i>
+                </div>
+                <div class="item-content">
+                    <div class="item-title">電子郵件通知</div>
+                    <div class="item-description">接收電子郵件摘要</div>
+                </div>
+                <div class="toggle-switch" onclick="toggleSwitch(this)"></div>
+            </div>
+            <div class="settings-item">
+                <div class="item-icon" style="background: #e0e7ff; color: #3730a3;">
+                    <i class="fas fa-heart"></i>
+                </div>
+                <div class="item-content">
+                    <div class="item-title">互動通知</div>
+                    <div class="item-description">有人按讚或評論時通知</div>
+                </div>
+                <div class="toggle-switch active" onclick="toggleSwitch(this)"></div>
+            </div>
+        </div>
+
+        <!-- 應用程式設定 -->
+        <div class="settings-section">
+            <div class="section-header">應用程式設定</div>
+            <div class="settings-item" onclick="window.location.href='language-settings.html'">
+                <div class="item-icon" style="background: #f3e8ff; color: #7c3aed;">
+                    <i class="fas fa-language"></i>
+                </div>
+                <div class="item-content">
+                    <div class="item-title">語言</div>
+                    <div class="item-description">繁體中文</div>
+                </div>
+                <div class="item-arrow">
+                    <i class="fas fa-chevron-right"></i>
+                </div>
+            </div>
+            <div class="settings-item" onclick="window.location.href='theme-settings.html'">
+                <div class="item-icon" style="background: #fef3c7; color: #d97706;">
+                    <i class="fas fa-palette"></i>
+                </div>
+                <div class="item-content">
+                    <div class="item-title">主題</div>
+                    <div class="item-description">淺色模式</div>
+                </div>
+                <div class="item-arrow">
+                    <i class="fas fa-chevron-right"></i>
+                </div>
+            </div>
+            <div class="settings-item" onclick="window.location.href='storage-settings.html'">
+                <div class="item-icon" style="background: #dbeafe; color: #1e40af;">
+                    <i class="fas fa-hdd"></i>
+                </div>
+                <div class="item-content">
+                    <div class="item-title">儲存空間</div>
+                    <div class="item-description">管理快取和離線內容</div>
+                </div>
+                <div class="item-arrow">
+                    <i class="fas fa-chevron-right"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- 支援與資訊 -->
+        <div class="settings-section">
+            <div class="section-header">支援與資訊</div>
+            <div class="settings-item" onclick="window.location.href='help-center.html'">
+                <div class="item-icon" style="background: #d1fae5; color: #059669;">
+                    <i class="fas fa-question-circle"></i>
+                </div>
+                <div class="item-content">
+                    <div class="item-title">說明中心</div>
+                    <div class="item-description">常見問題和使用指南</div>
+                </div>
+                <div class="item-arrow">
+                    <i class="fas fa-chevron-right"></i>
+                </div>
+            </div>
+            <div class="settings-item" onclick="window.location.href='contact-support.html'">
+                <div class="item-icon" style="background: #fef3c7; color: #d97706;">
+                    <i class="fas fa-headset"></i>
+                </div>
+                <div class="item-content">
+                    <div class="item-title">聯絡客服</div>
+                    <div class="item-description">獲得技術支援和協助</div>
+                </div>
+                <div class="item-arrow">
+                    <i class="fas fa-chevron-right"></i>
+                </div>
+            </div>
+            <div class="settings-item" onclick="window.location.href='about-app.html'">
+                <div class="item-icon" style="background: #e0e7ff; color: #3730a3;">
+                    <i class="fas fa-info-circle"></i>
+                </div>
+                <div class="item-content">
+                    <div class="item-title">關於應用程式</div>
+                    <div class="item-description">版本資訊和條款</div>
+                </div>
+                <div class="item-arrow">
+                    <i class="fas fa-chevron-right"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- 登出按鈕 -->
+        <button class="logout-btn" onclick="showLogoutModal()">
+            <i class="fas fa-sign-out-alt mr-2"></i>登出
+        </button>
+
+        <!-- 版本資訊 -->
+        <div class="version-info">
+            HOPENGHU好澎湖 v1.0.0<br>
+            © 2024 澎湖時光機團隊
+        </div>
+    </div>
+
+    <!-- 登出確認模態框 -->
+    <div class="modal" id="logoutModal">
+        <div class="modal-content">
+            <div class="modal-title">確認登出</div>
+            <p class="text-gray-600">您確定要登出嗎？</p>
+            <div class="modal-buttons">
+                <button class="modal-btn modal-btn-secondary" onclick="hideLogoutModal()">取消</button>
+                <button class="modal-btn modal-btn-primary" onclick="logout()">登出</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 切換開關
+        function toggleSwitch(element) {
+            element.classList.toggle('active');
+        }
+        
+        // 編輯個人資料
+        function editProfile() {
+            alert('編輯個人資料功能');
+        }
+        
+        // 隱私設定
+        function privacySettings() {
+            alert('隱私設定功能');
+        }
+        
+        // 封鎖的使用者
+        function blockedUsers() {
+            alert('封鎖的使用者功能');
+        }
+        
+        // 更改密碼
+        function changePassword() {
+            alert('更改密碼功能');
+        }
+        
+        // 語言設定
+        function languageSettings() {
+            alert('語言設定功能');
+        }
+        
+        // 主題設定
+        function themeSettings() {
+            alert('主題設定功能');
+        }
+        
+        // 儲存空間設定
+        function storageSettings() {
+            alert('儲存空間設定功能');
+        }
+        
+        // 說明中心
+        function helpCenter() {
+            alert('說明中心功能');
+        }
+        
+        // 聯絡客服
+        function contactSupport() {
+            alert('聯絡客服功能');
+        }
+        
+        // 關於應用程式
+        function aboutApp() {
+            alert('關於應用程式功能');
+        }
+        
+        // 顯示登出模態框
+        function showLogoutModal() {
+            document.getElementById('logoutModal').style.display = 'flex';
+        }
+        
+        // 隱藏登出模態框
+        function hideLogoutModal() {
+            document.getElementById('logoutModal').style.display = 'none';
+        }
+        
+        // 登出
+        function logout() {
+            alert('已登出');
+            window.location.href = 'index.html';
+        }
+        
+        // 點擊模態框外部關閉
+        document.getElementById('logoutModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                hideLogoutModal();
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>說明中心 - HOPENGHU好澎湖</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;600;700&display=swap');
+        body { 
+            font-family: 'Noto Sans TC', sans-serif; 
+            background: #f8fafc;
+        }
+        
+        .help-container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 1rem;
+        }
+        
+        .search-section {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        .search-bar {
+            position: relative;
+            margin-bottom: 1rem;
+        }
+        
+        .search-input {
+            width: 100%;
+            padding: 0.75rem 1rem 0.75rem 3rem;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.3s;
+        }
+        
+        .search-input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        .search-icon {
+            position: absolute;
+            left: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #9ca3af;
+        }
+        
+        .quick-links {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.5rem;
+        }
+        
+        .quick-link {
+            background: #f3f4f6;
+            color: #374151;
+            padding: 0.75rem;
+            border-radius: 8px;
+            text-align: center;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        
+        .quick-link:hover {
+            background: #e5e7eb;
+        }
+        
+        .help-section {
+            background: white;
+            border-radius: 12px;
+            margin-bottom: 1rem;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        .section-header {
+            padding: 1rem 1.5rem;
+            background: #f9fafb;
+            border-bottom: 1px solid #e5e7eb;
+            font-weight: 600;
+            color: #374151;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .section-header:hover {
+            background: #f3f4f6;
+        }
+        
+        .section-icon {
+            color: #667eea;
+            margin-right: 0.5rem;
+        }
+        
+        .section-arrow {
+            color: #9ca3af;
+            transition: transform 0.3s;
+        }
+        
+        .section-arrow.expanded {
+            transform: rotate(180deg);
+        }
+        
+        .section-content {
+            display: none;
+            padding: 1rem 1.5rem;
+        }
+        
+        .section-content.expanded {
+            display: block;
+        }
+        
+        .faq-item {
+            margin-bottom: 1rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid #f3f4f6;
+        }
+        
+        .faq-item:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+        
+        .faq-question {
+            font-weight: 500;
+            color: #111827;
+            margin-bottom: 0.5rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .faq-answer {
+            color: #6b7280;
+            font-size: 0.9rem;
+            line-height: 1.5;
+            display: none;
+        }
+        
+        .faq-answer.expanded {
+            display: block;
+        }
+        
+        .contact-section {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border-radius: 12px;
+            padding: 2rem;
+            text-align: center;
+            margin-bottom: 1rem;
+        }
+        
+        .contact-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+        }
+        
+        .contact-description {
+            margin-bottom: 1.5rem;
+            opacity: 0.9;
+        }
+        
+        .contact-buttons {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+        }
+        
+        .contact-btn {
+            background: white;
+            color: #667eea;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: transform 0.3s;
+        }
+        
+        .contact-btn:hover {
+            transform: translateY(-2px);
+        }
+        
+        .tutorial-section {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        .tutorial-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #111827;
+            margin-bottom: 1rem;
+        }
+        
+        .tutorial-steps {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+        
+        .tutorial-step {
+            display: flex;
+            align-items: flex-start;
+            gap: 1rem;
+        }
+        
+        .step-number {
+            background: #667eea;
+            color: white;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+            font-weight: 600;
+            flex-shrink: 0;
+        }
+        
+        .step-content {
+            flex: 1;
+        }
+        
+        .step-title {
+            font-weight: 500;
+            color: #111827;
+            margin-bottom: 0.25rem;
+        }
+        
+        .step-description {
+            color: #6b7280;
+            font-size: 0.9rem;
+        }
+        
+        /* 手機版優化 */
+        @media (max-width: 768px) {
+            .help-container {
+                padding: 0.5rem;
+            }
+            
+            .quick-links {
+                grid-template-columns: 1fr;
+            }
+            
+            .contact-buttons {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- 頂部導航 -->
+    <nav class="bg-white shadow-sm sticky top-0 z-50">
+        <div class="max-w-600px mx-auto px-4 py-3">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center">
+                    <a href="settings.html" class="mr-4">
+                        <i class="fas fa-arrow-left text-xl text-gray-600"></i>
+                    </a>
+                    <span class="text-lg font-semibold">說明中心</span>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="help-container">
+        <!-- 搜尋區域 -->
+        <div class="search-section">
+            <div class="search-bar">
+                <i class="fas fa-search search-icon"></i>
+                <input type="text" class="search-input" placeholder="搜尋說明內容..." id="searchInput">
+            </div>
+            <div class="quick-links">
+                <div class="quick-link" onclick="searchTopic('上傳照片')">上傳照片</div>
+                <div class="quick-link" onclick="searchTopic('朋友推薦')">朋友推薦</div>
+                <div class="quick-link" onclick="searchTopic('隱私設定')">隱私設定</div>
+                <div class="quick-link" onclick="searchTopic('帳戶問題')">帳戶問題</div>
+            </div>
+        </div>
+
+        <!-- 快速開始 -->
+        <div class="help-section">
+            <div class="section-header" onclick="toggleSection(this)">
+                <div>
+                    <i class="fas fa-rocket section-icon"></i>
+                    快速開始
+                </div>
+                <i class="fas fa-chevron-down section-arrow"></i>
+            </div>
+            <div class="section-content">
+                <div class="tutorial-steps">
+                    <div class="tutorial-step">
+                        <div class="step-number">1</div>
+                        <div class="step-content">
+                            <div class="step-title">建立您的個人資料</div>
+                            <div class="step-description">上傳照片，填寫個人資訊，讓朋友們認識您</div>
+                        </div>
+                    </div>
+                    <div class="tutorial-step">
+                        <div class="step-number">2</div>
+                        <div class="step-content">
+                            <div class="step-title">分享您的澎湖時光</div>
+                            <div class="step-description">上傳照片，添加描述和地點，分享美好回憶</div>
+                        </div>
+                    </div>
+                    <div class="tutorial-step">
+                        <div class="step-number">3</div>
+                        <div class="step-content">
+                            <div class="step-title">發現相關朋友</div>
+                            <div class="step-description">系統會根據您的興趣和地點推薦相關朋友</div>
+                        </div>
+                    </div>
+                    <div class="tutorial-step">
+                        <div class="step-number">4</div>
+                        <div class="step-content">
+                            <div class="step-title">與朋友互動</div>
+                            <div class="step-description">按讚、留言、分享，建立您的澎湖社交圈</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 常見問題 -->
+        <div class="help-section">
+            <div class="section-header" onclick="toggleSection(this)">
+                <div>
+                    <i class="fas fa-question-circle section-icon"></i>
+                    常見問題
+                </div>
+                <i class="fas fa-chevron-down section-arrow"></i>
+            </div>
+            <div class="section-content">
+                <div class="faq-item">
+                    <div class="faq-question" onclick="toggleFAQ(this)">
+                        <span>如何上傳照片？</span>
+                        <i class="fas fa-chevron-down"></i>
+                    </div>
+                    <div class="faq-answer">
+                        點擊首頁的「+」按鈕或進入「分享內容」頁面，選擇照片或直接拖拽到上傳區域。支援 JPG、PNG 格式，最大 10MB。
+                    </div>
+                </div>
+                
+                <div class="faq-item">
+                    <div class="faq-question" onclick="toggleFAQ(this)">
+                        <span>如何找到相關朋友？</span>
+                        <i class="fas fa-chevron-down"></i>
+                    </div>
+                    <div class="faq-answer">
+                        進入「發現朋友」頁面，系統會根據您的地點、興趣和互動記錄推薦相關朋友。您也可以使用搜尋功能尋找特定用戶。
+                    </div>
+                </div>
+                
+                <div class="faq-item">
+                    <div class="faq-question" onclick="toggleFAQ(this)">
+                        <span>如何設定隱私？</span>
+                        <i class="fas fa-chevron-down"></i>
+                    </div>
+                    <div class="faq-answer">
+                        進入「設定」→「隱私設定」，您可以控制個人資料可見性、貼文權限、朋友標記等各種隱私選項。
+                    </div>
+                </div>
+                
+                <div class="faq-item">
+                    <div class="faq-question" onclick="toggleFAQ(this)">
+                        <span>忘記密碼怎麼辦？</span>
+                        <i class="fas fa-chevron-down"></i>
+                    </div>
+                    <div class="faq-answer">
+                        在登入頁面點擊「忘記密碼」，輸入您的電子郵件地址，我們會發送重設密碼的連結給您。
+                    </div>
+                </div>
+                
+                <div class="faq-item">
+                    <div class="faq-question" onclick="toggleFAQ(this)">
+                        <span>如何刪除帳戶？</span>
+                        <i class="fas fa-chevron-down"></i>
+                    </div>
+                    <div class="faq-answer">
+                        進入「設定」→「隱私設定」→「危險區域」，點擊「刪除帳戶」。請注意，此操作無法復原。
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 功能說明 -->
+        <div class="help-section">
+            <div class="section-header" onclick="toggleSection(this)">
+                <div>
+                    <i class="fas fa-cogs section-icon"></i>
+                    功能說明
+                </div>
+                <i class="fas fa-chevron-down section-arrow"></i>
+            </div>
+            <div class="section-content">
+                <div class="faq-item">
+                    <div class="faq-question" onclick="toggleFAQ(this)">
+                        <span>什麼是相關度推薦？</span>
+                        <i class="fas fa-chevron-down"></i>
+                    </div>
+                    <div class="faq-answer">
+                        系統會分析您的地點、興趣、互動記錄等，計算與其他用戶的相關度，推薦最可能成為朋友的人。
+                    </div>
+                </div>
+                
+                <div class="faq-item">
+                    <div class="faq-question" onclick="toggleFAQ(this)">
+                        <span>如何管理通知？</span>
+                        <i class="fas fa-chevron-down"></i>
+                    </div>
+                    <div class="faq-answer">
+                        進入「設定」→「通知設定」，您可以控制推播通知、電子郵件通知和互動通知的開關。
+                    </div>
+                </div>
+                
+                <div class="faq-item">
+                    <div class="faq-question" onclick="toggleFAQ(this)">
+                        <span>如何標記地點？</span>
+                        <i class="fas fa-chevron-down"></i>
+                    </div>
+                    <div class="faq-answer">
+                        在上傳照片時，在「地點」欄位輸入或選擇地點。系統會自動建議澎湖的熱門景點。
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 聯絡客服 -->
+        <div class="contact-section">
+            <div class="contact-title">需要更多幫助？</div>
+            <div class="contact-description">
+                如果找不到您需要的答案，我們的客服團隊隨時為您服務
+            </div>
+            <div class="contact-buttons">
+                <button class="contact-btn" onclick="contactSupport()">
+                    <i class="fas fa-headset mr-2"></i>聯絡客服
+                </button>
+                <button class="contact-btn" onclick="sendFeedback()">
+                    <i class="fas fa-comment mr-2"></i>意見回饋
+                </button>
+            </div>
+        </div>
+
+        <!-- 版本資訊 -->
+        <div class="tutorial-section">
+            <div class="tutorial-title">版本資訊</div>
+            <div class="tutorial-steps">
+                <div class="tutorial-step">
+                    <div class="step-number">v</div>
+                    <div class="step-content">
+                        <div class="step-title">HOPENGHU好澎湖 v1.0.0</div>
+                        <div class="step-description">最新版本，包含所有核心功能</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 切換區塊展開/收合
+        function toggleSection(header) {
+            const content = header.nextElementSibling;
+            const arrow = header.querySelector('.section-arrow');
+            
+            if (content.classList.contains('expanded')) {
+                content.classList.remove('expanded');
+                arrow.classList.remove('expanded');
+            } else {
+                content.classList.add('expanded');
+                arrow.classList.add('expanded');
+            }
+        }
+        
+        // 切換FAQ展開/收合
+        function toggleFAQ(question) {
+            const answer = question.nextElementSibling;
+            const arrow = question.querySelector('i');
+            
+            if (answer.classList.contains('expanded')) {
+                answer.classList.remove('expanded');
+                arrow.style.transform = 'rotate(0deg)';
+            } else {
+                answer.classList.add('expanded');
+                arrow.style.transform = 'rotate(180deg)';
+            }
+        }
+        
+        // 搜尋功能
+        function searchTopic(topic) {
+            const searchInput = document.getElementById('searchInput');
+            searchInput.value = topic;
+            searchInput.focus();
+            
+            // 這裡可以實現搜尋邏輯
+            console.log('搜尋主題:', topic);
+        }
+        
+        // 聯絡客服
+        function contactSupport() {
+            window.location.href = 'contact-support.html';
+        }
+        
+        // 發送意見回饋
+        function sendFeedback() {
+            window.location.href = 'feedback.html';
+        }
+        
+        // 搜尋輸入監聽
+        document.getElementById('searchInput').addEventListener('input', function() {
+            const query = this.value.toLowerCase();
+            if (query.length > 2) {
+                // 這裡可以實現即時搜尋
+                console.log('搜尋:', query);
+            }
+        });
+        
+        // 初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            // 預設展開第一個區塊
+            const firstSection = document.querySelector('.section-header');
+            if (firstSection) {
+                toggleSection(firstSection);
+            }
+        });
+    </script>
+</body>
+</html>

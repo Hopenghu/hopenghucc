@@ -1,0 +1,7 @@
+{
+  "name": "AI Smart Itinerary Planner",
+  "description": "A sophisticated travel planner featuring Google Maps grounding, draggable timelines, and AI-powered itinerary optimization.",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
+}

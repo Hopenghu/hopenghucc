@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>語言設定 - HOPENGHU好澎湖</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;600;700&display=swap');
+        body { 
+            font-family: 'Noto Sans TC', sans-serif; 
+            background: #f8fafc;
+        }
+        
+        .language-container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 1rem;
+        }
+        
+        .language-section {
+            background: white;
+            border-radius: 12px;
+            margin-bottom: 1rem;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        .section-header {
+            padding: 1rem 1.5rem;
+            background: #f9fafb;
+            border-bottom: 1px solid #e5e7eb;
+            font-weight: 600;
+            color: #374151;
+        }
+        
+        .language-option {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid #f3f4f6;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        
+        .language-option:hover {
+            background: #f9fafb;
+        }
+        
+        .language-option:last-child {
+            border-bottom: none;
+        }
+        
+        .language-option.selected {
+            background: #f0f4ff;
+            border-left: 4px solid #667eea;
+        }
+        
+        .language-info {
+            display: flex;
+            align-items: center;
+            flex: 1;
+        }
+        
+        .language-flag {
+            width: 32px;
+            height: 24px;
+            border-radius: 4px;
+            margin-right: 1rem;
+            background-size: cover;
+            background-position: center;
+            border: 1px solid #e5e7eb;
+        }
+        
+        .language-details {
+            flex: 1;
+        }
+        
+        .language-name {
+            font-weight: 500;
+            color: #111827;
+            margin-bottom: 0.25rem;
+        }
+        
+        .language-native {
+            font-size: 0.8rem;
+            color: #6b7280;
+        }
+        
+        .language-status {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .status-badge {
+            padding: 0.25rem 0.5rem;
+            border-radius: 12px;
+            font-size: 0.7rem;
+            font-weight: 500;
+        }
+        
+        .status-current {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+        
+        .status-beta {
+            background: #fef3c7;
+            color: #d97706;
+        }
+        
+        .status-coming {
+            background: #f3f4f6;
+            color: #6b7280;
+        }
+        
+        .radio-button {
+            width: 20px;
+            height: 20px;
+            border: 2px solid #d1d5db;
+            border-radius: 50%;
+            position: relative;
+            transition: all 0.3s;
+        }
+        
+        .radio-button.selected {
+            border-color: #667eea;
+        }
+        
+        .radio-button.selected::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 10px;
+            height: 10px;
+            background: #667eea;
+            border-radius: 50%;
+        }
+        
+        .preview-section {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        .preview-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #111827;
+            margin-bottom: 1rem;
+        }
+        
+        .preview-content {
+            background: #f8fafc;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 1rem;
+        }
+        
+        .preview-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        
+        .preview-item:last-child {
+            border-bottom: none;
+        }
+        
+        .preview-label {
+            color: #374151;
+            font-weight: 500;
+        }
+        
+        .preview-value {
+            color: #6b7280;
+        }
+        
+        .save-btn {
+            width: 100%;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 1rem;
+            border-radius: 12px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.3s;
+            margin-top: 1rem;
+        }
+        
+        .save-btn:hover {
+            transform: translateY(-2px);
+        }
+        
+        .save-btn:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .info-text {
+            background: #f0f4ff;
+            border: 1px solid #c7d2fe;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-top: 1rem;
+            font-size: 0.9rem;
+            color: #3730a3;
+        }
+        
+        /* 手機版優化 */
+        @media (max-width: 768px) {
+            .language-container {
+                padding: 0.5rem;
+            }
+            
+            .language-option {
+                padding: 0.75rem 1rem;
+            }
+            
+            .language-flag {
+                width: 28px;
+                height: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- 頂部導航 -->
+    <nav class="bg-white shadow-sm sticky top-0 z-50">
+        <div class="max-w-600px mx-auto px-4 py-3">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center">
+                    <a href="settings.html" class="mr-4">
+                        <i class="fas fa-arrow-left text-xl text-gray-600"></i>
+                    </a>
+                    <span class="text-lg font-semibold">語言設定</span>
+                </div>
+                <button class="text-blue-600 font-semibold" onclick="saveLanguage()">儲存</button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="language-container">
+        <!-- 語言預覽 -->
+        <div class="preview-section">
+            <div class="preview-title">語言預覽</div>
+            <div class="preview-content">
+                <div class="preview-item">
+                    <span class="preview-label">首頁</span>
+                    <span class="preview-value" id="previewHome">首頁</span>
+                </div>
+                <div class="preview-item">
+                    <span class="preview-label">個人檔案</span>
+                    <span class="preview-value" id="previewProfile">個人檔案</span>
+                </div>
+                <div class="preview-item">
+                    <span class="preview-label">設定</span>
+                    <span class="preview-value" id="previewSettings">設定</span>
+                </div>
+                <div class="preview-item">
+                    <span class="preview-label">登出</span>
+                    <span class="preview-value" id="previewLogout">登出</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 可用語言 -->
+        <div class="language-section">
+            <div class="section-header">
+                <i class="fas fa-globe mr-2"></i>
+                選擇語言
+            </div>
+            
+            <!-- 繁體中文 -->
+            <div class="language-option selected" onclick="selectLanguage('zh-TW', this)">
+                <div class="language-info">
+                    <div class="language-flag" style="background-image: url('data:image/svg+xml,<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 32 24\"><rect width=\"32\" height=\"24\" fill=\"%23fe0000\"/><rect width=\"32\" height=\"8\" fill=\"%23ffffff\"/><rect y=\"16\" width=\"32\" height=\"8\" fill=\"%2300009f\"/></svg>')"></div>
+                    <div class="language-details">
+                        <div class="language-name">繁體中文</div>
+                        <div class="language-native">Traditional Chinese</div>
+                    </div>
+                </div>
+                <div class="language-status">
+                    <span class="status-badge status-current">目前</span>
+                    <div class="radio-button selected"></div>
+                </div>
+            </div>
+            
+            <!-- 簡體中文 -->
+            <div class="language-option" onclick="selectLanguage('zh-CN', this)">
+                <div class="language-info">
+                    <div class="language-flag" style="background-image: url('data:image/svg+xml,<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 32 24\"><rect width=\"32\" height=\"24\" fill=\"%23de2910\"/><polygon points=\"6,6 8,4 10,6 8,8\" fill=\"%23ffde00\"/><polygon points=\"22,6 24,4 26,6 24,8\" fill=\"%23ffde00\"/><polygon points=\"6,18 8,16 10,18 8,20\" fill=\"%23ffde00\"/><polygon points=\"22,18 24,16 26,18 24,20\" fill=\"%23ffde00\"/></svg>')"></div>
+                    <div class="language-details">
+                        <div class="language-name">簡體中文</div>
+                        <div class="language-native">Simplified Chinese</div>
+                    </div>
+                </div>
+                <div class="language-status">
+                    <span class="status-badge status-beta">測試版</span>
+                    <div class="radio-button"></div>
+                </div>
+            </div>
+            
+            <!-- English -->
+            <div class="language-option" onclick="selectLanguage('en', this)">
+                <div class="language-info">
+                    <div class="language-flag" style="background-image: url('data:image/svg+xml,<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 32 24\"><rect width=\"32\" height=\"24\" fill=\"%2301228c\"/><rect width=\"32\" height=\"2.4\" fill=\"%23ffffff\"/><rect y=\"4.8\" width=\"32\" height=\"2.4\" fill=\"%23ffffff\"/><rect y=\"9.6\" width=\"32\" height=\"2.4\" fill=\"%23ffffff\"/><rect y=\"14.4\" width=\"32\" height=\"2.4\" fill=\"%23ffffff\"/><rect y=\"19.2\" width=\"32\" height=\"2.4\" fill=\"%23ffffff\"/><rect width=\"4.8\" height=\"24\" fill=\"%23ffffff\"/><rect x=\"9.6\" width=\"4.8\" height=\"24\" fill=\"%23ffffff\"/><rect x=\"19.2\" width=\"4.8\" height=\"24\" fill=\"%23ffffff\"/><rect x=\"28.8\" width=\"4.8\" height=\"24\" fill=\"%23ffffff\"/></svg>')"></div>
+                    <div class="language-details">
+                        <div class="language-name">English</div>
+                        <div class="language-native">English</div>
+                    </div>
+                </div>
+                <div class="language-status">
+                    <span class="status-badge status-beta">測試版</span>
+                    <div class="radio-button"></div>
+                </div>
+            </div>
+            
+            <!-- 日本語 -->
+            <div class="language-option" onclick="selectLanguage('ja', this)">
+                <div class="language-info">
+                    <div class="language-flag" style="background-image: url('data:image/svg+xml,<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 32 24\"><rect width=\"32\" height=\"24\" fill=\"%23ffffff\"/><circle cx=\"16\" cy=\"12\" r=\"6\" fill=\"%23bc002d\"/></svg>')"></div>
+                    <div class="language-details">
+                        <div class="language-name">日本語</div>
+                        <div class="language-native">Japanese</div>
+                    </div>
+                </div>
+                <div class="language-status">
+                    <span class="status-badge status-coming">即將推出</span>
+                    <div class="radio-button"></div>
+                </div>
+            </div>
+            
+            <!-- 한국어 -->
+            <div class="language-option" onclick="selectLanguage('ko', this)">
+                <div class="language-info">
+                    <div class="language-flag" style="background-image: url('data:image/svg+xml,<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 32 24\"><rect width=\"32\" height=\"24\" fill=\"%23ffffff\"/><circle cx=\"16\" cy=\"12\" r=\"6\" fill=\"%23cd2e3a\"/><path d=\"M16 6c-3.3 0-6 2.7-6 6s2.7 6 6 6 6-2.7 6-6-2.7-6-6-6z\" fill=\"%230033a0\"/></svg>')"></div>
+                    <div class="language-details">
+                        <div class="language-name">한국어</div>
+                        <div class="language-native">Korean</div>
+                    </div>
+                </div>
+                <div class="language-status">
+                    <span class="status-badge status-coming">即將推出</span>
+                    <div class="radio-button"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 儲存按鈕 -->
+        <button class="save-btn" onclick="saveLanguage()">
+            <i class="fas fa-save mr-2"></i>儲存語言設定
+        </button>
+
+        <!-- 說明文字 -->
+        <div class="info-text">
+            <i class="fas fa-info-circle mr-2"></i>
+            更改語言後，應用程式的介面文字將會更新。某些功能可能需要重新載入頁面才能完全生效。
+        </div>
+    </div>
+
+    <script>
+        let selectedLanguage = 'zh-TW';
+        let hasChanges = false;
+        
+        // 語言翻譯對照表
+        const translations = {
+            'zh-TW': {
+                home: '首頁',
+                profile: '個人檔案',
+                settings: '設定',
+                logout: '登出'
+            },
+            'zh-CN': {
+                home: '首页',
+                profile: '个人档案',
+                settings: '设置',
+                logout: '登出'
+            },
+            'en': {
+                home: 'Home',
+                profile: 'Profile',
+                settings: 'Settings',
+                logout: 'Logout'
+            },
+            'ja': {
+                home: 'ホーム',
+                profile: 'プロフィール',
+                settings: '設定',
+                logout: 'ログアウト'
+            },
+            'ko': {
+                home: '홈',
+                profile: '프로필',
+                settings: '설정',
+                logout: '로그아웃'
+            }
+        };
+        
+        // 選擇語言
+        function selectLanguage(languageCode, element) {
+            // 檢查是否為即將推出的語言
+            const statusBadge = element.querySelector('.status-badge');
+            if (statusBadge.classList.contains('status-coming')) {
+                alert('此語言即將推出，敬請期待！');
+                return;
+            }
+            
+            // 移除所有選中狀態
+            document.querySelectorAll('.language-option').forEach(option => {
+                option.classList.remove('selected');
+                option.querySelector('.radio-button').classList.remove('selected');
+            });
+            
+            // 設置新的選中狀態
+            element.classList.add('selected');
+            element.querySelector('.radio-button').classList.add('selected');
+            
+            // 更新選中的語言
+            selectedLanguage = languageCode;
+            hasChanges = true;
+            
+            // 更新預覽
+            updatePreview(languageCode);
+        }
+        
+        // 更新預覽
+        function updatePreview(languageCode) {
+            const translation = translations[languageCode];
+            if (translation) {
+                document.getElementById('previewHome').textContent = translation.home;
+                document.getElementById('previewProfile').textContent = translation.profile;
+                document.getElementById('previewSettings').textContent = translation.settings;
+                document.getElementById('previewLogout').textContent = translation.logout;
+            }
+        }
+        
+        // 儲存語言設定
+        function saveLanguage() {
+            if (!hasChanges) {
+                alert('沒有變更需要儲存');
+                return;
+            }
+            
+            const saveBtn = document.querySelector('.save-btn');
+            saveBtn.disabled = true;
+            saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>儲存中...';
+            
+            // 模擬儲存過程
+            setTimeout(() => {
+                // 這裡應該發送到後端API
+                console.log('語言設定儲存:', selectedLanguage);
+                
+                // 更新本地存儲
+                localStorage.setItem('selectedLanguage', selectedLanguage);
+                
+                alert('語言設定已成功更新！');
+                
+                saveBtn.disabled = false;
+                saveBtn.innerHTML = '<i class="fas fa-save mr-2"></i>儲存語言設定';
+                hasChanges = false;
+                
+                // 可以選擇重新載入頁面以應用新語言
+                // window.location.reload();
+            }, 1500);
+        }
+        
+        // 初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            // 從本地存儲載入語言設定
+            const savedLanguage = localStorage.getItem('selectedLanguage');
+            if (savedLanguage && savedLanguage !== 'zh-TW') {
+                const languageOption = document.querySelector(`[onclick*="${savedLanguage}"]`);
+                if (languageOption) {
+                    selectLanguage(savedLanguage, languageOption);
+                }
+            }
+        });
+    </script>
+</body>
+</html>

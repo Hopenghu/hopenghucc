@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>發現朋友 - HOPENGHU好澎湖 v2.0</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="../styles.css">
+</head>
+<body class="bg-gray-50">
+    <!-- 導航欄 -->
+    <nav class="bg-white shadow-lg sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center">
+                    <a href="index.html" class="text-2xl font-bold text-blue-600">🏝️ HOPENGHU好澎湖</a>
+                </div>
+                <div class="hidden md:block">
+                    <div class="ml-10 flex items-baseline space-x-4">
+                        <a href="index.html" class="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium">首頁</a>
+                        <a href="feed.html" class="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium">內容流</a>
+                        <a href="discover.html" class="bg-blue-600 text-white px-3 py-2 rounded-md text-sm font-medium">發現朋友</a>
+                        <a href="profile.html" class="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium">個人檔案</a>
+                        <button id="uploadBtn" class="bg-green-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-green-700">
+                            <i class="fas fa-plus mr-2"></i>上傳
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 主要內容 -->
+    <main class="max-w-6xl mx-auto py-8 px-4">
+        <!-- 頁面標題 -->
+        <div class="mb-8">
+            <h1 class="text-3xl font-bold text-gray-900 mb-2">發現與您相關的澎湖朋友</h1>
+            <p class="text-gray-600">基於AI算法推薦與您有共同澎湖回憶的人</p>
+        </div>
+
+        <!-- 篩選器 -->
+        <div class="bg-white rounded-xl shadow-lg p-6 mb-8">
+            <div class="flex flex-wrap gap-4">
+                <div class="flex-1 min-w-48">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">相關度</label>
+                    <select id="relevanceFilter" class="w-full p-3 border border-gray-300 rounded-lg">
+                        <option value="all">全部</option>
+                        <option value="high">高相關度 (90%+)</option>
+                        <option value="medium">中相關度 (70-89%)</option>
+                        <option value="low">低相關度 (50-69%)</option>
+                    </select>
+                </div>
+                <div class="flex-1 min-w-48">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">共同回憶</label>
+                    <select id="memoryFilter" class="w-full p-3 border border-gray-300 rounded-lg">
+                        <option value="all">全部</option>
+                        <option value="location">相同地點</option>
+                        <option value="time">相同時間</option>
+                        <option value="interest">相同興趣</option>
+                    </select>
+                </div>
+                <div class="flex-1 min-w-48">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">排序方式</label>
+                    <select id="sortFilter" class="w-full p-3 border border-gray-300 rounded-lg">
+                        <option value="relevance">相關度</option>
+                        <option value="recent">最近活躍</option>
+                        <option value="memories">回憶數量</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- 朋友列表 -->
+        <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6" id="friendsList">
+            <!-- 朋友卡片1 -->
+            <div class="bg-white rounded-xl shadow-lg p-6 friend-card" data-relevance="95" data-memories="5">
+                <div class="flex items-center mb-4">
+                    <div class="w-16 h-16 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-white font-bold text-xl">
+                        小美
+                    </div>
+                    <div class="ml-4 flex-1">
+                        <h3 class="font-semibold text-lg">小美</h3>
+                        <p class="text-sm text-gray-500">與您相關度：95%</p>
+                        <div class="flex items-center mt-1">
+                            <span class="text-yellow-400">⭐⭐⭐⭐⭐</span>
+                            <span class="text-sm text-gray-500 ml-2">共同回憶: 5 個</span>
+                        </div>
+                    </div>
+                </div>
+                <p class="text-gray-700 mb-4">
+                    "在七美雙心石滬看夕陽，是我最美好的回憶！我們有相似的澎湖經歷呢！"
+                </p>
+                <div class="flex flex-wrap gap-2 mb-4">
+                    <span class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded">七美</span>
+                    <span class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded">夕陽</span>
+                    <span class="bg-purple-100 text-purple-800 text-xs px-2 py-1 rounded">攝影</span>
+                </div>
+                <div class="flex space-x-2">
+                    <button class="flex-1 bg-blue-600 text-white py-2 px-4 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors follow-btn" data-followed="false">
+                        <i class="fas fa-user-plus mr-1"></i>關注
+                    </button>
+                    <button class="flex-1 border border-gray-300 text-gray-700 py-2 px-4 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors view-profile-btn">
+                        <i class="fas fa-eye mr-1"></i>查看
+                    </button>
+                </div>
+            </div>
+
+            <!-- 朋友卡片2 -->
+            <div class="bg-white rounded-xl shadow-lg p-6 friend-card" data-relevance="87" data-memories="3">
+                <div class="flex items-center mb-4">
+                    <div class="w-16 h-16 bg-gradient-to-r from-green-500 to-teal-500 rounded-full flex items-center justify-center text-white font-bold text-xl">
+                        阿明
+                    </div>
+                    <div class="ml-4 flex-1">
+                        <h3 class="font-semibold text-lg">阿明</h3>
+                        <p class="text-sm text-gray-500">與您相關度：87%</p>
+                        <div class="flex items-center mt-1">
+                            <span class="text-yellow-400">⭐⭐⭐⭐</span>
+                            <span class="text-sm text-gray-500 ml-2">共同回憶: 3 個</span>
+                        </div>
+                    </div>
+                </div>
+                <p class="text-gray-700 mb-4">
+                    "澎湖的海鮮真的超新鮮！我們都愛澎湖的美食！"
+                </p>
+                <div class="flex flex-wrap gap-2 mb-4">
+                    <span class="bg-red-100 text-red-800 text-xs px-2 py-1 rounded">海鮮</span>
+                    <span class="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded">美食</span>
+                    <span class="bg-orange-100 text-orange-800 text-xs px-2 py-1 rounded">餐廳</span>
+                </div>
+                <div class="flex space-x-2">
+                    <button class="flex-1 bg-blue-600 text-white py-2 px-4 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors follow-btn" data-followed="false">
+                        <i class="fas fa-user-plus mr-1"></i>關注
+                    </button>
+                    <button class="flex-1 border border-gray-300 text-gray-700 py-2 px-4 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors view-profile-btn">
+                        <i class="fas fa-eye mr-1"></i>查看
+                    </button>
+                </div>
+            </div>
+
+            <!-- 朋友卡片3 -->
+            <div class="bg-white rounded-xl shadow-lg p-6 friend-card" data-relevance="92" data-memories="4">
+                <div class="flex items-center mb-4">
+                    <div class="w-16 h-16 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center text-white font-bold text-xl">
+                        小華
+                    </div>
+                    <div class="ml-4 flex-1">
+                        <h3 class="font-semibold text-lg">小華</h3>
+                        <p class="text-sm text-gray-500">與您相關度：92%</p>
+                        <div class="flex items-center mt-1">
+                            <span class="text-yellow-400">⭐⭐⭐⭐⭐</span>
+                            <span class="text-sm text-gray-500 ml-2">共同回憶: 4 個</span>
+                        </div>
+                    </div>
+                </div>
+                <p class="text-gray-700 mb-4">
+                    "澎湖的風景太美了，每一張照片都是藝術品！我們都喜歡拍澎湖風景！"
+                </p>
+                <div class="flex flex-wrap gap-2 mb-4">
+                    <span class="bg-purple-100 text-purple-800 text-xs px-2 py-1 rounded">攝影</span>
+                    <span class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded">風景</span>
+                    <span class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded">藝術</span>
+                </div>
+                <div class="flex space-x-2">
+                    <button class="flex-1 bg-blue-600 text-white py-2 px-4 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors follow-btn" data-followed="false">
+                        <i class="fas fa-user-plus mr-1"></i>關注
+                    </button>
+                    <button class="flex-1 border border-gray-300 text-gray-700 py-2 px-4 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors view-profile-btn">
+                        <i class="fas fa-eye mr-1"></i>查看
+                    </button>
+                </div>
+            </div>
+
+            <!-- 朋友卡片4 -->
+            <div class="bg-white rounded-xl shadow-lg p-6 friend-card" data-relevance="78" data-memories="2">
+                <div class="flex items-center mb-4">
+                    <div class="w-16 h-16 bg-gradient-to-r from-orange-500 to-red-500 rounded-full flex items-center justify-center text-white font-bold text-xl">
+                        小新
+                    </div>
+                    <div class="ml-4 flex-1">
+                        <h3 class="font-semibold text-lg">小新</h3>
+                        <p class="text-sm text-gray-500">與您相關度：78%</p>
+                        <div class="flex items-center mt-1">
+                            <span class="text-yellow-400">⭐⭐⭐</span>
+                            <span class="text-sm text-gray-500 ml-2">共同回憶: 2 個</span>
+                        </div>
+                    </div>
+                </div>
+                <p class="text-gray-700 mb-4">
+                    "澎湖的風真的很大！但是風景美得讓人忘記一切煩惱"
+                </p>
+                <div class="flex flex-wrap gap-2 mb-4">
+                    <span class="bg-orange-100 text-orange-800 text-xs px-2 py-1 rounded">風景</span>
+                    <span class="bg-red-100 text-red-800 text-xs px-2 py-1 rounded">風</span>
+                    <span class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded">自然</span>
+                </div>
+                <div class="flex space-x-2">
+                    <button class="flex-1 bg-blue-600 text-white py-2 px-4 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors follow-btn" data-followed="false">
+                        <i class="fas fa-user-plus mr-1"></i>關注
+                    </button>
+                    <button class="flex-1 border border-gray-300 text-gray-700 py-2 px-4 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors view-profile-btn">
+                        <i class="fas fa-eye mr-1"></i>查看
+                    </button>
+                </div>
+            </div>
+
+            <!-- 朋友卡片5 -->
+            <div class="bg-white rounded-xl shadow-lg p-6 friend-card" data-relevance="85" data-memories="3">
+                <div class="flex items-center mb-4">
+                    <div class="w-16 h-16 bg-gradient-to-r from-teal-500 to-cyan-500 rounded-full flex items-center justify-center text-white font-bold text-xl">
+                        小芳
+                    </div>
+                    <div class="ml-4 flex-1">
+                        <h3 class="font-semibold text-lg">小芳</h3>
+                        <p class="text-sm text-gray-500">與您相關度：85%</p>
+                        <div class="flex items-center mt-1">
+                            <span class="text-yellow-400">⭐⭐⭐⭐</span>
+                            <span class="text-sm text-gray-500 ml-2">共同回憶: 3 個</span>
+                        </div>
+                    </div>
+                </div>
+                <p class="text-gray-700 mb-4">
+                    "澎湖的星空真的很美，我們都在這裡看過星星！"
+                </p>
+                <div class="flex flex-wrap gap-2 mb-4">
+                    <span class="bg-indigo-100 text-indigo-800 text-xs px-2 py-1 rounded">星空</span>
+                    <span class="bg-purple-100 text-purple-800 text-xs px-2 py-1 rounded">夜晚</span>
+                    <span class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded">浪漫</span>
+                </div>
+                <div class="flex space-x-2">
+                    <button class="flex-1 bg-blue-600 text-white py-2 px-4 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors follow-btn" data-followed="false">
+                        <i class="fas fa-user-plus mr-1"></i>關注
+                    </button>
+                    <button class="flex-1 border border-gray-300 text-gray-700 py-2 px-4 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors view-profile-btn">
+                        <i class="fas fa-eye mr-1"></i>查看
+                    </button>
+                </div>
+            </div>
+
+            <!-- 朋友卡片6 -->
+            <div class="bg-white rounded-xl shadow-lg p-6 friend-card" data-relevance="73" data-memories="2">
+                <div class="flex items-center mb-4">
+                    <div class="w-16 h-16 bg-gradient-to-r from-pink-500 to-rose-500 rounded-full flex items-center justify-center text-white font-bold text-xl">
+                        小強
+                    </div>
+                    <div class="ml-4 flex-1">
+                        <h3 class="font-semibold text-lg">小強</h3>
+                        <p class="text-sm text-gray-500">與您相關度：73%</p>
+                        <div class="flex items-center mt-1">
+                            <span class="text-yellow-400">⭐⭐⭐</span>
+                            <span class="text-sm text-gray-500 ml-2">共同回憶: 2 個</span>
+                        </div>
+                    </div>
+                </div>
+                <p class="text-gray-700 mb-4">
+                    "澎湖的浮潛真的很棒！海底世界太美了"
+                </p>
+                <div class="flex flex-wrap gap-2 mb-4">
+                    <span class="bg-cyan-100 text-cyan-800 text-xs px-2 py-1 rounded">浮潛</span>
+                    <span class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded">海底</span>
+                    <span class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded">海洋</span>
+                </div>
+                <div class="flex space-x-2">
+                    <button class="flex-1 bg-blue-600 text-white py-2 px-4 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors follow-btn" data-followed="false">
+                        <i class="fas fa-user-plus mr-1"></i>關注
+                    </button>
+                    <button class="flex-1 border border-gray-300 text-gray-700 py-2 px-4 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors view-profile-btn">
+                        <i class="fas fa-eye mr-1"></i>查看
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 載入更多按鈕 -->
+        <div class="text-center mt-8">
+            <button id="loadMoreBtn" class="bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors">
+                <i class="fas fa-sync-alt mr-2"></i>載入更多朋友
+            </button>
+        </div>
+    </main>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            initDiscoverFeatures();
+        });
+
+        function initDiscoverFeatures() {
+            // 篩選功能
+            const relevanceFilter = document.getElementById('relevanceFilter');
+            const memoryFilter = document.getElementById('memoryFilter');
+            const sortFilter = document.getElementById('sortFilter');
+
+            [relevanceFilter, memoryFilter, sortFilter].forEach(filter => {
+                filter.addEventListener('change', applyFilters);
+            });
+
+            // 關注功能
+            document.querySelectorAll('.follow-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const isFollowed = this.getAttribute('data-followed') === 'true';
+                    
+                    if (isFollowed) {
+                        this.setAttribute('data-followed', 'false');
+                        this.innerHTML = '<i class="fas fa-user-plus mr-1"></i>關注';
+                        this.classList.remove('bg-gray-600', 'hover:bg-gray-700');
+                        this.classList.add('bg-blue-600', 'hover:bg-blue-700');
+                        showNotification('已取消關注', 'info');
+                    } else {
+                        this.setAttribute('data-followed', 'true');
+                        this.innerHTML = '<i class="fas fa-check mr-1"></i>已關注';
+                        this.classList.remove('bg-blue-600', 'hover:bg-blue-700');
+                        this.classList.add('bg-gray-600', 'hover:bg-gray-700');
+                        showNotification('關注成功！', 'success');
+                    }
+                });
+            });
+
+            // 查看檔案功能
+            document.querySelectorAll('.view-profile-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    showNotification('正在查看個人檔案...', 'info');
+                });
+            });
+
+            // 載入更多功能
+            document.getElementById('loadMoreBtn').addEventListener('click', function() {
+                loadMoreFriends();
+            });
+
+            // 上傳按鈕
+            document.getElementById('uploadBtn').addEventListener('click', () => {
+                window.location.href = 'index.html#upload';
+            });
+        }
+
+        function applyFilters() {
+            const relevanceFilter = document.getElementById('relevanceFilter').value;
+            const memoryFilter = document.getElementById('memoryFilter').value;
+            const sortFilter = document.getElementById('sortFilter').value;
+            
+            const friendsList = document.getElementById('friendsList');
+            const friendCards = Array.from(friendsList.querySelectorAll('.friend-card'));
+            
+            // 篩選
+            let filteredCards = friendCards.filter(card => {
+                const relevance = parseInt(card.getAttribute('data-relevance'));
+                const memories = parseInt(card.getAttribute('data-memories'));
+                
+                let relevanceMatch = true;
+                if (relevanceFilter === 'high') relevanceMatch = relevance >= 90;
+                else if (relevanceFilter === 'medium') relevanceMatch = relevance >= 70 && relevance < 90;
+                else if (relevanceFilter === 'low') relevanceMatch = relevance >= 50 && relevance < 70;
+                
+                let memoryMatch = true;
+                if (memoryFilter === 'location') memoryMatch = memories >= 3;
+                else if (memoryFilter === 'time') memoryMatch = memories >= 2;
+                else if (memoryFilter === 'interest') memoryMatch = memories >= 1;
+                
+                return relevanceMatch && memoryMatch;
+            });
+            
+            // 排序
+            if (sortFilter === 'relevance') {
+                filteredCards.sort((a, b) => parseInt(b.getAttribute('data-relevance')) - parseInt(a.getAttribute('data-relevance')));
+            } else if (sortFilter === 'memories') {
+                filteredCards.sort((a, b) => parseInt(b.getAttribute('data-memories')) - parseInt(a.getAttribute('data-memories')));
+            }
+            
+            // 重新排列
+            friendsList.innerHTML = '';
+            filteredCards.forEach(card => {
+                friendsList.appendChild(card);
+            });
+            
+            showNotification('篩選完成！', 'success');
+        }
+
+        function loadMoreFriends() {
+            const friendsList = document.getElementById('friendsList');
+            const loadMoreBtn = document.getElementById('loadMoreBtn');
+            
+            loadMoreBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>載入中...';
+            
+            setTimeout(() => {
+                // 模擬載入新朋友
+                const newFriend = document.createElement('div');
+                newFriend.className = 'bg-white rounded-xl shadow-lg p-6 friend-card';
+                newFriend.setAttribute('data-relevance', '81');
+                newFriend.setAttribute('data-memories', '3');
+                newFriend.innerHTML = `
+                    <div class="flex items-center mb-4">
+                        <div class="w-16 h-16 bg-gradient-to-r from-yellow-500 to-orange-500 rounded-full flex items-center justify-center text-white font-bold text-xl">
+                            小麗
+                        </div>
+                        <div class="ml-4 flex-1">
+                            <h3 class="font-semibold text-lg">小麗</h3>
+                            <p class="text-sm text-gray-500">與您相關度：81%</p>
+                            <div class="flex items-center mt-1">
+                                <span class="text-yellow-400">⭐⭐⭐⭐</span>
+                                <span class="text-sm text-gray-500 ml-2">共同回憶: 3 個</span>
+                            </div>
+                        </div>
+                    </div>
+                    <p class="text-gray-700 mb-4">
+                        "澎湖的日出真的很美！我們都在這裡看過日出！"
+                    </p>
+                    <div class="flex flex-wrap gap-2 mb-4">
+                        <span class="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded">日出</span>
+                        <span class="bg-orange-100 text-orange-800 text-xs px-2 py-1 rounded">早晨</span>
+                        <span class="bg-red-100 text-red-800 text-xs px-2 py-1 rounded">美景</span>
+                    </div>
+                    <div class="flex space-x-2">
+                        <button class="flex-1 bg-blue-600 text-white py-2 px-4 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors follow-btn" data-followed="false">
+                            <i class="fas fa-user-plus mr-1"></i>關注
+                        </button>
+                        <button class="flex-1 border border-gray-300 text-gray-700 py-2 px-4 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors view-profile-btn">
+                            <i class="fas fa-eye mr-1"></i>查看
+                        </button>
+                    </div>
+                `;
+                
+                friendsList.appendChild(newFriend);
+                loadMoreBtn.innerHTML = '<i class="fas fa-sync-alt mr-2"></i>載入更多朋友';
+                
+                // 重新綁定事件
+                initDiscoverFeatures();
+                
+                showNotification('載入了更多朋友！', 'success');
+            }, 1000);
+        }
+
+        function showNotification(message, type = 'info') {
+            const notification = document.createElement('div');
+            notification.className = `fixed top-4 right-4 p-4 rounded-lg shadow-lg z-50 ${
+                type === 'success' ? 'bg-green-500' : 
+                type === 'error' ? 'bg-red-500' : 'bg-blue-500'
+            } text-white`;
+            notification.textContent = message;
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.remove();
+            }, 3000);
+        }
+    </script>
+</body>
+</html>

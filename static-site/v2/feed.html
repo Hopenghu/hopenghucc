@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>內容流 - HOPENGHU好澎湖 v2.0</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="../styles.css">
+</head>
+<body class="bg-gray-50">
+    <!-- 導航欄 -->
+    <nav class="bg-white shadow-lg sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center">
+                    <a href="index.html" class="text-2xl font-bold text-blue-600">🏝️ HOPENGHU好澎湖</a>
+                </div>
+                <div class="hidden md:block">
+                    <div class="ml-10 flex items-baseline space-x-4">
+                        <a href="index.html" class="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium">首頁</a>
+                        <a href="feed.html" class="bg-blue-600 text-white px-3 py-2 rounded-md text-sm font-medium">內容流</a>
+                        <a href="discover.html" class="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium">發現朋友</a>
+                        <a href="profile.html" class="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium">個人檔案</a>
+                        <button id="uploadBtn" class="bg-green-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-green-700">
+                            <i class="fas fa-plus mr-2"></i>上傳
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 主要內容 -->
+    <main class="max-w-2xl mx-auto py-8 px-4">
+        <!-- 內容流標題 -->
+        <div class="mb-8">
+            <h1 class="text-3xl font-bold text-gray-900 mb-2">個人化內容流</h1>
+            <p class="text-gray-600">發現與您相關的澎湖朋友分享的內容</p>
+        </div>
+
+        <!-- 內容卡片 -->
+        <div class="space-y-6" id="contentFeed">
+            <!-- 內容卡片1 -->
+            <div class="bg-white rounded-xl shadow-lg p-6">
+                <div class="flex items-center mb-4">
+                    <div class="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold mr-4">
+                        小美
+                    </div>
+                    <div class="flex-1">
+                        <h4 class="font-semibold text-gray-900">小美</h4>
+                        <p class="text-sm text-gray-500">與您相關度：95% • 2小時前</p>
+                    </div>
+                    <button class="text-gray-400 hover:text-red-500 like-btn" data-liked="false">
+                        <i class="fas fa-heart"></i>
+                    </button>
+                </div>
+                <div class="mb-4">
+                    <div class="aspect-video bg-gradient-to-br from-blue-400 to-purple-500 rounded-lg flex items-center justify-center text-white mb-3">
+                        <i class="fas fa-image text-4xl"></i>
+                    </div>
+                    <p class="text-gray-700">在七美雙心石滬看夕陽，是我最美好的回憶！我們都在這裡看過夕陽呢！</p>
+                </div>
+                <div class="flex items-center justify-between">
+                    <div class="flex space-x-4">
+                        <button class="flex items-center text-gray-500 hover:text-red-500 like-btn" data-liked="false">
+                            <i class="fas fa-heart mr-1"></i>
+                            <span class="like-count">12</span>
+                        </button>
+                        <button class="flex items-center text-gray-500 hover:text-blue-500 comment-btn">
+                            <i class="fas fa-comment mr-1"></i>
+                            <span>3</span>
+                        </button>
+                        <button class="flex items-center text-gray-500 hover:text-green-500 share-btn">
+                            <i class="fas fa-share mr-1"></i>
+                            <span>分享</span>
+                        </button>
+                    </div>
+                    <div class="flex space-x-2">
+                        <span class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded">七美</span>
+                        <span class="bg-orange-100 text-orange-800 text-xs px-2 py-1 rounded">夕陽</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 內容卡片2 -->
+            <div class="bg-white rounded-xl shadow-lg p-6">
+                <div class="flex items-center mb-4">
+                    <div class="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center text-white font-bold mr-4">
+                        阿明
+                    </div>
+                    <div class="flex-1">
+                        <h4 class="font-semibold text-gray-900">阿明</h4>
+                        <p class="text-sm text-gray-500">與您相關度：87% • 4小時前</p>
+                    </div>
+                    <button class="text-gray-400 hover:text-red-500 like-btn" data-liked="false">
+                        <i class="fas fa-heart"></i>
+                    </button>
+                </div>
+                <div class="mb-4">
+                    <div class="aspect-video bg-gradient-to-br from-green-400 to-teal-500 rounded-lg flex items-center justify-center text-white mb-3">
+                        <i class="fas fa-image text-4xl"></i>
+                    </div>
+                    <p class="text-gray-700">澎湖的海鮮真的超新鮮！推薦大家一定要試試這家餐廳！</p>
+                </div>
+                <div class="flex items-center justify-between">
+                    <div class="flex space-x-4">
+                        <button class="flex items-center text-gray-500 hover:text-red-500 like-btn" data-liked="false">
+                            <i class="fas fa-heart mr-1"></i>
+                            <span class="like-count">8</span>
+                        </button>
+                        <button class="flex items-center text-gray-500 hover:text-blue-500 comment-btn">
+                            <i class="fas fa-comment mr-1"></i>
+                            <span>5</span>
+                        </button>
+                        <button class="flex items-center text-gray-500 hover:text-green-500 share-btn">
+                            <i class="fas fa-share mr-1"></i>
+                            <span>分享</span>
+                        </button>
+                    </div>
+                    <div class="flex space-x-2">
+                        <span class="bg-red-100 text-red-800 text-xs px-2 py-1 rounded">海鮮</span>
+                        <span class="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded">美食</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 內容卡片3 -->
+            <div class="bg-white rounded-xl shadow-lg p-6">
+                <div class="flex items-center mb-4">
+                    <div class="w-12 h-12 bg-purple-500 rounded-full flex items-center justify-center text-white font-bold mr-4">
+                        小華
+                    </div>
+                    <div class="flex-1">
+                        <h4 class="font-semibold text-gray-900">小華</h4>
+                        <p class="text-sm text-gray-500">與您相關度：92% • 6小時前</p>
+                    </div>
+                    <button class="text-gray-400 hover:text-red-500 like-btn" data-liked="false">
+                        <i class="fas fa-heart"></i>
+                    </button>
+                </div>
+                <div class="mb-4">
+                    <div class="aspect-video bg-gradient-to-br from-purple-400 to-pink-500 rounded-lg flex items-center justify-center text-white mb-3">
+                        <i class="fas fa-image text-4xl"></i>
+                    </div>
+                    <p class="text-gray-700">澎湖的風景太美了，每一張照片都是藝術品！我們都喜歡拍澎湖風景！</p>
+                </div>
+                <div class="flex items-center justify-between">
+                    <div class="flex space-x-4">
+                        <button class="flex items-center text-gray-500 hover:text-red-500 like-btn" data-liked="false">
+                            <i class="fas fa-heart mr-1"></i>
+                            <span class="like-count">15</span>
+                        </button>
+                        <button class="flex items-center text-gray-500 hover:text-blue-500 comment-btn">
+                            <i class="fas fa-comment mr-1"></i>
+                            <span>7</span>
+                        </button>
+                        <button class="flex items-center text-gray-500 hover:text-green-500 share-btn">
+                            <i class="fas fa-share mr-1"></i>
+                            <span>分享</span>
+                        </button>
+                    </div>
+                    <div class="flex space-x-2">
+                        <span class="bg-purple-100 text-purple-800 text-xs px-2 py-1 rounded">攝影</span>
+                        <span class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded">風景</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 載入更多按鈕 -->
+        <div class="text-center mt-8">
+            <button id="loadMoreBtn" class="bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors">
+                <i class="fas fa-sync-alt mr-2"></i>載入更多內容
+            </button>
+        </div>
+    </main>
+
+    <!-- 評論模態框 -->
+    <div id="commentModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden z-50">
+        <div class="flex items-center justify-center min-h-screen p-4">
+            <div class="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-semibold text-gray-900">評論</h3>
+                    <button id="closeCommentModal" class="text-gray-400 hover:text-gray-600">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="space-y-4">
+                    <div class="max-h-60 overflow-y-auto space-y-3" id="commentsList">
+                        <!-- 評論列表 -->
+                    </div>
+                    <div class="flex space-x-2">
+                        <input type="text" id="newComment" placeholder="寫下您的評論..." class="flex-1 p-3 border border-gray-300 rounded-lg">
+                        <button id="postCommentBtn" class="bg-blue-600 text-white px-4 py-3 rounded-lg hover:bg-blue-700">
+                            <i class="fas fa-paper-plane"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            initFeedFeatures();
+        });
+
+        function initFeedFeatures() {
+            // 點讚功能
+            document.querySelectorAll('.like-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const isLiked = this.getAttribute('data-liked') === 'true';
+                    const likeCount = this.querySelector('.like-count');
+                    
+                    if (isLiked) {
+                        this.setAttribute('data-liked', 'false');
+                        this.classList.remove('text-red-500');
+                        this.classList.add('text-gray-500');
+                        if (likeCount) {
+                            likeCount.textContent = parseInt(likeCount.textContent) - 1;
+                        }
+                    } else {
+                        this.setAttribute('data-liked', 'true');
+                        this.classList.add('text-red-500');
+                        this.classList.remove('text-gray-500');
+                        if (likeCount) {
+                            likeCount.textContent = parseInt(likeCount.textContent) + 1;
+                        }
+                    }
+                });
+            });
+
+            // 評論功能
+            document.querySelectorAll('.comment-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    document.getElementById('commentModal').classList.remove('hidden');
+                    loadComments();
+                });
+            });
+
+            // 分享功能
+            document.querySelectorAll('.share-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    showNotification('內容已分享！', 'success');
+                });
+            });
+
+            // 載入更多功能
+            document.getElementById('loadMoreBtn').addEventListener('click', function() {
+                loadMoreContent();
+            });
+
+            // 評論模態框
+            const commentModal = document.getElementById('commentModal');
+            const closeCommentModal = document.getElementById('closeCommentModal');
+            const postCommentBtn = document.getElementById('postCommentBtn');
+
+            closeCommentModal.addEventListener('click', () => {
+                commentModal.classList.add('hidden');
+            });
+
+            postCommentBtn.addEventListener('click', () => {
+                const newComment = document.getElementById('newComment').value;
+                if (newComment.trim()) {
+                    addComment(newComment);
+                    document.getElementById('newComment').value = '';
+                }
+            });
+
+            // 上傳按鈕
+            document.getElementById('uploadBtn').addEventListener('click', () => {
+                window.location.href = 'index.html#upload';
+            });
+        }
+
+        function loadComments() {
+            const commentsList = document.getElementById('commentsList');
+            commentsList.innerHTML = `
+                <div class="flex items-start space-x-3">
+                    <div class="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center text-sm font-bold">A</div>
+                    <div class="flex-1">
+                        <p class="font-semibold text-sm">阿強</p>
+                        <p class="text-gray-700 text-sm">我也去過七美！夕陽真的很美</p>
+                        <p class="text-gray-500 text-xs">1小時前</p>
+                    </div>
+                </div>
+                <div class="flex items-start space-x-3">
+                    <div class="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center text-sm font-bold">B</div>
+                    <div class="flex-1">
+                        <p class="font-semibold text-sm">小芳</p>
+                        <p class="text-gray-700 text-sm">下次一定要去看看！</p>
+                        <p class="text-gray-500 text-xs">2小時前</p>
+                    </div>
+                </div>
+            `;
+        }
+
+        function addComment(comment) {
+            const commentsList = document.getElementById('commentsList');
+            const newCommentDiv = document.createElement('div');
+            newCommentDiv.className = 'flex items-start space-x-3';
+            newCommentDiv.innerHTML = `
+                <div class="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white text-sm font-bold">我</div>
+                <div class="flex-1">
+                    <p class="font-semibold text-sm">您</p>
+                    <p class="text-gray-700 text-sm">${comment}</p>
+                    <p class="text-gray-500 text-xs">剛剛</p>
+                </div>
+            `;
+            commentsList.insertBefore(newCommentDiv, commentsList.firstChild);
+        }
+
+        function loadMoreContent() {
+            const contentFeed = document.getElementById('contentFeed');
+            const loadMoreBtn = document.getElementById('loadMoreBtn');
+            
+            loadMoreBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>載入中...';
+            
+            setTimeout(() => {
+                // 模擬載入新內容
+                const newContent = document.createElement('div');
+                newContent.className = 'bg-white rounded-xl shadow-lg p-6';
+                newContent.innerHTML = `
+                    <div class="flex items-center mb-4">
+                        <div class="w-12 h-12 bg-orange-500 rounded-full flex items-center justify-center text-white font-bold mr-4">
+                            小新
+                        </div>
+                        <div class="flex-1">
+                            <h4 class="font-semibold text-gray-900">小新</h4>
+                            <p class="text-sm text-gray-500">與您相關度：78% • 8小時前</p>
+                        </div>
+                        <button class="text-gray-400 hover:text-red-500 like-btn" data-liked="false">
+                            <i class="fas fa-heart"></i>
+                        </button>
+                    </div>
+                    <div class="mb-4">
+                        <div class="aspect-video bg-gradient-to-br from-orange-400 to-red-500 rounded-lg flex items-center justify-center text-white mb-3">
+                            <i class="fas fa-image text-4xl"></i>
+                        </div>
+                        <p class="text-gray-700">澎湖的風真的很大！但是風景美得讓人忘記一切煩惱</p>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <div class="flex space-x-4">
+                            <button class="flex items-center text-gray-500 hover:text-red-500 like-btn" data-liked="false">
+                                <i class="fas fa-heart mr-1"></i>
+                                <span class="like-count">6</span>
+                            </button>
+                            <button class="flex items-center text-gray-500 hover:text-blue-500 comment-btn">
+                                <i class="fas fa-comment mr-1"></i>
+                                <span>2</span>
+                            </button>
+                            <button class="flex items-center text-gray-500 hover:text-green-500 share-btn">
+                                <i class="fas fa-share mr-1"></i>
+                                <span>分享</span>
+                            </button>
+                        </div>
+                        <div class="flex space-x-2">
+                            <span class="bg-orange-100 text-orange-800 text-xs px-2 py-1 rounded">風景</span>
+                            <span class="bg-red-100 text-red-800 text-xs px-2 py-1 rounded">風</span>
+                        </div>
+                    </div>
+                `;
+                
+                contentFeed.appendChild(newContent);
+                loadMoreBtn.innerHTML = '<i class="fas fa-sync-alt mr-2"></i>載入更多內容';
+                
+                // 重新綁定事件
+                initFeedFeatures();
+                
+                showNotification('載入了更多內容！', 'success');
+            }, 1000);
+        }
+
+        function showNotification(message, type = 'info') {
+            const notification = document.createElement('div');
+            notification.className = `fixed top-4 right-4 p-4 rounded-lg shadow-lg z-50 ${
+                type === 'success' ? 'bg-green-500' : 
+                type === 'error' ? 'bg-red-500' : 'bg-blue-500'
+            } text-white`;
+            notification.textContent = message;
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.remove();
+            }, 3000);
+        }
+    </script>
+</body>
+</html>

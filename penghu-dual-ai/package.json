@@ -1,0 +1,10 @@
+{
+  "name": "penghu-dual-ai",
+  "version": "1.0.0",
+  "devDependencies": {
+    "wrangler": "^3.0.0"
+  },
+  "dependencies": {
+    "openai": "^4.0.0"
+  }
+}

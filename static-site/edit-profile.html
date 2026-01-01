@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>編輯個人資料 - HOPENGHU好澎湖</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;600;700&display=swap');
+        body { 
+            font-family: 'Noto Sans TC', sans-serif; 
+            background: #f8fafc;
+        }
+        
+        .edit-container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 1rem;
+        }
+        
+        .edit-section {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        .section-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #111827;
+            margin-bottom: 1.5rem;
+        }
+        
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+        
+        .form-label {
+            display: block;
+            font-weight: 500;
+            color: #374151;
+            margin-bottom: 0.5rem;
+        }
+        
+        .form-input {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.3s;
+        }
+        
+        .form-input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        .form-textarea {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            font-size: 1rem;
+            resize: vertical;
+            min-height: 100px;
+            transition: border-color 0.3s;
+        }
+        
+        .form-textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        .avatar-section {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        
+        .avatar-container {
+            position: relative;
+            display: inline-block;
+            margin-bottom: 1rem;
+        }
+        
+        .profile-avatar {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 3rem;
+            margin: 0 auto;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        
+        .profile-avatar:hover {
+            transform: scale(1.05);
+        }
+        
+        .avatar-overlay {
+            position: absolute;
+            bottom: 0;
+            right: 0;
+            background: #667eea;
+            color: white;
+            border-radius: 50%;
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            border: 3px solid white;
+        }
+        
+        .avatar-text {
+            color: #6b7280;
+            font-size: 0.9rem;
+        }
+        
+        .location-selector {
+            position: relative;
+        }
+        
+        .location-input {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            font-size: 1rem;
+        }
+        
+        .location-suggestions {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 1px solid #d1d5db;
+            border-top: none;
+            border-radius: 0 0 8px 8px;
+            max-height: 200px;
+            overflow-y: auto;
+            z-index: 10;
+            display: none;
+        }
+        
+        .location-suggestion {
+            padding: 0.75rem;
+            cursor: pointer;
+            border-bottom: 1px solid #f3f4f6;
+        }
+        
+        .location-suggestion:hover {
+            background: #f9fafb;
+        }
+        
+        .interests-section {
+            margin-top: 1rem;
+        }
+        
+        .interest-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+        }
+        
+        .interest-tag {
+            background: #e0e7ff;
+            color: #3730a3;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .interest-tag .remove {
+            cursor: pointer;
+            color: #6b7280;
+            font-weight: bold;
+        }
+        
+        .interest-input {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+        }
+        
+        .interest-input input {
+            flex: 1;
+            padding: 0.5rem;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 0.9rem;
+        }
+        
+        .add-interest-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            cursor: pointer;
+        }
+        
+        .save-btn {
+            width: 100%;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 1rem;
+            border-radius: 12px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.3s;
+            margin-top: 1rem;
+        }
+        
+        .save-btn:hover {
+            transform: translateY(-2px);
+        }
+        
+        .save-btn:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .predefined-interests {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+        
+        .predefined-interest {
+            background: #f3f4f6;
+            color: #374151;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .predefined-interest:hover {
+            background: #e5e7eb;
+        }
+        
+        .predefined-interest.selected {
+            background: #667eea;
+            color: white;
+        }
+        
+        /* 手機版優化 */
+        @media (max-width: 768px) {
+            .edit-container {
+                padding: 0.5rem;
+            }
+            
+            .edit-section {
+                padding: 1rem;
+            }
+            
+            .profile-avatar {
+                width: 100px;
+                height: 100px;
+                font-size: 2.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- 頂部導航 -->
+    <nav class="bg-white shadow-sm sticky top-0 z-50">
+        <div class="max-w-600px mx-auto px-4 py-3">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center">
+                    <a href="settings.html" class="mr-4">
+                        <i class="fas fa-arrow-left text-xl text-gray-600"></i>
+                    </a>
+                    <span class="text-lg font-semibold">編輯個人資料</span>
+                </div>
+                <button class="text-blue-600 font-semibold" onclick="saveProfile()">儲存</button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="edit-container">
+        <!-- 頭像設定 -->
+        <div class="edit-section">
+            <div class="section-title">個人照片</div>
+            <div class="avatar-section">
+                <div class="avatar-container">
+                    <div class="profile-avatar" onclick="changeAvatar()">我</div>
+                    <div class="avatar-overlay" onclick="changeAvatar()">
+                        <i class="fas fa-camera"></i>
+                    </div>
+                </div>
+                <div class="avatar-text">點擊更換個人照片</div>
+            </div>
+        </div>
+
+        <!-- 基本資訊 -->
+        <div class="edit-section">
+            <div class="section-title">基本資訊</div>
+            
+            <div class="form-group">
+                <label class="form-label">姓名</label>
+                <input type="text" class="form-input" value="我的澎湖時光" placeholder="輸入您的姓名">
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">用戶名稱</label>
+                <input type="text" class="form-input" value="penghu_lover" placeholder="輸入用戶名稱">
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">電子郵件</label>
+                <input type="email" class="form-input" value="user@example.com" placeholder="輸入電子郵件">
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">電話號碼</label>
+                <input type="tel" class="form-input" value="0912-345-678" placeholder="輸入電話號碼">
+            </div>
+        </div>
+
+        <!-- 個人簡介 -->
+        <div class="edit-section">
+            <div class="section-title">個人簡介</div>
+            
+            <div class="form-group">
+                <label class="form-label">自我介紹</label>
+                <textarea class="form-textarea" placeholder="介紹一下自己，讓朋友們更了解您...">熱愛澎湖的攝影愛好者 📸
+喜歡分享澎湖的美景和故事
+📍 七美 · 馬公</textarea>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">所在地</label>
+                <div class="location-selector">
+                    <input type="text" class="location-input" id="locationInput" value="澎湖縣馬公市" placeholder="選擇或輸入所在地..." autocomplete="off">
+                    <div class="location-suggestions" id="locationSuggestions"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 興趣標籤 -->
+        <div class="edit-section">
+            <div class="section-title">興趣標籤</div>
+            
+            <div class="interests-section">
+                <div class="interest-tags" id="interestTags">
+                    <div class="interest-tag">
+                        攝影
+                        <span class="remove" onclick="removeInterest(this)">×</span>
+                    </div>
+                    <div class="interest-tag">
+                        澎湖
+                        <span class="remove" onclick="removeInterest(this)">×</span>
+                    </div>
+                    <div class="interest-tag">
+                        夕陽
+                        <span class="remove" onclick="removeInterest(this)">×</span>
+                    </div>
+                    <div class="interest-tag">
+                        海邊
+                        <span class="remove" onclick="removeInterest(this)">×</span>
+                    </div>
+                </div>
+                
+                <div class="interest-input">
+                    <input type="text" id="interestInput" placeholder="新增興趣標籤..." onkeypress="handleInterestInput(event)">
+                    <button class="add-interest-btn" onclick="addInterest()">新增</button>
+                </div>
+                
+                <div class="predefined-interests">
+                    <div class="predefined-interest" onclick="togglePredefinedInterest(this)">美食</div>
+                    <div class="predefined-interest" onclick="togglePredefinedInterest(this)">旅遊</div>
+                    <div class="predefined-interest" onclick="togglePredefinedInterest(this)">文化</div>
+                    <div class="predefined-interest" onclick="togglePredefinedInterest(this)">歷史</div>
+                    <div class="predefined-interest" onclick="togglePredefinedInterest(this)">自然</div>
+                    <div class="predefined-interest" onclick="togglePredefinedInterest(this)">戶外活動</div>
+                    <div class="predefined-interest" onclick="togglePredefinedInterest(this)">家庭</div>
+                    <div class="predefined-interest" onclick="togglePredefinedInterest(this)">朋友</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 隱私設定 -->
+        <div class="edit-section">
+            <div class="section-title">隱私設定</div>
+            
+            <div class="form-group">
+                <label class="form-label">個人資料可見性</label>
+                <select class="form-input">
+                    <option value="public">公開</option>
+                    <option value="friends">僅朋友</option>
+                    <option value="private">私人</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">允許朋友標記</label>
+                <select class="form-input">
+                    <option value="everyone">所有人</option>
+                    <option value="friends">僅朋友</option>
+                    <option value="none">不允許</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- 儲存按鈕 -->
+        <button class="save-btn" onclick="saveProfile()">
+            <i class="fas fa-save mr-2"></i>儲存變更
+        </button>
+    </div>
+
+    <script>
+        let interests = ['攝影', '澎湖', '夕陽', '海邊'];
+        
+        // 地點建議
+        const locationSuggestions = [
+            '澎湖縣馬公市', '澎湖縣湖西鄉', '澎湖縣白沙鄉', '澎湖縣西嶼鄉',
+            '澎湖縣望安鄉', '澎湖縣七美鄉', '台北市', '新北市', '桃園市',
+            '台中市', '台南市', '高雄市', '基隆市', '新竹市', '嘉義市'
+        ];
+        
+        // 更換頭像
+        function changeAvatar() {
+            alert('更換頭像功能');
+        }
+        
+        // 地點建議
+        const locationInput = document.getElementById('locationInput');
+        const locationSuggestionsDiv = document.getElementById('locationSuggestions');
+        
+        locationInput.addEventListener('input', function() {
+            const query = this.value.toLowerCase();
+            if (query.length > 0) {
+                const filtered = locationSuggestions.filter(loc => 
+                    loc.toLowerCase().includes(query)
+                );
+                showLocationSuggestions(filtered);
+            } else {
+                locationSuggestionsDiv.style.display = 'none';
+            }
+        });
+        
+        function showLocationSuggestions(suggestions) {
+            locationSuggestionsDiv.innerHTML = '';
+            suggestions.forEach(suggestion => {
+                const div = document.createElement('div');
+                div.className = 'location-suggestion';
+                div.textContent = suggestion;
+                div.onclick = () => {
+                    locationInput.value = suggestion;
+                    locationSuggestionsDiv.style.display = 'none';
+                };
+                locationSuggestionsDiv.appendChild(div);
+            });
+            locationSuggestionsDiv.style.display = 'block';
+        }
+        
+        // 點擊外部關閉建議
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('.location-selector')) {
+                locationSuggestionsDiv.style.display = 'none';
+            }
+        });
+        
+        // 興趣標籤管理
+        function addInterest() {
+            const input = document.getElementById('interestInput');
+            const interest = input.value.trim();
+            
+            if (interest && !interests.includes(interest)) {
+                interests.push(interest);
+                updateInterestTags();
+                input.value = '';
+            }
+        }
+        
+        function removeInterest(element) {
+            const interest = element.parentElement.textContent.replace('×', '').trim();
+            interests = interests.filter(i => i !== interest);
+            updateInterestTags();
+        }
+        
+        function updateInterestTags() {
+            const container = document.getElementById('interestTags');
+            container.innerHTML = '';
+            
+            interests.forEach(interest => {
+                const tag = document.createElement('div');
+                tag.className = 'interest-tag';
+                tag.innerHTML = `
+                    ${interest}
+                    <span class="remove" onclick="removeInterest(this)">×</span>
+                `;
+                container.appendChild(tag);
+            });
+        }
+        
+        function handleInterestInput(event) {
+            if (event.key === 'Enter') {
+                addInterest();
+            }
+        }
+        
+        function togglePredefinedInterest(element) {
+            const interest = element.textContent;
+            
+            if (element.classList.contains('selected')) {
+                element.classList.remove('selected');
+                interests = interests.filter(i => i !== interest);
+            } else {
+                if (!interests.includes(interest)) {
+                    element.classList.add('selected');
+                    interests.push(interest);
+                }
+            }
+            
+            updateInterestTags();
+        }
+        
+        // 儲存個人資料
+        function saveProfile() {
+            const saveBtn = document.querySelector('.save-btn');
+            saveBtn.disabled = true;
+            saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>儲存中...';
+            
+            // 模擬儲存過程
+            setTimeout(() => {
+                alert('個人資料已成功更新！');
+                saveBtn.disabled = false;
+                saveBtn.innerHTML = '<i class="fas fa-save mr-2"></i>儲存變更';
+                // 可以選擇返回上一頁
+                // window.location.href = 'settings.html';
+            }, 1500);
+        }
+    </script>
+</body>
+</html>
