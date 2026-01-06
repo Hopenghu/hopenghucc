@@ -3,7 +3,7 @@
 
 import { pageTemplate } from '../components/layout.js';
 import { RecommendationService } from '../services/RecommendationService.js';
-import { LocationService } from '../services/locationService.js';
+import { LocationService } from '../services/LocationService.js';
 import { ImagePreview } from '../components/ImagePreview.js';
 
 export async function renderRecommendationsPage(request, env, session, user, nonce, cssContent) {

@@ -2,7 +2,7 @@
 // 基於「人、事、時、地、物」哲學架構
 // 管理圖片下載、存儲和版本控制
 
-import { LocationService } from './locationService.js';
+import { LocationService } from './LocationService.js';
 
 export class R2ImageService {
   constructor(db, googleMapsApiKey, r2Bucket = null) {

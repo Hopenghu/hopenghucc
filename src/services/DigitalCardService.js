@@ -3,7 +3,7 @@
  * 處理卡牌生成、轉讓、激活、核銷等核心功能
  */
 
-import { LocationService } from './locationService.js';
+import { LocationService } from './LocationService.js';
 
 export class DigitalCardService {
     constructor(db, mapsApiKey = null) {

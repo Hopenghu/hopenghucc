@@ -28,7 +28,7 @@ export async function handleItineraryRequest(request, env, user) {
 
   try {
     // 初始化服務
-    const locationService = new (await import('../services/locationService.js')).LocationService(
+    const locationService = new (await import('../services/LocationService.js')).LocationService(
       env.DB,
       env.GOOGLE_MAPS_API_KEY
     );

@@ -7,7 +7,7 @@ import { AuthService } from './AuthService.js';
 import { UserService } from './UserService.js';
 import { SessionService } from './SessionService.js';
 import { GoogleAuthService } from './GoogleAuthService.js';
-import { LocationService } from './locationService.js';
+import { LocationService } from './LocationService.js';
 import { LocationInvitationService } from './LocationInvitationService.js';
 import { AIService } from './AIService.js';
 import { BusinessVerificationService } from './BusinessVerificationService.js';

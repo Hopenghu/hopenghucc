@@ -6,7 +6,7 @@ import { Location } from '../models/Location.js';
 import { ObjectRelations } from '../models/ObjectRelations.js';
 import { TimeModule } from '../modules/TimeModule.js';
 import { ActionModule } from '../modules/ActionModule.js';
-import { LocationService } from './locationService.js';
+import { LocationService } from './LocationService.js';
 
 export class LocationModule {
   constructor(db, googleMapsApiKey = null) {

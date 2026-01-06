@@ -3,7 +3,7 @@
  * 實現完整的遊戲邏輯和文化元素
  */
 
-import { LocationService } from './locationService.js';
+import { LocationService } from './LocationService.js';
 
 export class PenghuGameService {
     constructor(db) {

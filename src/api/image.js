@@ -1,7 +1,7 @@
 import { ImageCacheService } from '../services/ImageCacheService.js';
 import { ImageDownloadService } from '../services/ImageDownloadService.js';
 import { R2ImageService } from '../services/R2ImageService.js';
-import { LocationService } from '../services/locationService.js';
+import { LocationService } from '../services/LocationService.js';
 import { withCache, CACHE_TTL } from '../utils/cacheHelper.js';
 
 /**
@@ -396,7 +396,7 @@ async function handleRefreshAllImages(request, env) {
     try {
         // 導入ImageRefreshService
         const { ImageRefreshService } = await import('../services/ImageRefreshService.js');
-        const { LocationService } = await import('../services/locationService.js');
+        const { LocationService } = await import('../services/LocationService.js');
         
         const locationService = new LocationService(env.DB, env.GOOGLE_MAPS_API_KEY);
         const imageRefreshService = new ImageRefreshService(env.DB, locationService);

@@ -123,7 +123,7 @@ console.log(story.toJSON());
 
 ```javascript
 import { Person, Location, ObjectRelations } from './models/index.js';
-import { LocationService } from '../services/locationService.js';
+import { LocationService } from '../services/LocationService.js';
 
 // 在 LocationService 中使用 Location 物件
 const locationService = new LocationService(db, apiKey);

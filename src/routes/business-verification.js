@@ -2,7 +2,7 @@ import { businessVerificationPage } from '../templates/business-verification.htm
 import { BusinessVerificationService } from '../services/BusinessVerificationService.js';
 import { SessionService } from '../services/SessionService.js';
 import { UserService } from '../services/UserService.js';
-import { LocationService } from '../services/locationService.js';
+import { LocationService } from '../services/LocationService.js';
 
 // Helper to parse cookies (can be moved to a shared util if used elsewhere)
 function getCookie(request, name) {

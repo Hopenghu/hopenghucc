@@ -1,3 +1,6 @@
+// ========================================
+// Imports
+// ========================================
 import { renderHomePage } from '../pages/Home.js';
 import { renderLoginPage } from '../pages/Login.js';
 import { renderNotFoundPage } from '../pages/notFound.js';
@@ -9,7 +12,6 @@ import { renderBusinessVerificationAdminPage } from '../pages/BusinessVerificati
 import { renderEcosystemDashboardPage } from '../pages/EcosystemDashboard.js';
 import { renderProfilePage } from '../pages/Profile.js';
 import { renderDesignPreviewPage } from '../pages/DesignPreview.js';
-// Game Pages
 import { renderPenghuGamePage as renderGamePage } from '../pages/GamePage.js';
 import { renderSimpleTestPage } from '../pages/SimpleTestPage.js';
 import { renderTestPage } from '../pages/TestPage.js';
@@ -19,7 +21,6 @@ import { renderRecommendationsPage } from '../pages/Recommendations.js';
 import { renderSearchPage } from '../pages/Search.js';
 import { renderFavoritesPage } from '../pages/Favorites.js';
 import { renderLocationDetailPage } from '../pages/LocationDetail.js';
-import { renderItineraryPlannerPage } from '../pages/ItineraryPlanner.js';
 import { renderTripPlannerPage } from '../pages/TripPlanner.js';
 import { handleAuthRequest } from '../api/auth.js';
 import { handleCspReport } from '../api/csp.js';
@@ -33,6 +34,9 @@ import { createSimpleGameRoutes } from '../api/simple-game.js';
 import { pageTemplate } from '../components/layout.js';
 import { renderErrorPage } from '../pages/ErrorPage.js';
 
+// ========================================
+// Helper Functions
+// ========================================
 async function renderGoogleInfoPage(request, env, session, user, nonce, cssContent) {
   if (!user) {
     return Response.redirect(new URL(request.url).origin + '/login', 302);
@@ -78,40 +82,128 @@ async function renderGoogleInfoPage(request, env, session, user, nonce, cssConte
   });
 }
 
+// ========================================
+// 公開路由（無需登入）
+// ========================================
 export async function routePageRequest(request, env, session, user, nonce, cssContent) {
   const url = new URL(request.url);
   const pathname = url.pathname;
 
   try {
+    // 首頁
     if (pathname === '/' || pathname === '/index.html') {
       return await renderHomePage(request, env, session, user, nonce, cssContent);
     }
+
+    // 登入頁面
     if (pathname === '/login') {
       if (user) {
-        // 如果用户已登录，重定向到首页（显示时光机 UI）
         return Response.redirect(url.origin + '/', 302);
       }
       return await renderLoginPage(request, env, session, user, nonce, cssContent);
     }
-    if (pathname === '/google-info') {
-      if (!user) {
-        return Response.redirect(url.origin + '/login', 302);
+
+    // 公開分享的行程頁面（無需登入）
+    if (pathname.startsWith('/trip-planner/shared/')) {
+      const shareToken = pathname.split('/').pop();
+      if (shareToken && shareToken !== 'shared') {
+        const { renderSharedTripPage } = await import('../pages/TripPlanner.js');
+        return await renderSharedTripPage(request, env, session, user, nonce, cssContent, shareToken);
       }
+    }
+
+    // 地點詳情頁面（公開）
+    if (pathname.startsWith('/location/')) {
+      const locationId = pathname.split('/').pop();
+      if (locationId && locationId !== 'location') {
+        return await renderLocationDetailPage(request, env, session, user, nonce, cssContent);
+      }
+    }
+
+    // 測試路由（開發用，無需登入）
+    if (pathname === '/test') {
+      return await renderSimpleTestPage(request, env, session, user, nonce, cssContent);
+    }
+
+    if (pathname === '/test-simple') {
+      return await renderTestPage(request, env, session, user, nonce, cssContent);
+    }
+
+    // ========================================
+    // 認證路由（需要登入）
+    // ========================================
+    if (!user) {
+      return Response.redirect(url.origin + '/login', 302);
+    }
+
+    // 個人資料
+    if (pathname === '/profile') {
+      return await renderProfilePage(request, env, session, user, nonce, cssContent);
+    }
+
+    // Google 帳號資訊
+    if (pathname === '/google-info') {
       return await renderGoogleInfoPage(request, env, session, user, nonce, cssContent);
     }
 
-    // Admin routes
-    if (pathname === '/admin' || pathname === '/admin/') {
-      // Redirect /admin to /admin/dashboard
-      return Response.redirect(url.origin + '/admin/dashboard', 302);
+    // 足跡
+    if (pathname === '/footprints') {
+      return await renderFootprintsPage(request, env, session, user, nonce, cssContent);
     }
 
-    if (pathname === '/admin/images') {
-      return await renderImageManagementPage(request, env, session, user, nonce, cssContent);
+    // 行程規劃
+    if (pathname === '/trip-planner') {
+      return await renderTripPlannerPage(request, env, session, user, nonce, cssContent);
+    }
+
+    // AI 聊天
+    if (pathname === '/ai-chat') {
+      return await renderAIChatPage(request, env, session, user, nonce, cssContent);
+    }
+
+    // 故事時間軸
+    if (pathname === '/story-timeline' || pathname === '/timeline') {
+      return await renderStoryTimelinePage(request, env, session, user, nonce, cssContent);
+    }
+
+    // 推薦
+    if (pathname === '/recommendations' || pathname === '/recommend') {
+      return await renderRecommendationsPage(request, env, session, user, nonce, cssContent);
+    }
+
+    // 搜尋
+    if (pathname === '/search') {
+      return await renderSearchPage(request, env, session, user, nonce, cssContent);
+    }
+
+    // 收藏
+    if (pathname === '/favorites') {
+      return await renderFavoritesPage(request, env, session, user, nonce, cssContent);
+    }
+
+    // 遊戲
+    if (pathname === '/game') {
+      return await renderGamePage(request, env, session, user, nonce, cssContent);
+    }
+
+    // 設計預覽
+    if (pathname === '/design-preview') {
+      return await renderDesignPreviewPage(request, env, session, user, nonce, cssContent);
+    }
+
+    // ========================================
+    // 管理員路由（需要管理員權限）
+    // ========================================
+    if (pathname === '/admin' || pathname === '/admin/') {
+      return Response.redirect(url.origin + '/admin/dashboard', 302);
     }
 
     if (pathname === '/admin/dashboard') {
       return await renderAdminDashboardPage(request, env, session, user, nonce, cssContent);
+    }
+
+    if (pathname === '/admin/images') {
+      return await renderImageManagementPage(request, env, session, user, nonce, cssContent);
     }
 
     if (pathname === '/admin/ai' || pathname === '/ai-admin') {
@@ -126,93 +218,7 @@ export async function routePageRequest(request, env, session, user, nonce, cssCo
       return await renderEcosystemDashboardPage(request, env, session, user, nonce, cssContent);
     }
 
-    if (pathname === '/profile') {
-      return await renderProfilePage(request, env, session, user, nonce, cssContent);
-    }
-
-    if (pathname === '/footprints') {
-      return await renderFootprintsPage(request, env, session, user, nonce, cssContent);
-    }
-
-    if (pathname === '/ai-chat') {
-      return await renderAIChatPage(request, env, session, user, nonce, cssContent);
-    }
-
-    if (pathname === '/story-timeline' || pathname === '/timeline') {
-      return await renderStoryTimelinePage(request, env, session, user, nonce, cssContent);
-    }
-
-    if (pathname === '/recommendations' || pathname === '/recommend') {
-      return await renderRecommendationsPage(request, env, session, user, nonce, cssContent);
-    }
-
-    if (pathname === '/search') {
-      return await renderSearchPage(request, env, session, user, nonce, cssContent);
-    }
-
-    if (pathname === '/favorites') {
-      return await renderFavoritesPage(request, env, session, user, nonce, cssContent);
-    }
-
-    // 暫時隱藏 AI 行程規劃功能（保留代碼，不刪除）
-    // if (pathname === '/itinerary' || pathname === '/itinerary-planner') {
-    //   return await renderItineraryPlannerPage(request, env, session, user, nonce, cssContent);
-    // }
-
-    if (pathname === '/trip-planner') {
-      return await renderTripPlannerPage(request, env, session, user, nonce, cssContent);
-    }
-
-    // 公開分享的行程頁面（無需登入）
-    if (pathname.startsWith('/trip-planner/shared/')) {
-      const shareToken = pathname.split('/').pop();
-      if (shareToken && shareToken !== 'shared') {
-        const { renderSharedTripPage } = await import('../pages/TripPlanner.js');
-        return await renderSharedTripPage(request, env, session, user, nonce, cssContent, shareToken);
-      }
-    }
-
-    if (pathname.startsWith('/location/')) {
-      const locationId = pathname.split('/').pop();
-      if (locationId && locationId !== 'location') {
-        return await renderLocationDetailPage(request, env, session, user, nonce, cssContent);
-      }
-    }
-
-    if (pathname === '/design-preview') {
-      return await renderDesignPreviewPage(request, env, session, user, nonce, cssContent);
-    }
-
-    if (pathname === '/game') {
-      if (!user) {
-        return Response.redirect(url.origin + '/login', 302);
-      }
-      return await renderGamePage(request, env, session, user, nonce, cssContent);
-    }
-
-    if (pathname === '/cards') {
-      return new Response('Cards route working!', {
-        headers: { 'Content-Type': 'text/plain' }
-      });
-    }
-
-    if (pathname === '/game-test') {
-      // 測試預覽頁面，不需要登入
-      return new Response('Game test route working!', {
-        headers: { 'Content-Type': 'text/plain' }
-      });
-    }
-
-    if (pathname === '/test') {
-      // 簡單測試頁面，不需要登入
-      return await renderSimpleTestPage(request, env, session, user, nonce, cssContent);
-    }
-
-    if (pathname === '/test-simple') {
-      // 最簡單測試頁面，不需要登入
-      return await renderTestPage(request, env, session, user, nonce, cssContent);
-    }
-
+    // 404 - 未找到頁面
     return await renderNotFoundPage(request, env, session, user, nonce, cssContent);
   } catch (error) {
     console.error('Route Error:', error);
@@ -220,6 +226,9 @@ export async function routePageRequest(request, env, session, user, nonce, cssCo
   }
 }
 
+// ========================================
+// API 路由
+// ========================================
 export async function handleApiRequest(request, env, session, user, ctx = null) {
   const url = new URL(request.url);
   const path = url.pathname;
@@ -244,7 +253,7 @@ export async function handleApiRequest(request, env, session, user, ctx = null) 
         case 'admin':
           return await handleAdminRequest(request, env, user);
         case 'location':
-        case 'locations':  // 支持复数形式
+        case 'locations':
           return await handleLocationRequest(request, env, user);
         case 'story':
           const { handleStoryRequest } = await import('../api/story.js');
@@ -265,39 +274,33 @@ export async function handleApiRequest(request, env, session, user, ctx = null) 
           const { handleTripPlannerRequest } = await import('../api/trip-planner.js');
           return await handleTripPlannerRequest(request, env, user);
         case 'business':
-          // 檢查是否為驗證相關 API
           if (path.startsWith('/api/business/verify/')) {
             const { handleBusinessVerificationRequest } = await import('../api/business-verification.js');
             return await handleBusinessVerificationRequest(request, env, user);
           }
           return new Response('API resource not Found', { status: 404 });
         case 'ai':
-          // 檢查是否為管理後台 API
           if (path.startsWith('/api/ai/admin/')) {
             const { handleAIAdminRequest } = await import('../api/ai-admin.js');
             return await handleAIAdminRequest(request, env, user);
           }
           return await handleAIRequest(request, env, user);
         case 'game':
-          // 創建臨時的 Hono app 來處理遊戲 API
           const { Hono } = await import('hono');
           const app = new Hono();
           createGameRoutes(app, env.DB);
           return await app.fetch(request);
         case 'penghu-game':
-          // 創建臨時的 Hono app 來處理澎湖遊戲 API
           const { Hono: PenghuHono } = await import('hono');
           const penghuApp = new PenghuHono();
           createPenghuGameRoutes(penghuApp, env.DB);
           return await penghuApp.fetch(request);
         case 'simple-game':
-          // 創建臨時的 Hono app 來處理簡化遊戲 API
           const { Hono: SimpleHono } = await import('hono');
           const simpleApp = new SimpleHono();
           createSimpleGameRoutes(simpleApp, env.DB);
           return await simpleApp.fetch(request);
         case 'digital-cards':
-          // 暫時禁用數位卡牌 API
           return new Response('API temporarily disabled', { status: 503 });
         default:
           return new Response('API resource not Found', { status: 404 });
@@ -313,4 +316,4 @@ export async function handleApiRequest(request, env, session, user, ctx = null) 
 
   console.warn('Request reached end of handleApiRequest without matching API route:', path);
   return new Response('API route not Found', { status: 404 });
-} 
+}

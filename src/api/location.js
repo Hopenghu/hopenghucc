@@ -1,4 +1,4 @@
-import { LocationService } from '../services/locationService.js';
+import { LocationService } from '../services/LocationService.js';
 import { withCache, CACHE_TTL } from '../utils/cacheHelper.js';
 
 export async function handleLocationRequest(request, env, user) {

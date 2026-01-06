@@ -1692,7 +1692,7 @@ export async function renderSharedTripPage(request, env, session, user, nonce, c
     const trip = result.trip;
 
     // 獲取地點詳情
-    const locationService = new (await import('../services/locationService.js')).LocationService(
+    const locationService = new (await import('../services/LocationService.js')).LocationService(
       env.DB,
       env.GOOGLE_MAPS_API_KEY
     );

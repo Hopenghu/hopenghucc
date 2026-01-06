@@ -3,7 +3,7 @@ import { AuthService } from './services/AuthService.js';
 import { UserService } from './services/UserService.js';
 import { SessionService } from './services/SessionService.js';
 import { GoogleAuthService } from './services/GoogleAuthService.js';
-import { LocationService } from './services/locationService.js'; // Corrected to actual lowercase filename
+import { LocationService } from './services/LocationService.js';
 import { LocationInvitationService } from './services/LocationInvitationService';
 import { AIService } from './services/AIService.js';
 import { BusinessVerificationService } from './services/BusinessVerificationService.js';
@@ -312,11 +312,7 @@ export default {
         return new Response(html, { headers: { 'Content-Type': 'text/html;charset=UTF-8' } });
       }
 
-      // Test Route
-      if (request.method === 'GET' && pathname === '/test') {
-        console.log('[Worker] Test route matched');
-        return new Response('Test route working', { headers: { 'Content-Type': 'text/plain' } });
-      }
+      // Test Route - 已移除，由 routes/index.js 處理
 
       // Profile Page Route
       if (request.method === 'GET' && pathname === '/profile') {

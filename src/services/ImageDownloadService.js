@@ -1,4 +1,4 @@
-import { LocationService } from './locationService.js';
+import { LocationService } from './LocationService.js';
 
 export class ImageDownloadService {
     constructor(db, googleMapsApiKey) {

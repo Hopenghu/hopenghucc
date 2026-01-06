@@ -66,7 +66,7 @@ async function handleDebugLocations(request, env) {
 
     try {
         // 使用 LocationService 來獲取包含用戶狀態的地點數據
-        const { LocationService } = await import('../services/locationService.js');
+        const { LocationService } = await import('../services/LocationService.js');
         const locationService = new LocationService(env.DB, env.GOOGLE_MAPS_API_KEY);
         
         // 獲取前5個地點，不包含特定用戶狀態（用於調試）
@@ -213,7 +213,7 @@ async function handleTestUserCounts(request, env) {
 
     try {
         // 導入 LocationService
-        const { LocationService } = await import('../services/locationService.js');
+        const { LocationService } = await import('../services/LocationService.js');
         const locationService = new LocationService(env.DB, env.GOOGLE_MAPS_API_KEY);
         
         // 測試用戶 ID 3 (blackie.hsieh@gmail.com) 的統計
@@ -260,7 +260,7 @@ async function handleTestProfileData(request, env) {
 
     try {
         // 導入 LocationService
-        const { LocationService } = await import('../services/locationService.js');
+        const { LocationService } = await import('../services/LocationService.js');
         const locationService = new LocationService(env.DB, env.GOOGLE_MAPS_API_KEY);
         
         // 測試用戶 ID 3 (blackie.hsieh@gmail.com) 的 Profile 數據
@@ -413,7 +413,7 @@ async function handleTestProfileFull(request, env) {
             const { SessionService } = await import('../services/SessionService.js');
             const { GoogleAuthService } = await import('../services/GoogleAuthService.js');
             const { AuthService } = await import('../services/AuthService.js');
-            const { LocationService } = await import('../services/locationService.js');
+            const { LocationService } = await import('../services/LocationService.js');
 
             const userService = new UserService(env.DB);
             const sessionService = new SessionService(env.DB);
@@ -452,7 +452,7 @@ async function handleTestProfileFull(request, env) {
 
         // 步驟 3: 測試地點數據獲取
         try {
-            const { LocationService } = await import('../services/locationService.js');
+            const { LocationService } = await import('../services/LocationService.js');
             const locationService = new LocationService(env.DB, env.GOOGLE_MAPS_API_KEY);
             
             const userLocations = await locationService.getUserLocations(3);
@@ -541,7 +541,7 @@ async function handleTestProfileRequest(request, env) {
             const { SessionService } = await import('../services/SessionService.js');
             const { GoogleAuthService } = await import('../services/GoogleAuthService.js');
             const { AuthService } = await import('../services/AuthService.js');
-            const { LocationService } = await import('../services/locationService.js');
+            const { LocationService } = await import('../services/LocationService.js');
 
             const userService = new UserService(env.DB);
             const sessionService = new SessionService(env.DB);
@@ -589,7 +589,7 @@ async function handleTestProfileRequest(request, env) {
 
         // 步驟 3: 獲取 Profile 頁面數據
         try {
-            const { LocationService } = await import('../services/locationService.js');
+            const { LocationService } = await import('../services/LocationService.js');
             const locationService = new LocationService(env.DB, env.GOOGLE_MAPS_API_KEY);
 
             // 模擬 Profile 頁面的數據獲取流程
@@ -635,7 +635,7 @@ async function handleTestProfileRequest(request, env) {
         // 步驟 4: 生成 Profile 頁面 HTML
         try {
             const { getProfilePageHtml } = await import('../templates/html.js');
-            const { LocationService } = await import('../services/locationService.js');
+            const { LocationService } = await import('../services/LocationService.js');
             
             const locationService = new LocationService(env.DB, env.GOOGLE_MAPS_API_KEY);
             const userLocations = await locationService.getUserLocations(3);
@@ -863,7 +863,7 @@ async function handleTestProfileLoggedIn(request, env) {
             const { SessionService } = await import('../services/SessionService.js');
             const { GoogleAuthService } = await import('../services/GoogleAuthService.js');
             const { AuthService } = await import('../services/AuthService.js');
-            const { LocationService } = await import('../services/locationService.js');
+            const { LocationService } = await import('../services/LocationService.js');
 
             const userService = new UserService(env.DB);
             const sessionService = new SessionService(env.DB);
@@ -904,7 +904,7 @@ async function handleTestProfileLoggedIn(request, env) {
 
         // 步驟 3: 測試 Profile 頁面數據獲取（模擬修復後的邏輯）
         try {
-            const { LocationService } = await import('../services/locationService.js');
+            const { LocationService } = await import('../services/LocationService.js');
             const locationService = new LocationService(env.DB, env.GOOGLE_MAPS_API_KEY);
 
             // 模擬修復後的 Profile 頁面邏輯
@@ -965,7 +965,7 @@ async function handleTestProfileLoggedIn(request, env) {
         // 步驟 4: 測試 HTML 生成
         try {
             const { getProfilePageHtml } = await import('../templates/html.js');
-            const { LocationService } = await import('../services/locationService.js');
+            const { LocationService } = await import('../services/LocationService.js');
             
             const locationService = new LocationService(env.DB, env.GOOGLE_MAPS_API_KEY);
             
@@ -1061,7 +1061,7 @@ async function handleTestHomepageData(request, env) {
 
         // 步驟 1: 實例化服務
         try {
-            const { LocationService } = await import('../services/locationService.js');
+            const { LocationService } = await import('../services/LocationService.js');
             const locationService = new LocationService(env.DB, env.GOOGLE_MAPS_API_KEY);
             results.steps.push('✅ 服務實例化成功');
         } catch (error) {
@@ -1072,7 +1072,7 @@ async function handleTestHomepageData(request, env) {
 
         // 步驟 2: 獲取首頁數據
         try {
-            const { LocationService } = await import('../services/locationService.js');
+            const { LocationService } = await import('../services/LocationService.js');
             const locationService = new LocationService(env.DB, env.GOOGLE_MAPS_API_KEY);
 
             // 模擬首頁數據獲取流程
@@ -1107,7 +1107,7 @@ async function handleTestHomepageData(request, env) {
         // 步驟 3: 測試首頁 HTML 生成
         try {
             const { getHomePageContent } = await import('../templates/html.js');
-            const { LocationService } = await import('../services/locationService.js');
+            const { LocationService } = await import('../services/LocationService.js');
             
             const locationService = new LocationService(env.DB, env.GOOGLE_MAPS_API_KEY);
             
@@ -1172,7 +1172,7 @@ async function handleTestXiaohongshuLayout(request, env) {
 
         // 步驟 1: 實例化服務
         try {
-            const { LocationService } = await import('../services/locationService.js');
+            const { LocationService } = await import('../services/LocationService.js');
             const locationService = new LocationService(env.DB, env.GOOGLE_MAPS_API_KEY);
             results.steps.push('✅ 服務實例化成功');
         } catch (error) {
@@ -1183,7 +1183,7 @@ async function handleTestXiaohongshuLayout(request, env) {
 
         // 步驟 2: 獲取小紅書風格佈局數據
         try {
-            const { LocationService } = await import('../services/locationService.js');
+            const { LocationService } = await import('../services/LocationService.js');
             const locationService = new LocationService(env.DB, env.GOOGLE_MAPS_API_KEY);
 
             // 模擬小紅書風格佈局數據獲取流程
@@ -1225,7 +1225,7 @@ async function handleTestXiaohongshuLayout(request, env) {
         // 步驟 3: 測試小紅書風格佈局 HTML 生成
         try {
             const { getXiaohongshuLayoutHtml } = await import('../templates/html.js');
-            const { LocationService } = await import('../services/locationService.js');
+            const { LocationService } = await import('../services/LocationService.js');
             
             const locationService = new LocationService(env.DB, env.GOOGLE_MAPS_API_KEY);
             

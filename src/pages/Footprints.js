@@ -1,5 +1,5 @@
 import { pageTemplate } from '../components/layout.js';
-import { LocationService } from '../services/locationService.js';
+import { LocationService } from '../services/LocationService.js';
 import { ImagePreview } from '../components/ImagePreview.js';
 import { ErrorResponseBuilder, ServiceHealthChecker, withErrorHandling } from '../utils/errorHandler.js';
 
