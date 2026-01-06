@@ -573,6 +573,7 @@ export async function renderTripPlannerPage(request, env, session, user, nonce, 
                 this.directionsRenderer = null; // 路線渲染器
                 this.routePolylines = []; // 路線多邊形
                 this.directionsApiDenied = false; // Directions API 是否被拒絕
+                this.markerLibrary = null; // AdvancedMarkerElement 庫（延遲載入）
             }
 
             // 初始化地圖
@@ -735,7 +736,7 @@ export async function renderTripPlannerPage(request, env, session, user, nonce, 
                     this.selectedPlaces.push(newPlace);
                     
                     // 在地圖上添加標記
-                    this.addMarker(placeData, newPlace);
+                    await this.addMarker(placeData, newPlace);
                     
                     // 更新 UI
                     this.updateTripPanel();
@@ -748,16 +749,55 @@ export async function renderTripPlannerPage(request, env, session, user, nonce, 
                 }
             }
 
-            // 添加地圖標記
-            addMarker(placeData, place) {
+            // 添加地圖標記（使用 AdvancedMarkerElement）
+            async addMarker(placeData, place) {
                 if (!placeData.latitude || !placeData.longitude) return;
 
                 const position = { lat: placeData.latitude, lng: placeData.longitude };
                 const markerNumber = this.getMarkerNumber(place);
                 
-                // 注意：google.maps.Marker 已棄用，建議使用 AdvancedMarkerElement
-                // 但為了兼容性，暫時繼續使用 Marker
-                // TODO: 遷移到 google.maps.marker.AdvancedMarkerElement
+                try {
+                    // 嘗試使用 AdvancedMarkerElement（推薦）
+                    if (!this.markerLibrary && google.maps && google.maps.importLibrary) {
+                        try {
+                            this.markerLibrary = await google.maps.importLibrary("marker");
+                        } catch (error) {
+                            console.warn('Failed to load marker library, falling back to Marker:', error);
+                            this.markerLibrary = null;
+                        }
+                    }
+                    
+                    if (this.markerLibrary && this.markerLibrary.AdvancedMarkerElement && this.markerLibrary.PinElement) {
+                        // 使用 AdvancedMarkerElement
+                        const pinElement = new this.markerLibrary.PinElement({
+                            background: '#3b82f6',
+                            borderColor: '#ffffff',
+                            glyphColor: '#ffffff',
+                            glyph: markerNumber.toString(),
+                            scale: 1.0
+                        });
+                        
+                        const marker = new this.markerLibrary.AdvancedMarkerElement({
+                            map: this.map,
+                            position: position,
+                            title: placeData.name,
+                            content: pinElement.element
+                        });
+
+                        // 添加點擊事件顯示詳情
+                        marker.addListener('click', () => {
+                            this.showLocationDetail(placeData, place);
+                        });
+
+                        this.markers.push({ marker, place, isAdvanced: true });
+                        this.updateMarkerNumbers();
+                        return;
+                    }
+                } catch (error) {
+                    console.warn('AdvancedMarkerElement failed, falling back to Marker:', error);
+                }
+                
+                // 降級方案：使用傳統 Marker（向後兼容）
                 const marker = new google.maps.Marker({
                     position: position,
                     map: this.map,
@@ -779,7 +819,7 @@ export async function renderTripPlannerPage(request, env, session, user, nonce, 
                     this.showLocationDetail(placeData, place);
                 });
 
-                this.markers.push({ marker, place });
+                this.markers.push({ marker, place, isAdvanced: false });
                 this.updateMarkerNumbers();
             }
 
@@ -799,18 +839,36 @@ export async function renderTripPlannerPage(request, env, session, user, nonce, 
 
             // 更新所有標記的編號
             updateMarkerNumbers() {
-                this.markers.forEach(({ marker, place }) => {
+                this.markers.forEach(({ marker, place, isAdvanced }) => {
                     const markerNumber = this.getMarkerNumber(place);
-                    marker.setIcon({
-                        url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(
-                            '<svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">' +
-                            '<circle cx="16" cy="16" r="12" fill="#3b82f6" stroke="white" stroke-width="2"/>' +
-                            '<text x="16" y="20" text-anchor="middle" fill="white" font-size="12" font-weight="bold">' +
-                            markerNumber + '</text></svg>'
-                        ),
-                        scaledSize: new google.maps.Size(32, 32),
-                        anchor: new google.maps.Point(16, 16)
-                    });
+                    
+                    if (isAdvanced && this.markerLibrary && this.markerLibrary.PinElement) {
+                        // 更新 AdvancedMarkerElement
+                        try {
+                            const pinElement = new this.markerLibrary.PinElement({
+                                background: '#3b82f6',
+                                borderColor: '#ffffff',
+                                glyphColor: '#ffffff',
+                                glyph: markerNumber.toString(),
+                                scale: 1.0
+                            });
+                            marker.content = pinElement.element;
+                        } catch (error) {
+                            console.warn('Failed to update AdvancedMarkerElement:', error);
+                        }
+                    } else {
+                        // 更新傳統 Marker
+                        marker.setIcon({
+                            url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(
+                                '<svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">' +
+                                '<circle cx="16" cy="16" r="12" fill="#3b82f6" stroke="white" stroke-width="2"/>' +
+                                '<text x="16" y="20" text-anchor="middle" fill="white" font-size="12" font-weight="bold">' +
+                                markerNumber + '</text></svg>'
+                            ),
+                            scaledSize: new google.maps.Size(32, 32),
+                            anchor: new google.maps.Point(16, 16)
+                        });
+                    }
                 });
             }
 
@@ -1440,7 +1498,14 @@ export async function renderTripPlannerPage(request, env, session, user, nonce, 
                     // 移除地圖標記
                     const markerIndex = this.markers.findIndex(m => m.place.placeId === placeId);
                     if (markerIndex >= 0) {
-                        this.markers[markerIndex].marker.setMap(null);
+                        const { marker, isAdvanced } = this.markers[markerIndex];
+                        if (isAdvanced) {
+                            // AdvancedMarkerElement
+                            marker.map = null;
+                        } else {
+                            // 傳統 Marker
+                            marker.setMap(null);
+                        }
                         this.markers.splice(markerIndex, 1);
                     }
                     
@@ -1587,8 +1652,20 @@ export async function renderTripPlannerPage(request, env, session, user, nonce, 
                             }
                             return true;
                         } catch (clipboardError) {
-                            // 如果 clipboard API 失敗，使用 fallback
-                            console.warn('Clipboard API failed, using fallback:', clipboardError);
+                            // Safari 或其他瀏覽器可能拒絕權限，靜默處理
+                            const errorName = clipboardError?.name || '';
+                            const errorMessage = clipboardError?.message || '';
+                            
+                            // 靜默處理常見的權限錯誤（Safari 等）
+                            if (errorName === 'NotAllowedError' || 
+                                errorName === 'NotFoundError' ||
+                                errorMessage.includes('not allowed') ||
+                                errorMessage.includes('not found')) {
+                                // 靜默降級到 fallback，不顯示警告
+                            } else {
+                                // 其他錯誤才顯示警告
+                                console.warn('Clipboard API failed, using fallback:', clipboardError);
+                            }
                         }
                     }
                     
@@ -1618,10 +1695,19 @@ export async function renderTripPlannerPage(request, env, session, user, nonce, 
                         }
                     } catch (err) {
                         document.body.removeChild(textArea);
-                        throw err;
+                        // 靜默處理 execCommand 錯誤（Safari 等瀏覽器可能不支援）
+                        if (err.name === 'NotAllowedError' || err.name === 'NotFoundError') {
+                            // 靜默處理，不顯示錯誤
+                        } else {
+                            throw err;
+                        }
                     }
                 } catch (error) {
-                    console.error('複製到剪貼簿失敗:', error);
+                    // 只記錄非權限相關的錯誤
+                    const errorName = error?.name || '';
+                    if (errorName !== 'NotAllowedError' && errorName !== 'NotFoundError') {
+                        console.error('複製到剪貼簿失敗:', error);
+                    }
                     if (showMessage) {
                         this.showMessage('無法自動複製，請手動複製連結', 'warning');
                     }
@@ -1680,8 +1766,14 @@ export async function renderTripPlannerPage(request, env, session, user, nonce, 
                 this.selectedPlaces = [];
                 
                 // 移除所有地圖標記
-                this.markers.forEach(({ marker }) => {
-                    marker.setMap(null);
+                this.markers.forEach(({ marker, isAdvanced }) => {
+                    if (isAdvanced) {
+                        // AdvancedMarkerElement
+                        marker.map = null;
+                    } else {
+                        // 傳統 Marker
+                        marker.setMap(null);
+                    }
                 });
                 this.markers = [];
                 
@@ -1895,7 +1987,7 @@ export async function renderTripPlannerPage(request, env, session, user, nonce, 
                                         this.selectedPlaces.push(place);
                                         
                                         // 在地圖上添加標記
-                                        this.addMarker(placeData, place);
+                                        await this.addMarker(placeData, place);
                                     } catch (error) {
                                         console.error(\`載入地點失敗: \${placeItem.placeId}\`, error);
                                     }
