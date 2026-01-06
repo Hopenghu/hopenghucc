@@ -67,6 +67,9 @@ export async function renderTripPlannerPage(request, env, session, user, nonce, 
 
                     <!-- Action Buttons -->
                     <div class="flex-shrink-0 border-t border-gray-100 bg-white p-4 space-y-2">
+                        <button id="load-trip-btn" class="w-full bg-purple-500 hover:bg-purple-600 text-white font-bold py-2 px-4 rounded transition-colors">
+                            載入行程
+                        </button>
                         <button id="save-trip-btn" class="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded disabled:opacity-50 transition-colors" disabled>
                             儲存行程
                         </button>
@@ -353,6 +356,139 @@ export async function renderTripPlannerPage(request, env, session, user, nonce, 
             position: fixed;
             left: -9999px;
             top: 0;
+        }
+
+        /* Loading State */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+            pointer-events: all;
+        }
+
+        .loading-overlay.hidden {
+            display: none;
+        }
+
+        .loading-content {
+            background: white;
+            padding: 24px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+
+        .loading-spinner {
+            border: 3px solid #f3f4f6;
+            border-top: 3px solid #3b82f6;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 12px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Trip List Modal */
+        .trip-list-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1500;
+            pointer-events: all;
+        }
+
+        .trip-list-modal.visible {
+            display: flex;
+        }
+
+        .trip-list-content {
+            background: white;
+            border-radius: 12px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+        }
+
+        .trip-list-header {
+            padding: 20px;
+            border-bottom: 1px solid #e5e7eb;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .trip-list-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #1f2937;
+        }
+
+        .trip-list-close {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #6b7280;
+            padding: 0;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 4px;
+        }
+
+        .trip-list-close:hover {
+            background: #f3f4f6;
+        }
+
+        .trip-list-body {
+            padding: 16px;
+        }
+
+        .trip-list-item {
+            padding: 12px;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .trip-list-item:hover {
+            border-color: #3b82f6;
+            background: #f0f9ff;
+        }
+
+        .trip-list-item-title {
+            font-weight: 600;
+            color: #1f2937;
+            margin-bottom: 4px;
+        }
+
+        .trip-list-item-meta {
+            font-size: 12px;
+            color: #6b7280;
         }
 
         /* Mobile adjustments */
@@ -1409,16 +1545,11 @@ export async function renderTripPlannerPage(request, env, session, user, nonce, 
                             document.body.appendChild(linkDisplay);
                             
                             // 綁定事件
-                            linkDisplay.querySelector('[data-action="copy-share-url"]').addEventListener('click', () => {
+                            linkDisplay.querySelector('[data-action="copy-share-url"]').addEventListener('click', async () => {
                                 const input = linkDisplay.querySelector('#share-url-input');
-                                input.select();
-                                input.setSelectionRange(0, 99999);
-                                try {
-                                    document.execCommand('copy');
-                                    this.showMessage('連結已複製！', 'success');
+                                const success = await this.copyToClipboard(shareUrl, true);
+                                if (success) {
                                     linkDisplay.remove();
-                                } catch (err) {
-                                    this.showMessage('複製失敗，請手動選擇並複製', 'warning');
                                 }
                             });
                             
@@ -1445,44 +1576,55 @@ export async function renderTripPlannerPage(request, env, session, user, nonce, 
             }
 
             // 複製到剪貼簿
-            async copyToClipboard(text) {
+            async copyToClipboard(text, showMessage = true) {
                 try {
                     // 檢查是否在安全上下文中（HTTPS 或 localhost）
-                    if (navigator.clipboard && navigator.clipboard.writeText) {
-                        // 檢查權限
-                        const permissionStatus = await navigator.permissions.query({ name: 'clipboard-write' }).catch(() => null);
-                        if (permissionStatus && permissionStatus.state === 'denied') {
-                            throw new Error('剪貼簿權限被拒絕');
-                        }
-                        
-                        await navigator.clipboard.writeText(text);
-                        return true;
-                    } else {
-                        // 降級方案：使用傳統方法
-                        const textArea = document.createElement('textarea');
-                        textArea.value = text;
-                        // 使用 CSS 類代替 inline style
-                        textArea.className = 'clipboard-fallback-textarea';
-                        textArea.setAttribute('readonly', '');
-                        textArea.setAttribute('aria-hidden', 'true');
-                        document.body.appendChild(textArea);
-                        
-                        // 選擇文本
-                        textArea.select();
-                        textArea.setSelectionRange(0, text.length);
-                        
+                    if (navigator.clipboard && window.isSecureContext && navigator.clipboard.writeText) {
                         try {
-                            const successful = document.execCommand('copy');
-                            document.body.removeChild(textArea);
-                            return successful;
-                        } catch (err) {
-                            document.body.removeChild(textArea);
-                            throw err;
+                            await navigator.clipboard.writeText(text);
+                            if (showMessage) {
+                                this.showMessage('已複製到剪貼簿', 'success');
+                            }
+                            return true;
+                        } catch (clipboardError) {
+                            // 如果 clipboard API 失敗，使用 fallback
+                            console.warn('Clipboard API failed, using fallback:', clipboardError);
                         }
+                    }
+                    
+                    // 降級方案：使用傳統方法
+                    const textArea = document.createElement('textarea');
+                    textArea.value = text;
+                    // 使用 CSS 類代替 inline style
+                    textArea.className = 'clipboard-fallback-textarea';
+                    textArea.setAttribute('readonly', '');
+                    textArea.setAttribute('aria-hidden', 'true');
+                    document.body.appendChild(textArea);
+                    
+                    // 選擇文本
+                    textArea.select();
+                    textArea.setSelectionRange(0, text.length);
+                    
+                    try {
+                        const successful = document.execCommand('copy');
+                        document.body.removeChild(textArea);
+                        if (successful) {
+                            if (showMessage) {
+                                this.showMessage('已複製到剪貼簿', 'success');
+                            }
+                            return true;
+                        } else {
+                            throw new Error('execCommand copy failed');
+                        }
+                    } catch (err) {
+                        document.body.removeChild(textArea);
+                        throw err;
                     }
                 } catch (error) {
                     console.error('複製到剪貼簿失敗:', error);
-                    // 如果複製失敗，顯示連結讓用戶手動複製
+                    if (showMessage) {
+                        this.showMessage('無法自動複製，請手動複製連結', 'warning');
+                    }
                     return false;
                 }
             }
@@ -1494,6 +1636,305 @@ export async function renderTripPlannerPage(request, env, session, user, nonce, 
 
             formatDateInput(date) {
                 return date.toISOString().split('T')[0];
+            }
+
+            // 顯示載入狀態
+            showLoadingState(message = '載入中...') {
+                let overlay = document.getElementById('loading-overlay');
+                if (!overlay) {
+                    overlay = document.createElement('div');
+                    overlay.id = 'loading-overlay';
+                    overlay.className = 'loading-overlay';
+                    overlay.innerHTML = \`
+                        <div class="loading-content">
+                            <div class="loading-spinner"></div>
+                            <p class="text-gray-700">\${message}</p>
+                        </div>
+                    \`;
+                    document.body.appendChild(overlay);
+                } else {
+                    const content = overlay.querySelector('.loading-content p');
+                    if (content) {
+                        content.textContent = message;
+                    }
+                    overlay.classList.remove('hidden');
+                }
+            }
+
+            // 隱藏載入狀態
+            hideLoadingState() {
+                const overlay = document.getElementById('loading-overlay');
+                if (overlay) {
+                    overlay.classList.add('hidden');
+                }
+            }
+
+            // 顯示錯誤訊息
+            showError(message) {
+                this.showMessage(message, 'error');
+            }
+
+            // 清空當前行程
+            clearCurrentTrip() {
+                // 清空地點列表
+                this.selectedPlaces = [];
+                
+                // 移除所有地圖標記
+                this.markers.forEach(({ marker }) => {
+                    marker.setMap(null);
+                });
+                this.markers = [];
+                
+                // 清除路線
+                if (this.directionsRenderer) {
+                    try {
+                        this.directionsRenderer.setDirections({ routes: [] });
+                    } catch (error) {
+                        // 忽略錯誤
+                    }
+                }
+                this.routePolylines.forEach(polyline => {
+                    try {
+                        polyline.setMap(null);
+                    } catch (error) {
+                        // 忽略錯誤
+                    }
+                });
+                this.routePolylines = [];
+                
+                // 重置天數
+                this.days = [new Date()];
+                this.currentDayIndex = 0;
+                
+                // 重置行程 ID
+                this.currentTripId = null;
+                this.shareToken = null;
+                
+                // 更新 UI
+                this.updateDayTabs();
+                this.updateTripPanel();
+                this.updateSelectedCount();
+                this.updateSaveButton();
+            }
+
+            // 獲取用戶的所有行程列表
+            async loadUserTrips() {
+                try {
+                    const response = await fetch('/api/trip-planner/list', {
+                        credentials: 'include'
+                    });
+                    
+                    if (!response.ok) {
+                        throw new Error('無法獲取行程列表');
+                    }
+                    
+                    const data = await response.json();
+                    return data.trips || [];
+                } catch (error) {
+                    console.error('Error loading user trips:', error);
+                    this.showError('無法載入行程列表');
+                    return [];
+                }
+            }
+
+            // 顯示行程列表對話框
+            async showTripList() {
+                this.showLoadingState('載入行程列表...');
+                
+                const trips = await this.loadUserTrips();
+                this.hideLoadingState();
+                
+                if (trips.length === 0) {
+                    this.showMessage('您還沒有儲存任何行程', 'info');
+                    return;
+                }
+                
+                // 創建或更新對話框
+                let modal = document.getElementById('trip-list-modal');
+                if (!modal) {
+                    modal = document.createElement('div');
+                    modal.id = 'trip-list-modal';
+                    modal.className = 'trip-list-modal';
+                    document.body.appendChild(modal);
+                }
+                
+                // 格式化日期
+                const formatDate = (timestamp) => {
+                    if (!timestamp) return '未知日期';
+                    const date = new Date(timestamp);
+                    return date.toLocaleDateString('zh-TW', { 
+                        year: 'numeric', 
+                        month: 'short', 
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    });
+                };
+                
+                modal.innerHTML = \`
+                    <div class="trip-list-content">
+                        <div class="trip-list-header">
+                            <h3 class="trip-list-title">我的行程</h3>
+                            <button class="trip-list-close" data-action="close-trip-list">×</button>
+                        </div>
+                        <div class="trip-list-body">
+                            \${trips.map(trip => \`
+                                <div class="trip-list-item" data-trip-id="\${trip.id}" data-action="load-trip">
+                                    <div class="trip-list-item-title">\${trip.title || '未命名行程'}</div>
+                                    <div class="trip-list-item-meta">
+                                        更新時間：\${formatDate(trip.updated_at)}
+                                    </div>
+                                </div>
+                            \`).join('')}
+                        </div>
+                    </div>
+                \`;
+                
+                modal.classList.add('visible');
+                
+                // 綁定事件
+                modal.querySelectorAll('[data-action="load-trip"]').forEach(item => {
+                    item.addEventListener('click', (e) => {
+                        const tripId = e.currentTarget.dataset.tripId;
+                        if (tripId) {
+                            this.loadTrip(tripId);
+                            modal.classList.remove('visible');
+                        }
+                    });
+                });
+                
+                modal.querySelector('[data-action="close-trip-list"]').addEventListener('click', () => {
+                    modal.classList.remove('visible');
+                });
+                
+                modal.addEventListener('click', (e) => {
+                    if (e.target === modal) {
+                        modal.classList.remove('visible');
+                    }
+                });
+            }
+
+            // 載入已儲存的行程
+            async loadTrip(tripId) {
+                try {
+                    this.showLoadingState('載入行程中...');
+                    
+                    // 從 API 獲取行程資料
+                    const response = await fetch(\`/api/trip-planner/\${tripId}\`, {
+                        credentials: 'include'
+                    });
+                    
+                    if (!response.ok) {
+                        const errorData = await response.json().catch(() => ({}));
+                        throw new Error(errorData.error || '無法載入行程');
+                    }
+                    
+                    const result = await response.json();
+                    
+                    if (!result.success || !result.trip) {
+                        throw new Error('行程資料格式錯誤');
+                    }
+                    
+                    const tripData = result.trip;
+                    
+                    // 清空現有行程
+                    this.clearCurrentTrip();
+                    
+                    // 設定行程 ID 和分享令牌
+                    this.currentTripId = tripData.id;
+                    this.shareToken = tripData.shareToken || null;
+                    
+                    // 載入每一天的地點
+                    if (tripData.days && tripData.days.length > 0) {
+                        // 初始化天數陣列
+                        this.days = [];
+                        
+                        for (let dayIndex = 0; dayIndex < tripData.days.length; dayIndex++) {
+                            const day = tripData.days[dayIndex];
+                            
+                            // 解析日期（如果有的話）
+                            let dayDate = new Date();
+                            if (day.date) {
+                                dayDate = new Date(day.date);
+                                if (isNaN(dayDate.getTime())) {
+                                    dayDate = new Date();
+                                }
+                            }
+                            this.days.push(dayDate);
+                            
+                            // 載入該天的地點
+                            if (day.places && day.places.length > 0) {
+                                for (const placeItem of day.places) {
+                                    try {
+                                        // 獲取地點詳情
+                                        const placeDetailsResponse = await fetch(\`/api/locations/details-by-placeid/\${placeItem.placeId}\`, {
+                                            credentials: 'include'
+                                        });
+                                        
+                                        if (!placeDetailsResponse.ok) {
+                                            console.warn(\`無法載入地點詳情: \${placeItem.placeId}\`);
+                                            continue;
+                                        }
+                                        
+                                        const placeData = await placeDetailsResponse.json();
+                                        
+                                        // 添加到行程
+                                        const place = {
+                                            placeId: placeItem.placeId,
+                                            placeData: placeData,
+                                            dayIndex: dayIndex,
+                                            time: placeItem.time || '09:00',
+                                            order: placeItem.order || 0,
+                                            bookingStatus: placeItem.bookingStatus || 'planned',
+                                            bookingUrl: placeItem.bookingUrl || null,
+                                            bookingPhone: placeItem.bookingPhone || null,
+                                            bookingNotes: placeItem.bookingNotes || null,
+                                            itemId: placeItem.id || null
+                                        };
+                                        
+                                        this.selectedPlaces.push(place);
+                                        
+                                        // 在地圖上添加標記
+                                        this.addMarker(placeData, place);
+                                    } catch (error) {
+                                        console.error(\`載入地點失敗: \${placeItem.placeId}\`, error);
+                                    }
+                                }
+                            }
+                        }
+                        
+                        // 如果沒有天數，至少添加一個
+                        if (this.days.length === 0) {
+                            this.days = [new Date()];
+                        }
+                        
+                        // 設定當前天數索引
+                        this.currentDayIndex = 0;
+                    }
+                    
+                    // 更新 UI
+                    this.updateDayTabs();
+                    this.updateTripPanel();
+                    this.updateSelectedCount();
+                    this.updateSaveButton();
+                    this.updateRoute(); // 更新路線
+                    
+                    // 更新日期選擇器
+                    const dateInput = document.getElementById('current-day-date');
+                    if (dateInput && this.days.length > 0) {
+                        dateInput.value = this.formatDateInput(this.days[0]);
+                    }
+                    
+                    // 隱藏載入狀態
+                    this.hideLoadingState();
+                    
+                    this.showMessage('行程載入成功', 'success');
+                    console.log('行程載入成功:', tripData);
+                } catch (error) {
+                    console.error('載入行程失敗:', error);
+                    this.showError(\`載入行程失敗: \${error.message}\`);
+                    this.hideLoadingState();
+                }
             }
 
             // 顯示訊息
@@ -1589,6 +2030,11 @@ export async function renderTripPlannerPage(request, env, session, user, nonce, 
                     addDayBtn.addEventListener('click', () => this.addDay());
                 }
 
+                const loadTripBtn = document.getElementById('load-trip-btn');
+                if (loadTripBtn) {
+                    loadTripBtn.addEventListener('click', () => this.showTripList());
+                }
+
                 const saveBtn = document.getElementById('save-trip-btn');
                 if (saveBtn) {
                     saveBtn.addEventListener('click', () => this.saveTrip());
@@ -1609,6 +2055,25 @@ export async function renderTripPlannerPage(request, env, session, user, nonce, 
                     });
                 }
             }
+
+            // 檢查 URL 參數並載入行程
+            checkUrlParams() {
+                const urlParams = new URLSearchParams(window.location.search);
+                const tripId = urlParams.get('id');
+                if (tripId) {
+                    // 等待地圖初始化完成後再載入行程
+                    const checkMapReady = () => {
+                        if (this.map) {
+                            this.loadTrip(tripId);
+                        } else {
+                            // 如果地圖還沒初始化，等待一下再試
+                            setTimeout(checkMapReady, 500);
+                        }
+                    };
+                    // 給地圖一點時間初始化
+                    setTimeout(checkMapReady, 1000);
+                }
+            }
         }
 
         // 創建全局實例
@@ -1619,6 +2084,8 @@ export async function renderTripPlannerPage(request, env, session, user, nonce, 
             tripPlanner = new TripPlanner();
             tripPlanner.initMap();
             tripPlanner.initEventListeners();
+            // 檢查 URL 參數並載入行程（如果有的話）
+            tripPlanner.checkUrlParams();
         });
     </script>
   `;
