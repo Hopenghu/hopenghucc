@@ -6667,7 +6667,7 @@ function pageTemplate2({ title, content, user, nonce, cssContent, useContainer =
               }
             }
           };
-        <\/script>
+        </script>
 
         <script nonce="${nonce}">
           // User Avatar Image Handling (CSP-compliant)
@@ -6764,7 +6764,7 @@ function pageTemplate2({ title, content, user, nonce, cssContent, useContainer =
             });
           }
           
-        <\/script>
+        </script>
       </body>
       </html>
     `;
@@ -13636,7 +13636,7 @@ async function renderTripPlannerPage(request, env, session, user, nonce, cssCont
             // \u6AA2\u67E5 URL \u53C3\u6578\u4E26\u8F09\u5165\u884C\u7A0B\uFF08\u5982\u679C\u6709\u7684\u8A71\uFF09
             tripPlanner.checkUrlParams();
         });
-    <\/script>
+    </script>
   `;
   const csp = [
     "default-src 'self'",
@@ -23195,7 +23195,7 @@ function getProfilePageContent(user, locations = [], userLocationCounts = null, 
           showLocationDetail(locationId);
         }
       }
-    <\/script>
+    </script>
   `;
   return content;
 }
@@ -24233,7 +24233,7 @@ function getAddPlacePageContent() {
            });
       }, 0);
       
-    <\/script>
+    </script>
 `;
 }
 function getHomePageHtml(user, bundledCss, generalLocations = [], userLocationCounts = null, locationInteractionCounts = {}, userLocationStatuses = {}) {
@@ -24525,7 +24525,7 @@ function getAdminInvitationsPageHtml(user, bundledCss, initialLocations = []) {
             //        console.error('Error refreshing locations:', error);
             //    }
             // }
-        <\/script>
+        </script>
     `;
   return wrapPageHtml(pageTitle, content, user, bundledCss);
 }
@@ -24824,7 +24824,7 @@ var init_html2 = __esm({
       }
     })();
   })();
-<\/script>
+</script>
 `;
     criticalCSS = `
 /* ===== CRITICAL CSS - Above the fold ===== */
@@ -25412,7 +25412,7 @@ function businessVerificationPage(user, message = "", placesForDropdown = []) {
                 const userForm = document.getElementById('userRequestForm');
                 if (userForm) userForm.addEventListener('submit', handleFormSubmit);
             });
-        <\/script>
+        </script>
     `;
 }
 
@@ -25650,7 +25650,7 @@ async function renderAdminKnowledgePage(request, env, session, user, nonce, cssC
 
       // Initial Load
       fetchPendingKnowledge();
-    <\/script>
+    </script>
   `;
   return pageTemplate2({
     user,
@@ -29178,7 +29178,7 @@ async function renderAIChatPage(request, env, session, user, nonce, cssContent) 
           return; // \u975C\u9ED8\u5FFD\u7565
         }
       });
-    <\/script>
+    </script>
   `;
   const csp = [
     "default-src 'self'",
@@ -29307,7 +29307,7 @@ async function renderAIChatPage(request, env, session, user, nonce, cssContent) 
             }, true);
           }
         })();
-      <\/script>
+      </script>
       <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet" crossorigin="anonymous">
       <style nonce="${nonce}">
         ${cssContent || "/* CSS content not provided */"}
@@ -29775,7 +29775,7 @@ async function renderImageManagementPage(request, env, session, user, nonce, css
                     }
                 }
             }
-        <\/script>
+        </script>
     `;
   return new Response(
     pageTemplate({
@@ -30323,7 +30323,7 @@ async function renderAdminDashboardPage(request, env, session, user, nonce, cssC
       setInterval(() => {
         refreshSystemStatus();
       }, 30000); // \u6BCF30\u79D2\u5237\u65B0\u4E00\u6B21
-    <\/script>
+    </script>
   `;
   return new Response(pageTemplate2({
     title: "\u7BA1\u7406\u54E1\u5100\u8868\u677F",
@@ -31195,7 +31195,7 @@ async function renderAIAdminPage(request, env, session, user, nonce, cssContent)
         loadStatistics();
         loadConversations();
       });
-    <\/script>
+    </script>
   `;
   return new Response(pageTemplate2({
     title: "AI \u7BA1\u7406\u5F8C\u53F0 - HOPENGHU",
@@ -32246,7 +32246,7 @@ async function renderBusinessVerificationAdminPage(request, env, session, user, 
       document.addEventListener('DOMContentLoaded', function() {
         loadStatistics();
       });
-    <\/script>
+    </script>
   `;
     return new Response(pageTemplate2({
       title: "\u5546\u5BB6\u9A57\u8B49\u5BE9\u6838 - \u7BA1\u7406\u54E1",
@@ -32711,7 +32711,7 @@ async function renderEcosystemDashboardPage(request, env, session, user, nonce, 
       setInterval(() => {
         refreshEcosystemReport();
       }, 300000);
-    <\/script>
+    </script>
   `;
   return new Response(pageTemplate2({
     title: "\u751F\u614B\u7CFB\u7D71\u76E3\u63A7 - \u7BA1\u7406\u5F8C\u53F0",
@@ -33104,7 +33104,7 @@ async function _renderProfilePage(request, env, session, user, nonce, cssContent
       document.addEventListener('DOMContentLoaded', function() {
         initLocationDetailManager();
       });
-    <\/script>
+    </script>
   `;
   try {
     const url = new URL(request.url);
@@ -34190,7 +34190,7 @@ async function renderPenghuGamePage(request, env, session, user, nonce, cssConte
                     else alert('\u89D2\u8272\u66F4\u65B0\u5931\u6557: ' + error.message);
                 }
             }
-        <\/script>
+        </script>
     `;
   return new Response(pageTemplate2({
     title: "\u6F8E\u6E56\u6642\u5149\u5CF6\u4E3B - \u904A\u6232",
@@ -34333,7 +34333,7 @@ async function renderSimpleTestPage(request, env, session, user, nonce, cssConte
                 console.log('\u7C21\u55AE\u6E2C\u8A66\u9801\u9762\u5DF2\u8F09\u5165\uFF01');
                 addTestResult('\u6E2C\u8A66\u9801\u9762\u8F09\u5165\u5B8C\u6210');
             });
-        <\/script>
+        </script>
     `;
   return new Response(pageTemplate2({
     title: "\u6F8E\u6E56\u6642\u5149\u5CF6\u4E3B - \u7C21\u55AE\u6E2C\u8A66",
@@ -34374,7 +34374,7 @@ async function renderTestPage(request, env, session, user, nonce, cssContent) {
                 document.getElementById('test-result').innerHTML = '\u2705 \u6E2C\u8A66\u6210\u529F\uFF01\u529F\u80FD\u6B63\u5E38\u904B\u4F5C\uFF01';
                 document.getElementById('test-result').className = 'text-green-600 font-semibold';
             }
-        <\/script>
+        </script>
     `;
   return new Response(pageTemplate2({
     title: "\u6F8E\u6E56\u6642\u5149\u5CF6\u4E3B - \u6E2C\u8A66",
@@ -34498,7 +34498,7 @@ var ImagePreview = class {
         // \u4F7F\u51FD\u6578\u5168\u5C40\u53EF\u7528
         window.openImagePreview = openImagePreview;
         window.closeImagePreview = closeImagePreview;
-      <\/script>
+      </script>
     `;
   }
 };
@@ -35118,7 +35118,7 @@ async function _renderFootprintsPage(request, env, session, user, nonce, cssCont
           }
         }, 300);
       });
-    <\/script>
+    </script>
     ${ImagePreview.getScript(nonce)}
   `;
   try {
@@ -35325,7 +35325,7 @@ async function renderStoryTimelinePage(request, env, session, user, nonce, cssCo
             });
           });
         });
-      <\/script>
+      </script>
     `;
     return pageTemplate2({
       title: "\u6211\u7684\u6545\u4E8B\u6642\u9593\u7DDA - \u6F8E\u6E56\u6642\u5149\u6A5F",
@@ -35680,7 +35680,7 @@ async function renderSearchPage(request, env, session, user, nonce, cssContent) 
           
           window.location.href = url;
         }
-      <\/script>
+      </script>
       ${ImagePreview.getScript(nonce)}
     `;
     return pageTemplate2({
@@ -35873,7 +35873,7 @@ async function renderFavoritesPage(request, env, session, user, nonce, cssConten
             });
           });
         });
-      <\/script>
+      </script>
     `;
     return pageTemplate2({
       title: "\u6211\u7684\u6536\u85CF - \u6F8E\u6E56\u6642\u5149\u6A5F",
@@ -36328,7 +36328,7 @@ var RatingComponent = class {
             });
           });
         });
-      <\/script>
+      </script>
     `;
   }
 };
@@ -36644,7 +36644,7 @@ var CommentsComponent = class {
               '</div>';
           }
         });
-      <\/script>
+      </script>
     `;
   }
 };
@@ -37065,7 +37065,7 @@ async function _renderLocationDetailPage(request, env, session, user, nonce, css
             console.error('\u8F09\u5165\u8A55\u8AD6\u5931\u6557:', error);
           }
         };
-      <\/script>
+      </script>
       ${user ? ratingComponent.getScript() : ""}
       ${commentsComponent.getScript()}
       ${ImagePreview.getScript(nonce)}
@@ -41396,7 +41396,7 @@ var worker_default = {
               setInterval(() => {
                 refreshSystemStatus();
               }, 60000); // \u6BCF\u5206\u9418\u5237\u65B0\u4E00\u6B21
-            <\/script>
+            </script>
           </body>
           </html>
         `;
