@@ -31,11 +31,14 @@ pattern = "www.hopenghu.cc/*"
 zone_name = "hopenghu.cc"
 
 # Environment variables
+# Note: Sensitive keys should be set via Cloudflare Workers secrets or environment variables
+# Use: wrangler secret put <KEY_NAME>
+# Example: wrangler secret put GOOGLE_MAPS_API_KEY
 [vars]
-GOOGLE_MAPS_API_KEY = "YOUR_GOOGLE_MAPS_API_KEY_HERE"
-GOOGLE_CLIENT_ID = "YOUR_GOOGLE_CLIENT_ID_HERE"
-GOOGLE_CLIENT_SECRET = "YOUR_GOOGLE_CLIENT_SECRET_HERE"
+# GOOGLE_MAPS_API_KEY - Set via Cloudflare Workers secrets
+# GOOGLE_CLIENT_ID - Set via Cloudflare Workers secrets
+# GOOGLE_CLIENT_SECRET - Set via Cloudflare Workers secrets
 GOOGLE_REDIRECT_URI = "https://www.hopenghu.cc/api/auth/google/callback"
-JWT_SECRET = "YOUR_JWT_SECRET_HERE"
-OPENAI_API_KEY = "YOUR_OPENAI_API_KEY_HERE"
-GEMINI_API_KEY = "YOUR_GEMINI_API_KEY_HERE"
+# JWT_SECRET - Set via Cloudflare Workers secrets
+# OPENAI_API_KEY - Set via Cloudflare Workers secrets
+# GEMINI_API_KEY - Set via Cloudflare Workers secrets
