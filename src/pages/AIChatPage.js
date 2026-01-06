@@ -1382,18 +1382,39 @@ export async function renderAIChatPage(request, env, session, user, nonce, cssCo
     <script nonce="${nonce}">
       // 立即設置全局錯誤處理，避免第三方腳本錯誤影響應用
       (function() {
+        // 檢查是否是第三方腳本錯誤的輔助函數
+        function isThirdPartyError(errorSource, fileName, errorMessage, stack) {
+          const sources = [
+            errorSource || '',
+            fileName || '',
+            errorMessage || '',
+            stack || ''
+          ].join(' ').toLowerCase();
+          
+          return sources.includes('givefreely') ||
+                 sources.includes('cloudflareinsights') ||
+                 sources.includes('beacon') ||
+                 (sources.includes('payload') && sources.includes('givefreely'));
+        }
+        
         // 處理未捕獲的 Promise 錯誤
         window.addEventListener('unhandledrejection', (event) => {
           const errorSource = event.reason?.stack || event.reason?.message || String(event.reason || '');
-          const fileName = event.reason?.fileName || '';
+          const fileName = event.reason?.fileName || event.reason?.sourceURL || '';
+          const errorMessage = event.reason?.message || String(event.reason || '');
+          const stack = event.reason?.stack || '';
+          
+          // 檢查錯誤堆棧中的文件名
+          let stackFileName = '';
+          if (stack) {
+            const match = stack.match(/at\s+.*?\(([^)]+)\)/);
+            if (match && match[1]) {
+              stackFileName = match[1];
+            }
+          }
+          
           // 檢查是否是第三方腳本的錯誤
-          if (errorSource.includes('giveFreely') || 
-              errorSource.includes('givefreely') ||
-              fileName.includes('giveFreely') ||
-              fileName.includes('givefreely') ||
-              errorSource.includes('cloudflareinsights') ||
-              errorSource.includes('beacon') ||
-              errorSource.includes('payload') && (errorSource.includes('giveFreely') || fileName.includes('giveFreely'))) {
+          if (isThirdPartyError(errorSource, fileName || stackFileName, errorMessage, stack)) {
             event.preventDefault(); // 阻止錯誤顯示在控制台
             return; // 靜默忽略
           }
@@ -1402,11 +1423,11 @@ export async function renderAIChatPage(request, env, session, user, nonce, cssCo
         // 處理未捕獲的同步錯誤
         window.addEventListener('error', (event) => {
           const errorSource = event.filename || event.message || '';
+          const errorMessage = event.message || '';
+          const stack = event.error?.stack || '';
+          
           // 檢查是否是第三方腳本的錯誤
-          if (errorSource.includes('giveFreely') || 
-              errorSource.includes('givefreely') ||
-              errorSource.includes('cloudflareinsights') ||
-              errorSource.includes('beacon')) {
+          if (isThirdPartyError(errorSource, event.filename || '', errorMessage, stack)) {
             event.preventDefault(); // 阻止錯誤顯示在控制台
             return; // 靜默忽略
           }
@@ -2723,7 +2744,7 @@ export async function renderAIChatPage(request, env, session, user, nonce, cssCo
           }
 
           const script = document.createElement('script');
-          script.src = 'https://maps.googleapis.com/maps/api/js?key=YOUR_GOOGLE_MAPS_API_KEY_HERE&libraries=places&callback=initChatMapCallback';
+          script.src = 'https://maps.googleapis.com/maps/api/js?key=YOUR_GOOGLE_MAPS_API_KEY_HERE&libraries=places&loading=async&callback=initChatMapCallback';
           script.async = true;
           script.defer = true;
 

@@ -266,6 +266,28 @@ export function renderFeatureCards() {
           </div>
         </div>
       </div>
+
+      <!-- 生態系統監控 -->
+      <div class="bg-white shadow rounded-lg">
+        <div class="px-4 py-5 sm:p-6">
+          <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">生態系統監控</h3>
+          <div class="space-y-4">
+            <div class="flex items-center justify-between">
+              <span class="text-sm text-gray-500">總體分數</span>
+              <span class="text-sm font-medium" id="ecosystem-overall-score">--</span>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="text-sm text-gray-500">狀態</span>
+              <span class="text-sm font-medium" id="ecosystem-status">檢查中...</span>
+            </div>
+            <div class="flex space-x-2">
+              <a href="/admin/ecosystem" class="bg-indigo-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-indigo-700 text-center">
+                查看詳細報告
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   `;
 }

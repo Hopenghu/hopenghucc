@@ -218,11 +218,42 @@ export async function renderAdminDashboardPage(request, env, session, user, nonc
         }
       }
 
+      // 載入生態系統總體分數
+      async function loadEcosystemScore() {
+        try {
+          const response = await fetch('/api/admin/ecosystem/report?days=7', {
+            credentials: 'include'
+          });
+          if (response.ok) {
+            const data = await response.json();
+            if (data.overallScore !== undefined) {
+              document.getElementById('ecosystem-overall-score').textContent = data.overallScore;
+              const statusElement = document.getElementById('ecosystem-status');
+              if (data.overallScore >= 80) {
+                statusElement.textContent = '健康';
+                statusElement.className = 'text-sm font-medium text-green-600';
+              } else if (data.overallScore >= 60) {
+                statusElement.textContent = '良好';
+                statusElement.className = 'text-sm font-medium text-yellow-600';
+              } else {
+                statusElement.textContent = '需關注';
+                statusElement.className = 'text-sm font-medium text-red-600';
+              }
+            }
+          }
+        } catch (error) {
+          console.error('載入生態系統分數失敗:', error);
+          document.getElementById('ecosystem-overall-score').textContent = '--';
+          document.getElementById('ecosystem-status').textContent = '載入失敗';
+        }
+      }
+
       document.addEventListener('DOMContentLoaded', function() {
         addLog('管理員儀表板已載入', 'info');
         refreshSystemStatus();
         refreshImageStats();
         loadPendingVerificationsCount();
+        loadEcosystemScore();
       });
 
       // 定期刷新狀態

@@ -1622,8 +1622,7 @@ export function getAddPlacePageContent() {
 
             // 2. Load Google Maps JS API script dynamically
             const script = document.createElement('script');
-            // REMOVED callback=initAutocomplete&loading=async
-            script.src = 'https://maps.googleapis.com/maps/api/js?key=' + mapsApiKey + '&libraries=places,places.element'; 
+            script.src = 'https://maps.googleapis.com/maps/api/js?key=' + mapsApiKey + '&libraries=places,places.element&loading=async'; 
             script.async = true; // Keep async loading
 
             // --- NEW: Initialize AFTER script loads ---

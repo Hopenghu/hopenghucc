@@ -2258,6 +2258,112 @@ var init_locationService = __esm({
   }
 });
 
+// src/services/LocationInvitationService.js
+var LocationInvitationService;
+var init_LocationInvitationService = __esm({
+  "src/services/LocationInvitationService.js"() {
+    "use strict";
+    LocationInvitationService = class {
+      constructor(db) {
+        this.db = db;
+      }
+      /**
+       * Generates a claim link for a location and stores the invitation.
+       * @param {string} locationId - The ID of the location.
+       * @param {string} merchantEmail - The email of the merchant to invite.
+       * @param {string} adminId - The ID of the admin creating the invitation.
+       * @returns {Promise<{claim_url: string, merchant_email: string} | {error: string, status: number}>}
+       */
+      async generateClaimLink(locationId, merchantEmail, adminId) {
+        if (!locationId || !merchantEmail || !adminId) {
+          return { error: "Missing required fields: locationId, merchantEmail, or adminId.", status: 400 };
+        }
+        try {
+          const claimToken = crypto.randomUUID();
+          const now = /* @__PURE__ */ new Date();
+          const createdAtISO = now.toISOString();
+          const expiresAt = new Date(now.setDate(now.getDate() + 7));
+          const expiresAtISO = expiresAt.toISOString();
+          const stmt = this.db.prepare(
+            "INSERT INTO location_invitations (id, location_id, merchant_email, claim_token, status, created_at, created_by_admin_id, expires_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+          );
+          await stmt.bind(crypto.randomUUID(), locationId, merchantEmail, claimToken, "pending_claim", createdAtISO, adminId, expiresAtISO).run();
+          const claim_url = `https://www.hopenghu.cc/claim-location?token=${claimToken}`;
+          return { claim_url, merchant_email: merchantEmail };
+        } catch (error) {
+          console.error("Error generating claim link:", error);
+          if (error.message && error.message.includes("UNIQUE constraint failed: location_invitations.claim_token")) {
+            return { error: "Failed to generate a unique claim token. Please try again.", status: 500 };
+          }
+          if (error.message && error.message.includes("FOREIGN KEY constraint failed")) {
+            return { error: "Invalid location_id or admin_id provided.", status: 400 };
+          }
+          return { error: "Failed to generate claim link due to a server error.", status: 500 };
+        }
+      }
+      /**
+       * Verifies a claim token.
+       * @param {string} token - The claim token.
+       * @returns {Promise<{isValid: boolean, invitation?: object, error?: string, message?: string}>}
+       */
+      async verifyInvitationToken(token) {
+        console.log(`[LocationInvitationService] verifyInvitationToken called with token: ${token}`);
+        if (!token) {
+          return { isValid: false, error: "invalid_token", message: "\u6B0A\u6756\u4E0D\u53EF\u70BA\u7A7A\u3002" };
+        }
+        try {
+          const stmt = this.db.prepare(
+            "SELECT * FROM location_invitations WHERE claim_token = ?"
+          );
+          const invitation = await stmt.bind(token).first();
+          if (!invitation) {
+            return { isValid: false, error: "invalid_token", message: "\u7121\u6548\u7684\u9080\u8ACB\u6B0A\u6756\u3002" };
+          }
+          if (invitation.status !== "pending_claim") {
+            return { isValid: false, error: "already_used", message: "\u6B64\u9080\u8ACB\u5DF2\u88AB\u4F7F\u7528\u6216\u5DF2\u5931\u6548\u3002" };
+          }
+          const now = /* @__PURE__ */ new Date();
+          const expiresAt = new Date(invitation.expires_at);
+          if (now > expiresAt) {
+            return { isValid: false, error: "expired", message: "\u6B64\u9080\u8ACB\u5DF2\u904E\u671F\u3002" };
+          }
+          return { isValid: true, invitation };
+        } catch (dbError) {
+          console.error("[LocationInvitationService] DB error during verifyInvitationToken:", dbError);
+          return { isValid: false, error: "db_error", message: "\u9A57\u8B49\u9080\u8ACB\u6642\u767C\u751F\u8CC7\u6599\u5EAB\u932F\u8AA4\u3002" };
+        }
+      }
+      /**
+       * Marks an invitation as claimed.
+       * @param {string} invitationId - The ID of the invitation.
+       * @param {string} claimingUserId - The ID of the user claiming the invitation.
+       * @returns {Promise<{success: boolean, error?: string}>}
+       */
+      async markInvitationAsClaimed(invitationId, claimingUserId) {
+        console.log(`[LocationInvitationService] markInvitationAsClaimed called for invitationId: ${invitationId}, claimingUserId: ${claimingUserId}`);
+        if (!invitationId || !claimingUserId) {
+          return { success: false, error: "missing_parameters", message: "\u7F3A\u5C11\u9080\u8ACBID\u6216\u7528\u6236ID\u3002" };
+        }
+        try {
+          const now = (/* @__PURE__ */ new Date()).toISOString();
+          const stmt = this.db.prepare(
+            "UPDATE location_invitations SET status = 'claimed', claimed_at = ?, claimed_by_user_id = ?, updated_at = ? WHERE id = ?"
+          );
+          const result = await stmt.bind(now, claimingUserId, now, invitationId).run();
+          if (result.meta.changes === 0) {
+            return { success: false, error: "not_found", message: "\u627E\u4E0D\u5230\u5C0D\u61C9\u7684\u9080\u8ACB\u6216\u66F4\u65B0\u5931\u6557\u3002" };
+          }
+          return { success: true };
+        } catch (dbError) {
+          console.error("[LocationInvitationService] DB error during markInvitationAsClaimed:", dbError);
+          return { success: false, error: "db_error", message: "\u66F4\u65B0\u9080\u8ACB\u72C0\u614B\u6642\u767C\u751F\u8CC7\u6599\u5EAB\u932F\u8AA4\u3002" };
+        }
+      }
+      // We will add more methods here later for verify-claim-token and confirm-claim
+    };
+  }
+});
+
 // src/services/AIQuestioningService.js
 var AIQuestioningService;
 var init_AIQuestioningService = __esm({
@@ -6387,6 +6493,294 @@ var init_BusinessVerificationService = __esm({
   }
 });
 
+// src/components/layout.js
+function pageTemplate2({ title, content, user, nonce, cssContent, useContainer = true, currentPath = "", headScripts = "" }) {
+  console.log("pageTemplate called with:", { title, user: !!user, nonce, useContainer, currentPath });
+  const isFootprintsActive = currentPath === "/footprints" || currentPath.startsWith("/footprints");
+  const isTripPlannerActive = currentPath === "/trip-planner" || currentPath.startsWith("/trip-planner");
+  try {
+    const html = `
+      <!DOCTYPE html>
+      <html lang="zh-TW">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>${title || "HOPE PENGHU"} - HOPE PENGHU</title>
+        <link rel="icon" type="image/x-icon" href="/favicon.ico">
+        <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+        
+        <!-- Removed CSS link tag -->
+        <!-- <link rel="stylesheet" href="/build/worker.css"> -->
+
+        <!-- Inject CSS content -->
+        <style nonce="${nonce}">
+          ${cssContent || "/* CSS content not provided */"}
+          /* \u5B57\u9AD4\u56DE\u9000\uFF1A\u5982\u679C Google Fonts \u7121\u6CD5\u8F09\u5165\uFF0C\u4F7F\u7528\u7CFB\u7D71\u5B57\u9AD4 */
+          body {
+            font-family: 'Noto Sans TC', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft JhengHei', 'PingFang TC', 'Helvetica Neue', Arial, sans-serif;
+          }
+          /* Avatar fallback \u6A23\u5F0F\uFF08CSP-compliant\uFF09 */
+          .avatar-fallback-hidden {
+            display: none !important;
+          }
+          /* Join button margin */
+          .join-button {
+            margin-right: 8px;
+          }
+        </style>
+
+        ${headScripts || ""}
+
+      </head>
+      <body>
+        <header class="header">
+          <nav class="nav container">
+            <a href="/" class="nav-logo">HOPE PENGHU</a>
+            <ul class="nav-menu">
+              <li><a href="/footprints" class="nav-link${isFootprintsActive ? " nav-link-active" : ""}">\u8DB3\u8DE1</a></li>
+              ${user ? `<li><a href="/trip-planner" class="nav-link${isTripPlannerActive ? " nav-link-active" : ""}">\u884C\u7A0B\u898F\u5283</a></li>` : ""}
+              ${user ? `
+                <li class="nav-menu-item-avatar">
+                  <div id="avatar-container" role="button" tabindex="0" aria-label="User menu" class="focus:outline-none avatar-container-div"> 
+                     ${user.avatar_url ? `<img src="${user.avatar_url}" alt="User Avatar" class="user-avatar" id="user-avatar-img"><span class="user-avatar avatar-fallback avatar-fallback-hidden">${user.name ? user.name.charAt(0).toUpperCase() : "?"}</span>` : `<span class="user-avatar avatar-fallback">${user.name ? user.name.charAt(0).toUpperCase() : "?"}</span>`}
+                  </div>
+                  
+                  <div id="user-dropdown-menu" class="user-dropdown">
+                    <div class="dropdown-header">
+                       <p class="dropdown-header-name">${user.name || "User"}</p>
+                       <p class="dropdown-header-email">${user.email || ""}</p>
+                    </div>
+                    <a href="/profile" class="dropdown-item">\u6211\u7684\u5730\u9EDE</a>
+                    <a href="/trip-planner" class="dropdown-item">\u6211\u7684\u884C\u7A0B</a>
+                    <a href="/google-info" class="dropdown-item">\u6211\u7684\u5E33\u865F</a>
+                    ${user.role === "admin" ? `
+                      <a href="/admin/verifications" class="dropdown-item">\u5546\u5BB6\u9A57\u8B49\u7BA1\u7406</a>
+                      <a href="/admin/knowledge" class="dropdown-item">\u77E5\u8B58\u5EAB\u5BE9\u6838</a>
+                      <div class="dropdown-divider"></div>
+                    ` : ""}
+                    <div class="dropdown-divider"></div>
+                    <button id="logout-button" class="dropdown-item">\u767B\u51FA</button>
+                  </div>
+                </li>
+              ` : `
+                <li><a href="/login" class="button button-secondary join-button">\u52A0\u5165</a></li>
+                <li><a href="/login" class="button button-primary">\u767B\u5165</a></li>
+              `}
+            </ul>
+            <button id="mobile-menu-button" class="mobile-menu-toggle">\u2630</button> 
+          </nav>
+        </header>
+
+        <main class="${useContainer ? "container" : ""}">
+          ${content || "<p>\u9801\u9762\u5167\u5BB9\u8F09\u5165\u4E2D...</p>"} 
+        </main>
+
+        <footer class="footer">
+          <div class="container">
+            <p>&copy; ${(/* @__PURE__ */ new Date()).getFullYear()} HOPE PENGHU. All rights reserved.</p>
+          </div>
+        </footer>
+
+        <!-- \u5168\u5C40 Toast \u901A\u77E5\u5BB9\u5668 -->
+        <div id="toast-container" class="fixed top-4 right-4 z-50 flex flex-col gap-2"></div>
+
+        <!-- \u5168\u5C40\u5716\u7247\u8F09\u5165\u8655\u7406\u8173\u672C -->
+        <script nonce="${nonce}">
+          // Toast \u901A\u77E5\u7CFB\u7D71
+          window.showToast = function(message, type = 'info') {
+            const container = document.getElementById('toast-container');
+            if (!container) return;
+
+            const toast = document.createElement('div');
+            
+            // \u6839\u64DA\u985E\u578B\u8A2D\u7F6E\u6A23\u5F0F
+            let bgClass = 'bg-gray-800';
+            let icon = '\u2139\uFE0F';
+            
+            if (type === 'success') {
+              bgClass = 'bg-green-600';
+              icon = '\u2705';
+            } else if (type === 'error') {
+              bgClass = 'bg-red-600';
+              icon = '\u274C';
+            } else if (type === 'warning') {
+              bgClass = 'bg-yellow-600';
+              icon = '\u26A0\uFE0F';
+            }
+
+            toast.className = \`\${bgClass} text-white px-6 py-4 rounded-lg shadow-lg transform transition-all duration-300 translate-x-full opacity-0 flex items-center gap-3 min-w-[300px]\`;
+            
+            toast.innerHTML = \`
+              <span class="text-xl">\${icon}</span>
+              <p class="font-medium">\${message}</p>
+            \`;
+
+            container.appendChild(toast);
+
+            // \u52D5\u756B\uFF1A\u6ED1\u5165
+            requestAnimationFrame(() => {
+              toast.classList.remove('translate-x-full', 'opacity-0');
+            });
+
+            // 3\u79D2\u5F8C\u81EA\u52D5\u79FB\u9664
+            setTimeout(() => {
+              toast.classList.add('opacity-0', 'translate-x-full');
+              setTimeout(() => {
+                if (container.contains(toast)) {
+                  container.removeChild(toast);
+                }
+              }, 300);
+            }, 3000);
+          };
+
+          // \u5716\u7247\u8F09\u5165\u8655\u7406\u51FD\u6578\uFF08\u5168\u5C40\uFF09
+          window.handleImageLoad = function(imageId, containerId) {
+            const img = document.getElementById(imageId);
+            const container = document.getElementById(containerId);
+            if (img && container) {
+              const skeleton = container.querySelector('.image-skeleton');
+              const progress = container.querySelector('.image-progress');
+              const errorMsg = container.querySelector('#error-' + imageId);
+              if (skeleton) skeleton.classList.add('hidden');
+              if (progress) progress.classList.add('hidden');
+              if (errorMsg) errorMsg.classList.add('hidden');
+              img.style.opacity = '1';
+            }
+          };
+
+          window.handleImageError = function(imageId, containerId, defaultImage) {
+            const img = document.getElementById(imageId);
+            const container = document.getElementById(containerId);
+            if (img && container) {
+              const skeleton = container.querySelector('.image-skeleton');
+              const progress = container.querySelector('.image-progress');
+              if (skeleton) skeleton.classList.add('hidden');
+              if (progress) progress.classList.add('hidden');
+              const errorMsg = container.querySelector('#error-' + imageId);
+              if (errorMsg) errorMsg.classList.remove('hidden');
+              if (img.src !== defaultImage) {
+                img.onerror = null;
+                img.src = defaultImage;
+                img.style.opacity = '1';
+              } else {
+                img.style.opacity = '0.3';
+              }
+            }
+          };
+        </script>
+
+        <script nonce="${nonce}">
+          // User Avatar Image Handling (CSP-compliant)
+          const userAvatarImg = document.getElementById('user-avatar-img');
+          if (userAvatarImg) {
+            const fallback = userAvatarImg.nextElementSibling;
+            if (fallback && fallback.classList.contains('avatar-fallback')) {
+              // \u5716\u7247\u8F09\u5165\u6210\u529F\u6642\u96B1\u85CF fallback
+              userAvatarImg.addEventListener('load', function() {
+                fallback.classList.add('avatar-fallback-hidden');
+              });
+              // \u5716\u7247\u8F09\u5165\u5931\u6557\u6642\u986F\u793A fallback
+              userAvatarImg.addEventListener('error', function() {
+                userAvatarImg.style.display = 'none';
+                fallback.classList.remove('avatar-fallback-hidden');
+              });
+            }
+          }
+
+          // User Dropdown Menu Logic
+          const avatarContainer = document.getElementById('avatar-container'); 
+          const dropdownMenu = document.getElementById('user-dropdown-menu');
+
+          if (avatarContainer && dropdownMenu) {
+            avatarContainer.addEventListener('click', (event) => {
+              event.stopPropagation(); 
+              dropdownMenu.classList.toggle('dropdown-active');
+            });
+            avatarContainer.addEventListener('keydown', (event) => {
+               if (event.key === 'Enter' || event.key === ' ') {
+                 event.preventDefault();
+                 dropdownMenu.classList.toggle('dropdown-active');
+               }
+            });
+            document.addEventListener('click', (event) => {
+              if (!dropdownMenu.contains(event.target) && !avatarContainer.contains(event.target)) {
+                dropdownMenu.classList.remove('dropdown-active');
+              }
+            });
+            document.addEventListener('keydown', (event) => {
+               if (event.key === 'Escape' && dropdownMenu.classList.contains('dropdown-active')) {
+                 dropdownMenu.classList.remove('dropdown-active');
+                 avatarContainer.focus(); 
+               }
+            });
+          }
+
+          // Event listener for logout button 
+          const logoutButton = document.getElementById('logout-button');
+          if (logoutButton) {
+            logoutButton.addEventListener('click', async () => {
+              if (dropdownMenu) dropdownMenu.classList.remove('dropdown-active'); 
+              
+              try {
+                const response = await fetch('/api/auth/logout', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' }
+                });
+                if (response.ok) {
+                  showToast('\u767B\u51FA\u6210\u529F\uFF01\u671F\u5F85\u4E0B\u6B21\u76F8\u898B \u{1F44B}', 'success');
+                  setTimeout(() => {
+                    window.location.href = '/';
+                  }, 1000);
+                } else {
+                  console.error('Logout failed:', await response.text());
+                  showToast('\u767B\u51FA\u5931\u6557\uFF0C\u8ACB\u7A0D\u5F8C\u518D\u8A66\u3002', 'error'); 
+                }
+              } catch (error) {
+                console.error('Error logging out:', error);
+                showToast('\u767B\u51FA\u6642\u767C\u751F\u932F\u8AA4\u3002', 'error'); 
+              }
+            });
+          }
+
+          // Event listener for mobile menu 
+          const mobileMenuButton = document.getElementById('mobile-menu-button');
+          const navMenu = document.querySelector('.nav-menu');
+          if (mobileMenuButton && navMenu) {
+            mobileMenuButton.addEventListener('click', () => {
+              navMenu.classList.toggle('active'); 
+            });
+          }
+
+          // Register Service Worker for offline support
+          if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+              navigator.serviceWorker.register('/sw.js')
+                .then((registration) => {
+                  console.log('[Service Worker] Registration successful:', registration.scope);
+                })
+                .catch((error) => {
+                  console.error('[Service Worker] Registration failed:', error);
+                });
+            });
+          }
+          
+        </script>
+      </body>
+      </html>
+    `;
+    console.log("pageTemplate finished successfully for title:", title);
+    return html;
+  } catch (e) {
+    console.error("Error during pageTemplate HTML generation:", e);
+    return `<html><body>Template Error for ${title}: ${e.message}</body></html>`;
+  }
+}
+var init_layout = __esm({
+  "src/components/layout.js"() {
+    "use strict";
+  }
+});
+
 // src/middleware/auth.js
 function isAdmin(user) {
   return user && user.role === "admin";
@@ -6429,6 +6823,461 @@ function requireAdminAPI(user) {
 var init_auth = __esm({
   "src/middleware/auth.js"() {
     "use strict";
+  }
+});
+
+// src/services/ItineraryService.js
+var ItineraryService;
+var init_ItineraryService = __esm({
+  "src/services/ItineraryService.js"() {
+    "use strict";
+    ItineraryService = class {
+      constructor(db, locationService, aiService) {
+        if (!db) {
+          throw new Error("Database connection is required for ItineraryService.");
+        }
+        this.db = db;
+        this.locationService = locationService;
+        this.aiService = aiService;
+      }
+      /**
+       * 建立新行程
+       * @param {string} userId - 用戶 ID
+       * @param {object} data - 行程資料 { title, dayPlans }
+       * @returns {Promise<object>} 建立的行程物件
+       */
+      async createItinerary(userId, data) {
+        var _a, _b, _c;
+        try {
+          const { title, dayPlans } = data;
+          const itineraryId = `itinerary_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+          const now = Date.now();
+          await this.db.prepare(
+            `INSERT INTO itineraries (id, user_id, title, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?)`
+          ).bind(
+            itineraryId,
+            userId,
+            title || null,
+            now,
+            now
+          ).run();
+          for (let dayIndex = 0; dayIndex < dayPlans.length; dayIndex++) {
+            const dayPlan = dayPlans[dayIndex];
+            const dayId = `day_${itineraryId}_${dayIndex}`;
+            await this.db.prepare(
+              `INSERT INTO itinerary_days (id, itinerary_id, day_number, date, created_at)
+           VALUES (?, ?, ?, ?, ?)`
+            ).bind(
+              dayId,
+              itineraryId,
+              dayIndex + 1,
+              dayPlan.date || `\u7B2C ${dayIndex + 1} \u5929`,
+              now
+            ).run();
+            for (let itemIndex = 0; itemIndex < dayPlan.items.length; itemIndex++) {
+              const item = dayPlan.items[itemIndex];
+              const itemId = `item_${dayId}_${itemIndex}_${now}_${Math.random().toString(36).substr(2, 9)}`;
+              let placeId = ((_a = item.place) == null ? void 0 : _a.id) || null;
+              if (((_b = item.place) == null ? void 0 : _b.google_place_id) && !placeId && this.locationService) {
+                try {
+                  const googlePlaceData = {
+                    place_id: item.place.google_place_id,
+                    name: item.place.name,
+                    formatted_address: item.place.address || item.place.formatted_address,
+                    geometry: {
+                      location: {
+                        lat: item.place.latitude || item.place.lat,
+                        lng: item.place.longitude || item.place.lng
+                      }
+                    },
+                    types: item.place.types || [],
+                    website: item.place.website,
+                    international_phone_number: item.place.phone_number,
+                    business_status: item.place.business_status,
+                    rating: item.place.rating || item.place.google_rating,
+                    user_ratings_total: item.place.user_ratings_total,
+                    photos: item.place.photos || []
+                  };
+                  const location = await this.locationService.createOrGetLocationFromGoogleMaps(
+                    googlePlaceData,
+                    userId,
+                    {
+                      autoLink: true,
+                      initialStatus: "want_to_visit",
+                      sourceType: "itinerary_added"
+                    }
+                  );
+                  placeId = location.id;
+                  await this.locationService.incrementItineraryUseCount(location.id);
+                  console.log(`[ItineraryService] Created/linked location from Google Maps: ${location.id}`);
+                } catch (error) {
+                  console.warn("[ItineraryService] Failed to create location from Google Maps:", error);
+                }
+              } else if (placeId) {
+                try {
+                  const placeExists = await this.db.prepare(
+                    `SELECT id FROM locations WHERE id = ?`
+                  ).bind(placeId).first();
+                  if (!placeExists) {
+                    placeId = null;
+                  } else {
+                    if (this.locationService) {
+                      await this.locationService.incrementItineraryUseCount(placeId);
+                    }
+                  }
+                } catch (error) {
+                  console.warn("[ItineraryService] Failed to verify place_id:", error);
+                  placeId = null;
+                }
+              }
+              await this.db.prepare(
+                `INSERT INTO itinerary_items (
+              id, day_id, place_id, place_name, start_time, duration, order_index, created_at, updated_at, status, notes
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+              ).bind(
+                itemId,
+                dayId,
+                placeId,
+                ((_c = item.place) == null ? void 0 : _c.name) || "\u672A\u77E5\u5730\u9EDE",
+                item.startTime || "09:00",
+                item.duration || 60,
+                itemIndex,
+                now,
+                now,
+                // updated_at
+                "planned",
+                // status
+                item.notes || null
+                // notes
+              ).run();
+            }
+          }
+          return await this.getItinerary(userId, itineraryId);
+        } catch (error) {
+          console.error("[ItineraryService] Error creating itinerary:", error);
+          throw error;
+        }
+      }
+      /**
+       * 獲取行程
+       * @param {string} userId - 用戶 ID
+       * @param {string} itineraryId - 行程 ID
+       * @returns {Promise<object>} 行程物件
+       */
+      async getItinerary(userId, itineraryId) {
+        try {
+          const itinerary = await this.db.prepare(
+            `SELECT id, user_id, title, created_at, updated_at
+         FROM itineraries
+         WHERE id = ? AND user_id = ?`
+          ).bind(itineraryId, userId).first();
+          if (!itinerary) {
+            return null;
+          }
+          const days = await this.db.prepare(
+            `SELECT id, day_number, date
+         FROM itinerary_days
+         WHERE itinerary_id = ?
+         ORDER BY day_number ASC`
+          ).bind(itineraryId).all();
+          const dayPlans = [];
+          for (const day of days.results) {
+            const items = await this.db.prepare(
+              `SELECT id, place_id, place_name, start_time, duration, order_index
+           FROM itinerary_items
+           WHERE day_id = ?
+           ORDER BY order_index ASC`
+            ).bind(day.id).all();
+            const itineraryItems = [];
+            for (const item of items.results) {
+              let place = {
+                id: item.place_id || item.id,
+                name: item.place_name
+              };
+              if (item.place_id && this.locationService) {
+                try {
+                  const locationDetails = await this.locationService.getLocationById(item.place_id);
+                  if (locationDetails) {
+                    place = {
+                      id: locationDetails.id,
+                      name: locationDetails.name,
+                      address: locationDetails.address,
+                      location: locationDetails.latitude && locationDetails.longitude ? {
+                        lat: locationDetails.latitude,
+                        lng: locationDetails.longitude
+                      } : void 0,
+                      rating: locationDetails.google_rating,
+                      userRatingCount: locationDetails.google_user_ratings_total
+                    };
+                  }
+                } catch (error) {
+                  console.warn("[ItineraryService] Failed to fetch location details:", error);
+                }
+              }
+              itineraryItems.push({
+                id: item.id,
+                place,
+                startTime: item.start_time,
+                duration: item.duration
+              });
+            }
+            dayPlans.push({
+              date: day.date,
+              items: itineraryItems
+            });
+          }
+          return {
+            id: itinerary.id,
+            userId: itinerary.user_id,
+            title: itinerary.title,
+            dayPlans,
+            createdAt: itinerary.created_at,
+            updatedAt: itinerary.updated_at
+          };
+        } catch (error) {
+          console.error("[ItineraryService] Error getting itinerary:", error);
+          throw error;
+        }
+      }
+      /**
+       * 獲取用戶的所有行程
+       * @param {string} userId - 用戶 ID
+       * @returns {Promise<Array>} 行程列表
+       */
+      async getUserItineraries(userId) {
+        try {
+          const itineraries = await this.db.prepare(
+            `SELECT id, title, created_at, updated_at
+         FROM itineraries
+         WHERE user_id = ?
+         ORDER BY updated_at DESC`
+          ).bind(userId).all();
+          return itineraries.results.map((it) => ({
+            id: it.id,
+            userId,
+            title: it.title,
+            createdAt: it.created_at,
+            updatedAt: it.updated_at
+          }));
+        } catch (error) {
+          console.error("[ItineraryService] Error getting user itineraries:", error);
+          throw error;
+        }
+      }
+      /**
+       * 更新行程
+       * @param {string} userId - 用戶 ID
+       * @param {string} itineraryId - 行程 ID
+       * @param {object} updates - 更新資料 { title, dayPlans }
+       * @returns {Promise<object>} 更新後的行程物件
+       */
+      async updateItinerary(userId, itineraryId, updates) {
+        var _a, _b, _c;
+        try {
+          const { title, dayPlans } = updates;
+          const now = Date.now();
+          if (title !== void 0) {
+            await this.db.prepare(
+              `UPDATE itineraries
+           SET title = ?, updated_at = ?
+           WHERE id = ? AND user_id = ?`
+            ).bind(title, now, itineraryId, userId).run();
+          }
+          if (dayPlans) {
+            await this.db.prepare(
+              `DELETE FROM itinerary_items 
+           WHERE day_id IN (SELECT id FROM itinerary_days WHERE itinerary_id = ?)`
+            ).bind(itineraryId).run();
+            await this.db.prepare(
+              `DELETE FROM itinerary_days WHERE itinerary_id = ?`
+            ).bind(itineraryId).run();
+            for (let dayIndex = 0; dayIndex < dayPlans.length; dayIndex++) {
+              const dayPlan = dayPlans[dayIndex];
+              const dayId = `day_${itineraryId}_${dayIndex}_${now}_${Math.random().toString(36).substr(2, 9)}`;
+              await this.db.prepare(
+                `INSERT INTO itinerary_days (id, itinerary_id, day_number, date, created_at)
+             VALUES (?, ?, ?, ?, ?)`
+              ).bind(
+                dayId,
+                itineraryId,
+                dayIndex + 1,
+                dayPlan.date || `\u7B2C ${dayIndex + 1} \u5929`,
+                now
+              ).run();
+              for (let itemIndex = 0; itemIndex < dayPlan.items.length; itemIndex++) {
+                const item = dayPlan.items[itemIndex];
+                const itemId = `item_${dayId}_${itemIndex}_${now}_${Math.random().toString(36).substr(2, 9)}`;
+                let placeId = ((_a = item.place) == null ? void 0 : _a.id) || null;
+                if (((_b = item.place) == null ? void 0 : _b.google_place_id) && !placeId && this.locationService) {
+                  try {
+                    const googlePlaceData = {
+                      place_id: item.place.google_place_id,
+                      name: item.place.name,
+                      formatted_address: item.place.address || item.place.formatted_address,
+                      geometry: {
+                        location: {
+                          lat: item.place.latitude || item.place.lat,
+                          lng: item.place.longitude || item.place.lng
+                        }
+                      },
+                      types: item.place.types || [],
+                      website: item.place.website,
+                      international_phone_number: item.place.phone_number,
+                      business_status: item.place.business_status,
+                      rating: item.place.rating || item.place.google_rating,
+                      user_ratings_total: item.place.user_ratings_total,
+                      photos: item.place.photos || []
+                    };
+                    const location = await this.locationService.createOrGetLocationFromGoogleMaps(
+                      googlePlaceData,
+                      userId,
+                      {
+                        autoLink: true,
+                        initialStatus: "want_to_visit",
+                        sourceType: "itinerary_added"
+                      }
+                    );
+                    placeId = location.id;
+                    await this.locationService.incrementItineraryUseCount(location.id);
+                    console.log(`[ItineraryService] Created/linked location from Google Maps: ${location.id}`);
+                  } catch (error) {
+                    console.warn("[ItineraryService] Failed to create location from Google Maps:", error);
+                  }
+                } else if (placeId) {
+                  try {
+                    const placeExists = await this.db.prepare(
+                      `SELECT id FROM locations WHERE id = ?`
+                    ).bind(placeId).first();
+                    if (!placeExists) {
+                      placeId = null;
+                    } else {
+                      if (this.locationService) {
+                        await this.locationService.incrementItineraryUseCount(placeId);
+                      }
+                    }
+                  } catch (error) {
+                    console.warn("[ItineraryService] Failed to verify place_id:", error);
+                    placeId = null;
+                  }
+                }
+                await this.db.prepare(
+                  `INSERT INTO itinerary_items (
+                id, day_id, place_id, place_name, start_time, duration, order_index, created_at, updated_at, status, notes
+              )
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+                ).bind(
+                  itemId,
+                  dayId,
+                  placeId,
+                  ((_c = item.place) == null ? void 0 : _c.name) || "\u672A\u77E5\u5730\u9EDE",
+                  item.startTime || "09:00",
+                  item.duration || 60,
+                  itemIndex,
+                  now,
+                  now,
+                  // updated_at
+                  "planned",
+                  // status
+                  item.notes || null
+                  // notes
+                ).run();
+              }
+            }
+            await this.db.prepare(
+              `UPDATE itineraries SET updated_at = ? WHERE id = ? AND user_id = ?`
+            ).bind(now, itineraryId, userId).run();
+          }
+          return await this.getItinerary(userId, itineraryId);
+        } catch (error) {
+          console.error("[ItineraryService] Error updating itinerary:", error);
+          throw error;
+        }
+      }
+      /**
+       * 刪除行程
+       * @param {string} userId - 用戶 ID
+       * @param {string} itineraryId - 行程 ID
+       * @returns {Promise<void>}
+       */
+      async deleteItinerary(userId, itineraryId) {
+        try {
+          const days = await this.db.prepare(
+            `SELECT id FROM itinerary_days WHERE itinerary_id = ?`
+          ).bind(itineraryId).all();
+          for (const day of days.results) {
+            await this.db.prepare(
+              `DELETE FROM itinerary_items WHERE day_id = ?`
+            ).bind(day.id).run();
+          }
+          await this.db.prepare(
+            `DELETE FROM itinerary_days WHERE itinerary_id = ?`
+          ).bind(itineraryId).run();
+          await this.db.prepare(
+            `DELETE FROM itineraries WHERE id = ? AND user_id = ?`
+          ).bind(itineraryId, userId).run();
+        } catch (error) {
+          console.error("[ItineraryService] Error deleting itinerary:", error);
+          throw error;
+        }
+      }
+      /**
+       * 優化行程（使用 AI）
+       * @param {string} userId - 用戶 ID
+       * @param {string} itineraryId - 行程 ID
+       * @param {number} dayIndex - 要優化的天數索引（可選）
+       * @returns {Promise<object>} 優化後的行程物件
+       */
+      async optimizeItinerary(userId, itineraryId, dayIndex = null) {
+        try {
+          const itinerary = await this.getItinerary(userId, itineraryId);
+          if (!itinerary) {
+            throw new Error("Itinerary not found");
+          }
+          if (!this.aiService) {
+            throw new Error("AIService is required for optimization");
+          }
+          const daysToOptimize = dayIndex !== null ? [itinerary.dayPlans[dayIndex]] : itinerary.dayPlans;
+          const optimizedDayPlans = [];
+          for (const dayPlan of daysToOptimize) {
+            if (dayPlan.items.length < 2) {
+              optimizedDayPlans.push(dayPlan);
+              continue;
+            }
+            const places = dayPlan.items.map((item) => item.place);
+            const optimizedData = await this.aiService.optimizeDayPlan(places);
+            if (optimizedData && optimizedData.itinerary) {
+              const reorderedItems = optimizedData.itinerary.map((optItem) => {
+                const originalItem = dayPlan.items.find(
+                  (item) => item.place.name === optItem.placeName
+                );
+                if (originalItem) {
+                  return {
+                    ...originalItem,
+                    startTime: optItem.recommendedTime || originalItem.startTime
+                  };
+                }
+                return null;
+              }).filter(Boolean);
+              optimizedDayPlans.push({
+                ...dayPlan,
+                items: reorderedItems
+              });
+            } else {
+              optimizedDayPlans.push(dayPlan);
+            }
+          }
+          const finalDayPlans = dayIndex !== null ? itinerary.dayPlans.map((day, idx) => idx === dayIndex ? optimizedDayPlans[0] : day) : optimizedDayPlans;
+          return await this.updateItinerary(userId, itineraryId, {
+            dayPlans: finalDayPlans
+          });
+        } catch (error) {
+          console.error("[ItineraryService] Error optimizing itinerary:", error);
+          throw error;
+        }
+      }
+    };
   }
 });
 
@@ -7867,133 +8716,6 @@ var init_StoryModule = __esm({
   }
 });
 
-// src/services/PersonModule.js
-var PersonModule;
-var init_PersonModule = __esm({
-  "src/services/PersonModule.js"() {
-    "use strict";
-    init_Person();
-    init_ObjectRelations();
-    init_TimeModule();
-    init_ActionModule();
-    PersonModule = class {
-      constructor(db) {
-        if (!db) {
-          throw new Error("Database connection is required for PersonModule");
-        }
-        this.db = db;
-        this.relations = new ObjectRelations(db);
-        this.timeModule = new TimeModule();
-        this.actionModule = new ActionModule();
-      }
-      /**
-       * 根據 ID 獲取 Person
-       * @param {string} personId - Person ID
-       * @returns {Promise<Person|null>}
-       */
-      async getPersonById(personId) {
-        try {
-          const record = await this.db.prepare(
-            "SELECT * FROM users WHERE id = ?"
-          ).bind(personId).first();
-          return record ? Person.fromDbRecord(record) : null;
-        } catch (error) {
-          console.error("[PersonModule] Error getting person:", error);
-          throw error;
-        }
-      }
-      /**
-       * 根據 Email 獲取 Person
-       * @param {string} email - Email
-       * @returns {Promise<Person|null>}
-       */
-      async getPersonByEmail(email) {
-        try {
-          const record = await this.db.prepare(
-            "SELECT * FROM users WHERE email = ?"
-          ).bind(email).first();
-          return record ? Person.fromDbRecord(record) : null;
-        } catch (error) {
-          console.error("[PersonModule] Error getting person by email:", error);
-          throw error;
-        }
-      }
-      /**
-       * 獲取 Person 的完整資訊（包含關聯資料）
-       * @param {string} personId - Person ID
-       * @returns {Promise<object>}
-       */
-      async getPersonProfile(personId) {
-        try {
-          const person = await this.getPersonById(personId);
-          if (!person)
-            return null;
-          const locations = await this.relations.getPersonLocations(personId);
-          const timeline = await this.relations.getPersonTimeline(personId);
-          const enrichedTimeline = timeline.map((story) => ({
-            ...story.toJSON(),
-            timeDescription: this.timeModule.getStoryTimeDescription(story),
-            actionName: this.actionModule.getActionTypeName(story.action_type),
-            actionIcon: this.actionModule.getActionTypeIcon(story.action_type),
-            actionColor: this.actionModule.getActionTypeColor(story.action_type)
-          }));
-          const actionStats = this.actionModule.getActionStatistics(timeline);
-          return {
-            person: person.toJSON(),
-            locations: locations.map((loc) => loc.toJSON()),
-            timeline: enrichedTimeline,
-            statistics: {
-              totalLocations: locations.length,
-              totalStories: timeline.length,
-              actionStats
-            }
-          };
-        } catch (error) {
-          console.error("[PersonModule] Error getting person profile:", error);
-          throw error;
-        }
-      }
-      /**
-       * 更新 Person 資訊
-       * @param {string} personId - Person ID
-       * @param {object} updates - 要更新的欄位
-       * @returns {Promise<Person>}
-       */
-      async updatePerson(personId, updates) {
-        try {
-          const updateFields = [];
-          const updateValues = [];
-          if (updates.name !== void 0) {
-            updateFields.push("name = ?");
-            updateValues.push(updates.name);
-          }
-          if (updates.avatar_url !== void 0) {
-            updateFields.push("avatar_url = ?");
-            updateValues.push(updates.avatar_url);
-          }
-          if (updates.user_type !== void 0) {
-            updateFields.push("user_type = ?");
-            updateValues.push(updates.user_type);
-            updateFields.push("is_merchant = ?");
-            updateValues.push(updates.user_type === "merchant" ? 1 : 0);
-          }
-          if (updateFields.length === 0) {
-            return await this.getPersonById(personId);
-          }
-          updateFields.push('updated_at = datetime("now")');
-          updateValues.push(personId);
-          const sql = `UPDATE users SET ${updateFields.join(", ")} WHERE id = ?`;
-          await this.db.prepare(sql).bind(...updateValues).run();
-          return await this.getPersonById(personId);
-        } catch (error) {
-          console.error("[PersonModule] Error updating person:", error);
-          throw error;
-        }
-      }
-    };
-  }
-});
-
 // src/services/LocationModule.js
 var LocationModule;
 var init_LocationModule = __esm({
@@ -8130,6 +8852,133 @@ var init_LocationModule = __esm({
           };
         } catch (error) {
           console.error("[LocationModule] Error getting paginated locations:", error);
+          throw error;
+        }
+      }
+    };
+  }
+});
+
+// src/services/PersonModule.js
+var PersonModule;
+var init_PersonModule = __esm({
+  "src/services/PersonModule.js"() {
+    "use strict";
+    init_Person();
+    init_ObjectRelations();
+    init_TimeModule();
+    init_ActionModule();
+    PersonModule = class {
+      constructor(db) {
+        if (!db) {
+          throw new Error("Database connection is required for PersonModule");
+        }
+        this.db = db;
+        this.relations = new ObjectRelations(db);
+        this.timeModule = new TimeModule();
+        this.actionModule = new ActionModule();
+      }
+      /**
+       * 根據 ID 獲取 Person
+       * @param {string} personId - Person ID
+       * @returns {Promise<Person|null>}
+       */
+      async getPersonById(personId) {
+        try {
+          const record = await this.db.prepare(
+            "SELECT * FROM users WHERE id = ?"
+          ).bind(personId).first();
+          return record ? Person.fromDbRecord(record) : null;
+        } catch (error) {
+          console.error("[PersonModule] Error getting person:", error);
+          throw error;
+        }
+      }
+      /**
+       * 根據 Email 獲取 Person
+       * @param {string} email - Email
+       * @returns {Promise<Person|null>}
+       */
+      async getPersonByEmail(email) {
+        try {
+          const record = await this.db.prepare(
+            "SELECT * FROM users WHERE email = ?"
+          ).bind(email).first();
+          return record ? Person.fromDbRecord(record) : null;
+        } catch (error) {
+          console.error("[PersonModule] Error getting person by email:", error);
+          throw error;
+        }
+      }
+      /**
+       * 獲取 Person 的完整資訊（包含關聯資料）
+       * @param {string} personId - Person ID
+       * @returns {Promise<object>}
+       */
+      async getPersonProfile(personId) {
+        try {
+          const person = await this.getPersonById(personId);
+          if (!person)
+            return null;
+          const locations = await this.relations.getPersonLocations(personId);
+          const timeline = await this.relations.getPersonTimeline(personId);
+          const enrichedTimeline = timeline.map((story) => ({
+            ...story.toJSON(),
+            timeDescription: this.timeModule.getStoryTimeDescription(story),
+            actionName: this.actionModule.getActionTypeName(story.action_type),
+            actionIcon: this.actionModule.getActionTypeIcon(story.action_type),
+            actionColor: this.actionModule.getActionTypeColor(story.action_type)
+          }));
+          const actionStats = this.actionModule.getActionStatistics(timeline);
+          return {
+            person: person.toJSON(),
+            locations: locations.map((loc) => loc.toJSON()),
+            timeline: enrichedTimeline,
+            statistics: {
+              totalLocations: locations.length,
+              totalStories: timeline.length,
+              actionStats
+            }
+          };
+        } catch (error) {
+          console.error("[PersonModule] Error getting person profile:", error);
+          throw error;
+        }
+      }
+      /**
+       * 更新 Person 資訊
+       * @param {string} personId - Person ID
+       * @param {object} updates - 要更新的欄位
+       * @returns {Promise<Person>}
+       */
+      async updatePerson(personId, updates) {
+        try {
+          const updateFields = [];
+          const updateValues = [];
+          if (updates.name !== void 0) {
+            updateFields.push("name = ?");
+            updateValues.push(updates.name);
+          }
+          if (updates.avatar_url !== void 0) {
+            updateFields.push("avatar_url = ?");
+            updateValues.push(updates.avatar_url);
+          }
+          if (updates.user_type !== void 0) {
+            updateFields.push("user_type = ?");
+            updateValues.push(updates.user_type);
+            updateFields.push("is_merchant = ?");
+            updateValues.push(updates.user_type === "merchant" ? 1 : 0);
+          }
+          if (updateFields.length === 0) {
+            return await this.getPersonById(personId);
+          }
+          updateFields.push('updated_at = datetime("now")');
+          updateValues.push(personId);
+          const sql = `UPDATE users SET ${updateFields.join(", ")} WHERE id = ?`;
+          await this.db.prepare(sql).bind(...updateValues).run();
+          return await this.getPersonById(personId);
+        } catch (error) {
+          console.error("[PersonModule] Error updating person:", error);
           throw error;
         }
       }
@@ -9027,458 +9876,3478 @@ var init_FavoritesService = __esm({
   }
 });
 
-// src/services/ItineraryService.js
-var ItineraryService;
-var init_ItineraryService = __esm({
-  "src/services/ItineraryService.js"() {
+// src/services/SecurityService.js
+var SecurityService;
+var init_SecurityService = __esm({
+  "src/services/SecurityService.js"() {
     "use strict";
-    ItineraryService = class {
-      constructor(db, locationService, aiService) {
-        if (!db) {
-          throw new Error("Database connection is required for ItineraryService.");
-        }
-        this.db = db;
-        this.locationService = locationService;
-        this.aiService = aiService;
+    SecurityService = class {
+      constructor() {
+        this.nonce = this.generateNonce();
+      }
+      generateNonce() {
+        const array = new Uint8Array(16);
+        crypto.getRandomValues(array);
+        return Array.from(array, (byte) => byte.toString(16).padStart(2, "0")).join("");
+      }
+      getNonce() {
+        return this.nonce;
+      }
+      getCSPHeaders() {
+        const nonce = this.getNonce();
+        const csp = [
+          "default-src 'self'",
+          `script-src 'self' 'nonce-${nonce}' 'unsafe-inline' 'unsafe-eval' https://apis.google.com https://maps.googleapis.com https://accounts.google.com https://ajax.googleapis.com`,
+          `style-src 'self' https://fonts.googleapis.com 'nonce-${nonce}' 'unsafe-inline'`,
+          `style-src-attr 'self' 'nonce-${nonce}' 'unsafe-inline'`,
+          "font-src 'self' data: https://fonts.gstatic.com",
+          "img-src 'self' data: https: https://www.gstatic.com https://maps.googleapis.com https://maps.gstatic.com",
+          "connect-src 'self' https://apis.google.com https://accounts.google.com https://maps.googleapis.com https://www.googleapis.com https://oauth2.googleapis.com https://generativelanguage.googleapis.com https://api.openai.com",
+          "frame-src 'self' https://accounts.google.com",
+          "base-uri 'self'",
+          "form-action 'self'",
+          "frame-ancestors 'none'",
+          "object-src 'none'"
+        ].join("; ");
+        return {
+          "Content-Security-Policy": csp,
+          "X-Content-Type-Options": "nosniff",
+          "X-Frame-Options": "DENY",
+          "X-XSS-Protection": "1; mode=block",
+          "Referrer-Policy": "strict-origin-when-cross-origin",
+          "Permissions-Policy": "geolocation=(), microphone=(), camera=()"
+        };
+      }
+    };
+  }
+});
+
+// src/services/RateLimitService.js
+var RateLimitService;
+var init_RateLimitService = __esm({
+  "src/services/RateLimitService.js"() {
+    "use strict";
+    RateLimitService = class {
+      constructor(env) {
+        this.env = env;
+        this.db = env.DB;
+        this.defaultLimits = {
+          // Google Places API 限制
+          "google_places": {
+            requestsPerMinute: 10,
+            requestsPerHour: 100,
+            requestsPerDay: 1e3
+          },
+          // 一般 API 限制
+          "api": {
+            requestsPerMinute: 60,
+            requestsPerHour: 1e3,
+            requestsPerDay: 1e4
+          },
+          // 圖片代理限制
+          "image_proxy": {
+            requestsPerMinute: 30,
+            requestsPerHour: 500,
+            requestsPerDay: 5e3
+          },
+          // 管理員 API 限制
+          "admin": {
+            requestsPerMinute: 100,
+            requestsPerHour: 2e3,
+            requestsPerDay: 2e4
+          }
+        };
       }
       /**
-       * 建立新行程
-       * @param {string} userId - 用戶 ID
-       * @param {object} data - 行程資料 { title, dayPlans }
-       * @returns {Promise<object>} 建立的行程物件
+       * 檢查請求是否超過限制
+       * @param {string} clientId 客戶端識別碼 (IP 或用戶ID)
+       * @param {string} endpoint 端點類型
+       * @returns {Promise<object>} 檢查結果
        */
-      async createItinerary(userId, data) {
-        var _a, _b, _c;
+      async checkRateLimit(clientId, endpoint = "api") {
         try {
-          const { title, dayPlans } = data;
-          const itineraryId = `itinerary_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-          const now = Date.now();
-          await this.db.prepare(
-            `INSERT INTO itineraries (id, user_id, title, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?)`
-          ).bind(
-            itineraryId,
-            userId,
-            title || null,
-            now,
-            now
-          ).run();
-          for (let dayIndex = 0; dayIndex < dayPlans.length; dayIndex++) {
-            const dayPlan = dayPlans[dayIndex];
-            const dayId = `day_${itineraryId}_${dayIndex}`;
-            await this.db.prepare(
-              `INSERT INTO itinerary_days (id, itinerary_id, day_number, date, created_at)
-           VALUES (?, ?, ?, ?, ?)`
-            ).bind(
-              dayId,
-              itineraryId,
-              dayIndex + 1,
-              dayPlan.date || `\u7B2C ${dayIndex + 1} \u5929`,
-              now
-            ).run();
-            for (let itemIndex = 0; itemIndex < dayPlan.items.length; itemIndex++) {
-              const item = dayPlan.items[itemIndex];
-              const itemId = `item_${dayId}_${itemIndex}_${now}_${Math.random().toString(36).substr(2, 9)}`;
-              let placeId = ((_a = item.place) == null ? void 0 : _a.id) || null;
-              if (((_b = item.place) == null ? void 0 : _b.google_place_id) && !placeId && this.locationService) {
-                try {
-                  const googlePlaceData = {
-                    place_id: item.place.google_place_id,
-                    name: item.place.name,
-                    formatted_address: item.place.address || item.place.formatted_address,
-                    geometry: {
-                      location: {
-                        lat: item.place.latitude || item.place.lat,
-                        lng: item.place.longitude || item.place.lng
-                      }
-                    },
-                    types: item.place.types || [],
-                    website: item.place.website,
-                    international_phone_number: item.place.phone_number,
-                    business_status: item.place.business_status,
-                    rating: item.place.rating || item.place.google_rating,
-                    user_ratings_total: item.place.user_ratings_total,
-                    photos: item.place.photos || []
-                  };
-                  const location = await this.locationService.createOrGetLocationFromGoogleMaps(
-                    googlePlaceData,
-                    userId,
-                    {
-                      autoLink: true,
-                      initialStatus: "want_to_visit",
-                      sourceType: "itinerary_added"
-                    }
-                  );
-                  placeId = location.id;
-                  await this.locationService.incrementItineraryUseCount(location.id);
-                  console.log(`[ItineraryService] Created/linked location from Google Maps: ${location.id}`);
-                } catch (error) {
-                  console.warn("[ItineraryService] Failed to create location from Google Maps:", error);
-                }
-              } else if (placeId) {
-                try {
-                  const placeExists = await this.db.prepare(
-                    `SELECT id FROM locations WHERE id = ?`
-                  ).bind(placeId).first();
-                  if (!placeExists) {
-                    placeId = null;
-                  } else {
-                    if (this.locationService) {
-                      await this.locationService.incrementItineraryUseCount(placeId);
-                    }
-                  }
-                } catch (error) {
-                  console.warn("[ItineraryService] Failed to verify place_id:", error);
-                  placeId = null;
-                }
-              }
-              await this.db.prepare(
-                `INSERT INTO itinerary_items (
-              id, day_id, place_id, place_name, start_time, duration, order_index, created_at, updated_at, status, notes
-            )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-              ).bind(
-                itemId,
-                dayId,
-                placeId,
-                ((_c = item.place) == null ? void 0 : _c.name) || "\u672A\u77E5\u5730\u9EDE",
-                item.startTime || "09:00",
-                item.duration || 60,
-                itemIndex,
-                now,
-                now,
-                // updated_at
-                "planned",
-                // status
-                item.notes || null
-                // notes
-              ).run();
-            }
+          const limits = this.defaultLimits[endpoint] || this.defaultLimits["api"];
+          const now = /* @__PURE__ */ new Date();
+          const minuteCheck = await this.checkWindow(clientId, endpoint, "minute", limits.requestsPerMinute, now);
+          if (!minuteCheck.allowed) {
+            return {
+              allowed: false,
+              limit: "minute",
+              remaining: minuteCheck.remaining,
+              resetTime: minuteCheck.resetTime,
+              retryAfter: minuteCheck.retryAfter
+            };
           }
-          return await this.getItinerary(userId, itineraryId);
-        } catch (error) {
-          console.error("[ItineraryService] Error creating itinerary:", error);
-          throw error;
-        }
-      }
-      /**
-       * 獲取行程
-       * @param {string} userId - 用戶 ID
-       * @param {string} itineraryId - 行程 ID
-       * @returns {Promise<object>} 行程物件
-       */
-      async getItinerary(userId, itineraryId) {
-        try {
-          const itinerary = await this.db.prepare(
-            `SELECT id, user_id, title, created_at, updated_at
-         FROM itineraries
-         WHERE id = ? AND user_id = ?`
-          ).bind(itineraryId, userId).first();
-          if (!itinerary) {
-            return null;
+          const hourCheck = await this.checkWindow(clientId, endpoint, "hour", limits.requestsPerHour, now);
+          if (!hourCheck.allowed) {
+            return {
+              allowed: false,
+              limit: "hour",
+              remaining: hourCheck.remaining,
+              resetTime: hourCheck.resetTime,
+              retryAfter: hourCheck.retryAfter
+            };
           }
-          const days = await this.db.prepare(
-            `SELECT id, day_number, date
-         FROM itinerary_days
-         WHERE itinerary_id = ?
-         ORDER BY day_number ASC`
-          ).bind(itineraryId).all();
-          const dayPlans = [];
-          for (const day of days.results) {
-            const items = await this.db.prepare(
-              `SELECT id, place_id, place_name, start_time, duration, order_index
-           FROM itinerary_items
-           WHERE day_id = ?
-           ORDER BY order_index ASC`
-            ).bind(day.id).all();
-            const itineraryItems = [];
-            for (const item of items.results) {
-              let place = {
-                id: item.place_id || item.id,
-                name: item.place_name
-              };
-              if (item.place_id && this.locationService) {
-                try {
-                  const locationDetails = await this.locationService.getLocationById(item.place_id);
-                  if (locationDetails) {
-                    place = {
-                      id: locationDetails.id,
-                      name: locationDetails.name,
-                      address: locationDetails.address,
-                      location: locationDetails.latitude && locationDetails.longitude ? {
-                        lat: locationDetails.latitude,
-                        lng: locationDetails.longitude
-                      } : void 0,
-                      rating: locationDetails.google_rating,
-                      userRatingCount: locationDetails.google_user_ratings_total
-                    };
-                  }
-                } catch (error) {
-                  console.warn("[ItineraryService] Failed to fetch location details:", error);
-                }
-              }
-              itineraryItems.push({
-                id: item.id,
-                place,
-                startTime: item.start_time,
-                duration: item.duration
-              });
-            }
-            dayPlans.push({
-              date: day.date,
-              items: itineraryItems
-            });
+          const dayCheck = await this.checkWindow(clientId, endpoint, "day", limits.requestsPerDay, now);
+          if (!dayCheck.allowed) {
+            return {
+              allowed: false,
+              limit: "day",
+              remaining: dayCheck.remaining,
+              resetTime: dayCheck.resetTime,
+              retryAfter: dayCheck.retryAfter
+            };
           }
+          await this.recordRequest(clientId, endpoint, now);
           return {
-            id: itinerary.id,
-            userId: itinerary.user_id,
-            title: itinerary.title,
-            dayPlans,
-            createdAt: itinerary.created_at,
-            updatedAt: itinerary.updated_at
+            allowed: true,
+            remaining: Math.min(minuteCheck.remaining, hourCheck.remaining, dayCheck.remaining),
+            resetTime: Math.min(minuteCheck.resetTime, hourCheck.resetTime, dayCheck.resetTime)
           };
         } catch (error) {
-          console.error("[ItineraryService] Error getting itinerary:", error);
-          throw error;
+          console.error("[RateLimitService] Error checking rate limit:", error);
+          return {
+            allowed: true,
+            error: error.message
+          };
         }
       }
       /**
-       * 獲取用戶的所有行程
-       * @param {string} userId - 用戶 ID
-       * @returns {Promise<Array>} 行程列表
+       * 檢查特定時間窗口的限制
        */
-      async getUserItineraries(userId) {
+      async checkWindow(clientId, endpoint, window, limit, now) {
+        let startTime, windowName;
+        switch (window) {
+          case "minute":
+            startTime = new Date(now.getTime() - 60 * 1e3);
+            windowName = "minute";
+            break;
+          case "hour":
+            startTime = new Date(now.getTime() - 60 * 60 * 1e3);
+            windowName = "hour";
+            break;
+          case "day":
+            startTime = new Date(now.getTime() - 24 * 60 * 60 * 1e3);
+            windowName = "day";
+            break;
+          default:
+            throw new Error(`Invalid window: ${window}`);
+        }
+        const stmt = this.db.prepare(`
+            SELECT COUNT(*) as count
+            FROM rate_limit_logs
+            WHERE client_id = ? 
+            AND endpoint = ? 
+            AND window_type = ?
+            AND request_time > ?
+        `);
+        const result = await stmt.bind(clientId, endpoint, windowName, startTime.toISOString()).first();
+        const count = result.count || 0;
+        const remaining = Math.max(0, limit - count);
+        const allowed = count < limit;
+        let resetTime;
+        switch (window) {
+          case "minute":
+            resetTime = new Date(now.getTime() + 60 * 1e3);
+            break;
+          case "hour":
+            resetTime = new Date(now.getTime() + 60 * 60 * 1e3);
+            break;
+          case "day":
+            resetTime = new Date(now.getTime() + 24 * 60 * 60 * 1e3);
+            break;
+        }
+        return {
+          allowed,
+          remaining,
+          resetTime: resetTime.toISOString(),
+          retryAfter: Math.ceil((resetTime.getTime() - now.getTime()) / 1e3)
+        };
+      }
+      /**
+       * 記錄請求
+       */
+      async recordRequest(clientId, endpoint, timestamp) {
         try {
-          const itineraries = await this.db.prepare(
-            `SELECT id, title, created_at, updated_at
-         FROM itineraries
-         WHERE user_id = ?
-         ORDER BY updated_at DESC`
-          ).bind(userId).all();
-          return itineraries.results.map((it) => ({
-            id: it.id,
-            userId,
-            title: it.title,
-            createdAt: it.created_at,
-            updatedAt: it.updated_at
-          }));
+          const stmt = this.db.prepare(`
+                INSERT INTO rate_limit_logs 
+                (client_id, endpoint, window_type, request_time, created_at)
+                VALUES (?, ?, ?, ?, ?)
+            `);
+          await stmt.bind(clientId, endpoint, "minute", timestamp.toISOString(), timestamp.toISOString()).run();
+          await stmt.bind(clientId, endpoint, "hour", timestamp.toISOString(), timestamp.toISOString()).run();
+          await stmt.bind(clientId, endpoint, "day", timestamp.toISOString(), timestamp.toISOString()).run();
         } catch (error) {
-          console.error("[ItineraryService] Error getting user itineraries:", error);
-          throw error;
+          console.error("[RateLimitService] Failed to record request:", error);
         }
       }
       /**
-       * 更新行程
-       * @param {string} userId - 用戶 ID
-       * @param {string} itineraryId - 行程 ID
-       * @param {object} updates - 更新資料 { title, dayPlans }
-       * @returns {Promise<object>} 更新後的行程物件
+       * 獲取客戶端使用統計
+       * @param {string} clientId 客戶端識別碼
+       * @param {string} endpoint 端點類型
+       * @returns {Promise<object>} 使用統計
        */
-      async updateItinerary(userId, itineraryId, updates) {
-        var _a, _b, _c;
+      async getClientStats(clientId, endpoint = "api") {
         try {
-          const { title, dayPlans } = updates;
-          const now = Date.now();
-          if (title !== void 0) {
-            await this.db.prepare(
-              `UPDATE itineraries
-           SET title = ?, updated_at = ?
-           WHERE id = ? AND user_id = ?`
-            ).bind(title, now, itineraryId, userId).run();
-          }
-          if (dayPlans) {
-            await this.db.prepare(
-              `DELETE FROM itinerary_items 
-           WHERE day_id IN (SELECT id FROM itinerary_days WHERE itinerary_id = ?)`
-            ).bind(itineraryId).run();
-            await this.db.prepare(
-              `DELETE FROM itinerary_days WHERE itinerary_id = ?`
-            ).bind(itineraryId).run();
-            for (let dayIndex = 0; dayIndex < dayPlans.length; dayIndex++) {
-              const dayPlan = dayPlans[dayIndex];
-              const dayId = `day_${itineraryId}_${dayIndex}_${now}_${Math.random().toString(36).substr(2, 9)}`;
-              await this.db.prepare(
-                `INSERT INTO itinerary_days (id, itinerary_id, day_number, date, created_at)
-             VALUES (?, ?, ?, ?, ?)`
-              ).bind(
-                dayId,
-                itineraryId,
-                dayIndex + 1,
-                dayPlan.date || `\u7B2C ${dayIndex + 1} \u5929`,
-                now
-              ).run();
-              for (let itemIndex = 0; itemIndex < dayPlan.items.length; itemIndex++) {
-                const item = dayPlan.items[itemIndex];
-                const itemId = `item_${dayId}_${itemIndex}_${now}_${Math.random().toString(36).substr(2, 9)}`;
-                let placeId = ((_a = item.place) == null ? void 0 : _a.id) || null;
-                if (((_b = item.place) == null ? void 0 : _b.google_place_id) && !placeId && this.locationService) {
-                  try {
-                    const googlePlaceData = {
-                      place_id: item.place.google_place_id,
-                      name: item.place.name,
-                      formatted_address: item.place.address || item.place.formatted_address,
-                      geometry: {
-                        location: {
-                          lat: item.place.latitude || item.place.lat,
-                          lng: item.place.longitude || item.place.lng
-                        }
-                      },
-                      types: item.place.types || [],
-                      website: item.place.website,
-                      international_phone_number: item.place.phone_number,
-                      business_status: item.place.business_status,
-                      rating: item.place.rating || item.place.google_rating,
-                      user_ratings_total: item.place.user_ratings_total,
-                      photos: item.place.photos || []
-                    };
-                    const location = await this.locationService.createOrGetLocationFromGoogleMaps(
-                      googlePlaceData,
-                      userId,
-                      {
-                        autoLink: true,
-                        initialStatus: "want_to_visit",
-                        sourceType: "itinerary_added"
-                      }
-                    );
-                    placeId = location.id;
-                    await this.locationService.incrementItineraryUseCount(location.id);
-                    console.log(`[ItineraryService] Created/linked location from Google Maps: ${location.id}`);
-                  } catch (error) {
-                    console.warn("[ItineraryService] Failed to create location from Google Maps:", error);
-                  }
-                } else if (placeId) {
-                  try {
-                    const placeExists = await this.db.prepare(
-                      `SELECT id FROM locations WHERE id = ?`
-                    ).bind(placeId).first();
-                    if (!placeExists) {
-                      placeId = null;
-                    } else {
-                      if (this.locationService) {
-                        await this.locationService.incrementItineraryUseCount(placeId);
-                      }
-                    }
-                  } catch (error) {
-                    console.warn("[ItineraryService] Failed to verify place_id:", error);
-                    placeId = null;
-                  }
-                }
-                await this.db.prepare(
-                  `INSERT INTO itinerary_items (
-                id, day_id, place_id, place_name, start_time, duration, order_index, created_at, updated_at, status, notes
-              )
-              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-                ).bind(
-                  itemId,
-                  dayId,
-                  placeId,
-                  ((_c = item.place) == null ? void 0 : _c.name) || "\u672A\u77E5\u5730\u9EDE",
-                  item.startTime || "09:00",
-                  item.duration || 60,
-                  itemIndex,
-                  now,
-                  now,
-                  // updated_at
-                  "planned",
-                  // status
-                  item.notes || null
-                  // notes
-                ).run();
-              }
+          const now = /* @__PURE__ */ new Date();
+          const minuteAgo = new Date(now.getTime() - 60 * 1e3);
+          const hourAgo = new Date(now.getTime() - 60 * 60 * 1e3);
+          const dayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1e3);
+          const stmt = this.db.prepare(`
+                SELECT 
+                    window_type,
+                    COUNT(*) as count
+                FROM rate_limit_logs
+                WHERE client_id = ? 
+                AND endpoint = ?
+                AND request_time > ?
+                GROUP BY window_type
+            `);
+          const minuteResult = await stmt.bind(clientId, endpoint, minuteAgo.toISOString()).all();
+          const hourResult = await stmt.bind(clientId, endpoint, hourAgo.toISOString()).all();
+          const dayResult = await stmt.bind(clientId, endpoint, dayAgo.toISOString()).all();
+          const limits = this.defaultLimits[endpoint] || this.defaultLimits["api"];
+          return {
+            clientId,
+            endpoint,
+            usage: {
+              minute: minuteResult.length > 0 ? minuteResult[0].count : 0,
+              hour: hourResult.length > 0 ? hourResult[0].count : 0,
+              day: dayResult.length > 0 ? dayResult[0].count : 0
+            },
+            limits,
+            remaining: {
+              minute: Math.max(0, limits.requestsPerMinute - (minuteResult.length > 0 ? minuteResult[0].count : 0)),
+              hour: Math.max(0, limits.requestsPerHour - (hourResult.length > 0 ? hourResult[0].count : 0)),
+              day: Math.max(0, limits.requestsPerDay - (dayResult.length > 0 ? dayResult[0].count : 0))
             }
-            await this.db.prepare(
-              `UPDATE itineraries SET updated_at = ? WHERE id = ? AND user_id = ?`
-            ).bind(now, itineraryId, userId).run();
-          }
-          return await this.getItinerary(userId, itineraryId);
+          };
         } catch (error) {
-          console.error("[ItineraryService] Error updating itinerary:", error);
-          throw error;
+          console.error("[RateLimitService] Failed to get client stats:", error);
+          return {
+            clientId,
+            endpoint,
+            error: error.message
+          };
         }
       }
       /**
-       * 刪除行程
-       * @param {string} userId - 用戶 ID
-       * @param {string} itineraryId - 行程 ID
-       * @returns {Promise<void>}
+       * 清理過期的速率限制日誌
+       * @param {number} daysToKeep 保留天數
+       * @returns {Promise<object>} 清理結果
        */
-      async deleteItinerary(userId, itineraryId) {
+      async cleanupOldLogs(daysToKeep = 7) {
         try {
-          const days = await this.db.prepare(
-            `SELECT id FROM itinerary_days WHERE itinerary_id = ?`
-          ).bind(itineraryId).all();
-          for (const day of days.results) {
-            await this.db.prepare(
-              `DELETE FROM itinerary_items WHERE day_id = ?`
-            ).bind(day.id).run();
-          }
-          await this.db.prepare(
-            `DELETE FROM itinerary_days WHERE itinerary_id = ?`
-          ).bind(itineraryId).run();
-          await this.db.prepare(
-            `DELETE FROM itineraries WHERE id = ? AND user_id = ?`
-          ).bind(itineraryId, userId).run();
+          const cutoffDate = /* @__PURE__ */ new Date();
+          cutoffDate.setDate(cutoffDate.getDate() - daysToKeep);
+          const stmt = this.db.prepare(`
+                DELETE FROM rate_limit_logs
+                WHERE request_time < ?
+            `);
+          const result = await stmt.bind(cutoffDate.toISOString()).run();
+          return {
+            success: true,
+            deletedCount: result.changes || 0
+          };
         } catch (error) {
-          console.error("[ItineraryService] Error deleting itinerary:", error);
-          throw error;
+          console.error("[RateLimitService] Failed to cleanup old logs:", error);
+          return {
+            success: false,
+            error: error.message
+          };
         }
       }
       /**
-       * 優化行程（使用 AI）
-       * @param {string} userId - 用戶 ID
-       * @param {string} itineraryId - 行程 ID
-       * @param {number} dayIndex - 要優化的天數索引（可選）
-       * @returns {Promise<object>} 優化後的行程物件
+       * 獲取速率限制統計
+       * @returns {Promise<object>} 統計資訊
        */
-      async optimizeItinerary(userId, itineraryId, dayIndex = null) {
+      async getRateLimitStats() {
         try {
-          const itinerary = await this.getItinerary(userId, itineraryId);
-          if (!itinerary) {
-            throw new Error("Itinerary not found");
-          }
-          if (!this.aiService) {
-            throw new Error("AIService is required for optimization");
-          }
-          const daysToOptimize = dayIndex !== null ? [itinerary.dayPlans[dayIndex]] : itinerary.dayPlans;
-          const optimizedDayPlans = [];
-          for (const dayPlan of daysToOptimize) {
-            if (dayPlan.items.length < 2) {
-              optimizedDayPlans.push(dayPlan);
-              continue;
-            }
-            const places = dayPlan.items.map((item) => item.place);
-            const optimizedData = await this.aiService.optimizeDayPlan(places);
-            if (optimizedData && optimizedData.itinerary) {
-              const reorderedItems = optimizedData.itinerary.map((optItem) => {
-                const originalItem = dayPlan.items.find(
-                  (item) => item.place.name === optItem.placeName
-                );
-                if (originalItem) {
-                  return {
-                    ...originalItem,
-                    startTime: optItem.recommendedTime || originalItem.startTime
-                  };
-                }
-                return null;
-              }).filter(Boolean);
-              optimizedDayPlans.push({
-                ...dayPlan,
-                items: reorderedItems
-              });
-            } else {
-              optimizedDayPlans.push(dayPlan);
-            }
-          }
-          const finalDayPlans = dayIndex !== null ? itinerary.dayPlans.map((day, idx) => idx === dayIndex ? optimizedDayPlans[0] : day) : optimizedDayPlans;
-          return await this.updateItinerary(userId, itineraryId, {
-            dayPlans: finalDayPlans
-          });
+          const now = /* @__PURE__ */ new Date();
+          const dayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1e3);
+          const stmt = this.db.prepare(`
+                SELECT 
+                    endpoint,
+                    COUNT(*) as total_requests,
+                    COUNT(DISTINCT client_id) as unique_clients
+                FROM rate_limit_logs
+                WHERE request_time > ?
+                GROUP BY endpoint
+            `);
+          const { results } = await stmt.bind(dayAgo.toISOString()).all();
+          return {
+            period: "24h",
+            stats: results,
+            totalRequests: results.reduce((sum, row) => sum + row.total_requests, 0),
+            uniqueClients: results.reduce((sum, row) => sum + row.unique_clients, 0)
+          };
         } catch (error) {
-          console.error("[ItineraryService] Error optimizing itinerary:", error);
-          throw error;
+          console.error("[RateLimitService] Failed to get stats:", error);
+          return {
+            error: error.message
+          };
+        }
+      }
+      /**
+       * 檢查 Google Places API 使用量
+       * @returns {Promise<object>} API 使用量
+       */
+      async checkGooglePlacesUsage() {
+        try {
+          const now = /* @__PURE__ */ new Date();
+          const dayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1e3);
+          const stmt = this.db.prepare(`
+                SELECT COUNT(*) as count
+                FROM rate_limit_logs
+                WHERE endpoint = 'google_places'
+                AND request_time > ?
+            `);
+          const result = await stmt.bind(dayAgo.toISOString()).first();
+          const dailyUsage = result.count || 0;
+          const limit = this.defaultLimits.google_places.requestsPerDay;
+          const remaining = Math.max(0, limit - dailyUsage);
+          const usagePercentage = dailyUsage / limit * 100;
+          return {
+            dailyUsage,
+            limit,
+            remaining,
+            usagePercentage: Math.round(usagePercentage * 100) / 100,
+            status: usagePercentage > 90 ? "warning" : usagePercentage > 75 ? "caution" : "normal"
+          };
+        } catch (error) {
+          console.error("[RateLimitService] Failed to check Google Places usage:", error);
+          return {
+            error: error.message
+          };
         }
       }
     };
+  }
+});
+
+// src/services/agents/BaseAgent.js
+var BaseAgent;
+var init_BaseAgent = __esm({
+  "src/services/agents/BaseAgent.js"() {
+    "use strict";
+    BaseAgent = class {
+      /**
+       * 創建 AI Agent 實例
+       * @param {Object} aiService - AIService 實例
+       * @param {Object} config - Agent 配置
+       */
+      constructor(aiService, config = {}) {
+        if (!aiService) {
+          throw new Error("AIService is required for BaseAgent");
+        }
+        this.aiService = aiService;
+        this.config = {
+          mode: config.mode || null,
+          // 'traveler' 或 'resident'
+          context: config.context || {},
+          options: config.options || {},
+          ...config
+        };
+        this.state = {
+          initialized: false,
+          lastUsed: null,
+          usageCount: 0
+        };
+      }
+      /**
+       * 初始化 Agent
+       * @returns {Promise<void>}
+       */
+      async initialize() {
+        if (this.state.initialized) {
+          return;
+        }
+        await this._onInitialize();
+        this.state.initialized = true;
+        this.state.lastUsed = /* @__PURE__ */ new Date();
+      }
+      /**
+       * 子類可以覆蓋此方法進行初始化
+       * @protected
+       */
+      async _onInitialize() {
+      }
+      /**
+       * 執行 Agent 的主要功能
+       * @param {Object} input - 輸入數據
+       * @returns {Promise<Object>} 執行結果
+       */
+      async execute(input) {
+        if (!this.state.initialized) {
+          await this.initialize();
+        }
+        this.state.usageCount++;
+        this.state.lastUsed = /* @__PURE__ */ new Date();
+        try {
+          return await this._execute(input);
+        } catch (error) {
+          console.error(`[${this.constructor.name}] Execution error:`, error);
+          throw error;
+        }
+      }
+      /**
+       * 子類必須實現此方法
+       * @param {Object} input - 輸入數據
+       * @returns {Promise<Object>} 執行結果
+       * @protected
+       * @abstract
+       */
+      async _execute(input) {
+        throw new Error("_execute method must be implemented by subclass");
+      }
+      /**
+       * 獲取 Agent 狀態
+       * @returns {Object} Agent 狀態
+       */
+      getState() {
+        return {
+          ...this.state,
+          config: this.config,
+          agentType: this.constructor.name
+        };
+      }
+      /**
+       * 重置 Agent 狀態
+       */
+      reset() {
+        this.state.usageCount = 0;
+        this.state.lastUsed = null;
+      }
+      /**
+       * 更新配置
+       * @param {Object} newConfig - 新配置
+       */
+      updateConfig(newConfig) {
+        this.config = {
+          ...this.config,
+          ...newConfig
+        };
+      }
+    };
+  }
+});
+
+// src/services/agents/TravelPlannerAgent.js
+var TravelPlannerAgent;
+var init_TravelPlannerAgent = __esm({
+  "src/services/agents/TravelPlannerAgent.js"() {
+    "use strict";
+    init_BaseAgent();
+    TravelPlannerAgent = class extends BaseAgent {
+      /**
+       * 創建行程規劃 Agent
+       * @param {Object} aiService - AIService 實例
+       * @param {Object} config - Agent 配置
+       */
+      constructor(aiService, config = {}) {
+        super(aiService, {
+          mode: "traveler",
+          // 預設使用旅客模式（Gemini）
+          ...config
+        });
+      }
+      /**
+       * 執行行程規劃
+       * @param {Object} input - 輸入數據
+       *   - userId: 用戶 ID
+       *   - sessionId: 會話 ID
+       *   - query: 用戶查詢
+       *   - context: 上下文信息（可選）
+       * @returns {Promise<Object>} 規劃結果
+       */
+      async _execute(input) {
+        const { userId, sessionId, query, context = {} } = input;
+        if (!query) {
+          throw new Error("Query is required for TravelPlannerAgent");
+        }
+        const result = await this.aiService.handleQuery(
+          userId,
+          sessionId,
+          query,
+          this.config.mode || "traveler",
+          context.ctx
+        );
+        return {
+          success: true,
+          message: result.message || result.response,
+          suggestions: this._extractSuggestions(result),
+          metadata: {
+            agentType: "TravelPlannerAgent",
+            mode: this.config.mode,
+            timestamp: (/* @__PURE__ */ new Date()).toISOString()
+          }
+        };
+      }
+      /**
+       * 從 AI 回應中提取建議
+       * @param {Object} result - AI 回應結果
+       * @returns {Array} 建議列表
+       * @private
+       */
+      _extractSuggestions(result) {
+        const suggestions = [];
+        const message = result.message || result.response || "";
+        const locationPatterns = [
+          /推薦.*?([\u4e00-\u9fa5]+)/g,
+          /可以去.*?([\u4e00-\u9fa5]+)/g,
+          /([\u4e00-\u9fa5]+).*?不錯/g
+        ];
+        locationPatterns.forEach((pattern) => {
+          const matches = message.matchAll(pattern);
+          for (const match of matches) {
+            if (match[1] && match[1].length > 1) {
+              suggestions.push({
+                type: "location",
+                value: match[1],
+                confidence: 0.7
+              });
+            }
+          }
+        });
+        return suggestions;
+      }
+      /**
+       * 優化行程
+       * @param {Object} itinerary - 行程數據
+       * @param {Object} preferences - 用戶偏好
+       * @returns {Promise<Object>} 優化後的行程
+       */
+      async optimizeItinerary(itinerary, preferences = {}) {
+        const query = `\u8ACB\u512A\u5316\u4EE5\u4E0B\u884C\u7A0B\uFF1A${JSON.stringify(itinerary)}\u3002\u504F\u597D\uFF1A${JSON.stringify(preferences)}`;
+        return await this.execute({
+          userId: preferences.userId,
+          sessionId: preferences.sessionId || `session_${Date.now()}`,
+          query,
+          context: preferences
+        });
+      }
+    };
+  }
+});
+
+// src/services/agents/KnowledgeExtractorAgent.js
+var KnowledgeExtractorAgent;
+var init_KnowledgeExtractorAgent = __esm({
+  "src/services/agents/KnowledgeExtractorAgent.js"() {
+    "use strict";
+    init_BaseAgent();
+    KnowledgeExtractorAgent = class extends BaseAgent {
+      /**
+       * 創建知識提取 Agent
+       * @param {Object} aiService - AIService 實例
+       * @param {Object} config - Agent 配置
+       */
+      constructor(aiService, config = {}) {
+        super(aiService, {
+          mode: "resident",
+          // 預設使用居民模式（GPT）
+          ...config
+        });
+      }
+      /**
+       * 執行知識提取
+       * @param {Object} input - 輸入數據
+       *   - userId: 用戶 ID
+       *   - sessionId: 會話 ID
+       *   - conversation: 對話內容
+       *   - context: 上下文信息（可選）
+       * @returns {Promise<Object>} 提取的知識
+       */
+      async _execute(input) {
+        const { userId, sessionId, conversation, context = {} } = input;
+        if (!conversation) {
+          throw new Error("Conversation is required for KnowledgeExtractorAgent");
+        }
+        const knowledgeService2 = this.aiService.knowledgeService;
+        if (!knowledgeService2) {
+          throw new Error("AIKnowledgeService is not available");
+        }
+        const extractedKnowledge = await knowledgeService2.processInteraction(
+          userId,
+          sessionId,
+          conversation
+        );
+        return {
+          success: true,
+          knowledge: extractedKnowledge,
+          metadata: {
+            agentType: "KnowledgeExtractorAgent",
+            mode: this.config.mode,
+            timestamp: (/* @__PURE__ */ new Date()).toISOString(),
+            userId,
+            sessionId
+          }
+        };
+      }
+      /**
+       * 驗證知識質量
+       * @param {Object} knowledge - 知識對象
+       * @returns {Promise<Object>} 驗證結果
+       */
+      async validateKnowledge(knowledge) {
+        const query = `\u8ACB\u9A57\u8B49\u4EE5\u4E0B\u77E5\u8B58\u7684\u6E96\u78BA\u6027\u548C\u50F9\u503C\uFF1A${JSON.stringify(knowledge)}`;
+        const result = await this.aiService.handleQuery(
+          knowledge.userId,
+          `validation_${Date.now()}`,
+          query,
+          "resident"
+        );
+        return {
+          isValid: true,
+          // 簡化實現，實際應該根據 AI 回應判斷
+          confidence: 0.8,
+          feedback: result.message || result.response,
+          metadata: {
+            validatedAt: (/* @__PURE__ */ new Date()).toISOString()
+          }
+        };
+      }
+      /**
+       * 批量提取知識
+       * @param {Array} conversations - 對話列表
+       * @returns {Promise<Array>} 提取的知識列表
+       */
+      async extractBatch(conversations) {
+        const results = [];
+        for (const conversation of conversations) {
+          try {
+            const result = await this.execute({
+              userId: conversation.userId,
+              sessionId: conversation.sessionId,
+              conversation: conversation.content,
+              context: conversation.context
+            });
+            results.push(result);
+          } catch (error) {
+            console.error(`[KnowledgeExtractorAgent] Error extracting from conversation:`, error);
+            results.push({
+              success: false,
+              error: error.message
+            });
+          }
+        }
+        return results;
+      }
+    };
+  }
+});
+
+// src/services/agents/RecommendationAgent.js
+var RecommendationAgent;
+var init_RecommendationAgent = __esm({
+  "src/services/agents/RecommendationAgent.js"() {
+    "use strict";
+    init_BaseAgent();
+    RecommendationAgent = class extends BaseAgent {
+      /**
+       * 創建推薦 Agent
+       * @param {Object} aiService - AIService 實例
+       * @param {Object} recommendationService - RecommendationService 實例（可選）
+       * @param {Object} config - Agent 配置
+       */
+      constructor(aiService, recommendationService = null, config = {}) {
+        super(aiService, config);
+        this.recommendationService = recommendationService;
+      }
+      /**
+       * 執行推薦
+       * @param {Object} input - 輸入數據
+       *   - userId: 用戶 ID
+       *   - sessionId: 會話 ID
+       *   - query: 用戶查詢或偏好
+       *   - context: 上下文信息（可選）
+       * @returns {Promise<Object>} 推薦結果
+       */
+      async _execute(input) {
+        const { userId, sessionId, query, context = {} } = input;
+        if (this.recommendationService) {
+          try {
+            const recommendations = await this.recommendationService.getRecommendations(
+              userId,
+              query,
+              context
+            );
+            return {
+              success: true,
+              recommendations,
+              source: "RecommendationService",
+              metadata: {
+                agentType: "RecommendationAgent",
+                timestamp: (/* @__PURE__ */ new Date()).toISOString()
+              }
+            };
+          } catch (error) {
+            console.warn("[RecommendationAgent] RecommendationService failed, falling back to AI:", error);
+          }
+        }
+        const result = await this.aiService.handleQuery(
+          userId,
+          sessionId,
+          `\u8ACB\u6839\u64DA\u4EE5\u4E0B\u9700\u6C42\u63A8\u85A6\uFF1A${query}`,
+          this.config.mode || null,
+          context.ctx
+        );
+        return {
+          success: true,
+          recommendations: this._parseRecommendations(result),
+          source: "AIService",
+          metadata: {
+            agentType: "RecommendationAgent",
+            mode: this.config.mode,
+            timestamp: (/* @__PURE__ */ new Date()).toISOString()
+          }
+        };
+      }
+      /**
+       * 從 AI 回應中解析推薦
+       * @param {Object} result - AI 回應結果
+       * @returns {Array} 推薦列表
+       * @private
+       */
+      _parseRecommendations(result) {
+        const message = result.message || result.response || "";
+        const recommendations = [];
+        const lines = message.split("\n");
+        lines.forEach((line) => {
+          const trimmed = line.trim();
+          if (trimmed.length > 0 && (trimmed.includes("\u63A8\u85A6") || trimmed.includes("\u5EFA\u8B70"))) {
+            recommendations.push({
+              type: "general",
+              content: trimmed,
+              confidence: 0.7
+            });
+          }
+        });
+        return recommendations;
+      }
+      /**
+       * 個性化推薦
+       * @param {string} userId - 用戶 ID
+       * @param {Object} preferences - 用戶偏好
+       * @returns {Promise<Object>} 個性化推薦
+       */
+      async getPersonalizedRecommendations(userId, preferences = {}) {
+        const query = `\u6839\u64DA\u6211\u7684\u504F\u597D\u63A8\u85A6\uFF1A${JSON.stringify(preferences)}`;
+        return await this.execute({
+          userId,
+          sessionId: `personalized_${Date.now()}`,
+          query,
+          context: { preferences }
+        });
+      }
+    };
+  }
+});
+
+// src/services/agents/ConversationAgent.js
+var ConversationAgent;
+var init_ConversationAgent = __esm({
+  "src/services/agents/ConversationAgent.js"() {
+    "use strict";
+    init_BaseAgent();
+    ConversationAgent = class extends BaseAgent {
+      /**
+       * 創建對話 Agent
+       * @param {Object} aiService - AIService 實例
+       * @param {Object} config - Agent 配置
+       */
+      constructor(aiService, config = {}) {
+        super(aiService, {
+          mode: null,
+          // 自動判斷模式
+          ...config
+        });
+      }
+      /**
+       * 執行對話
+       * @param {Object} input - 輸入數據
+       *   - userId: 用戶 ID
+       *   - sessionId: 會話 ID
+       *   - message: 用戶訊息
+       *   - context: 上下文信息（可選）
+       * @returns {Promise<Object>} 對話結果
+       */
+      async _execute(input) {
+        const { userId, sessionId, message, context = {} } = input;
+        if (!message) {
+          throw new Error("Message is required for ConversationAgent");
+        }
+        const result = await this.aiService.handleQuery(
+          userId,
+          sessionId,
+          message,
+          this.config.mode || null,
+          // 自動判斷模式
+          context.ctx
+        );
+        return {
+          success: true,
+          response: result.message || result.response,
+          sessionId: result.sessionId || sessionId,
+          metadata: {
+            agentType: "ConversationAgent",
+            mode: result.mode || this.config.mode,
+            timestamp: (/* @__PURE__ */ new Date()).toISOString(),
+            relationshipDepth: result.relationshipDepth || null
+          }
+        };
+      }
+      /**
+       * 繼續對話
+       * @param {string} sessionId - 會話 ID
+       * @param {string} message - 用戶訊息
+       * @param {string} userId - 用戶 ID（可選）
+       * @returns {Promise<Object>} 對話結果
+       */
+      async continueConversation(sessionId, message, userId = null) {
+        return await this.execute({
+          userId,
+          sessionId,
+          message,
+          context: {}
+        });
+      }
+      /**
+       * 獲取對話歷史
+       * @param {string} sessionId - 會話 ID
+       * @param {number} limit - 限制數量
+       * @returns {Promise<Array>} 對話歷史
+       */
+      async getConversationHistory(sessionId, limit = 50) {
+        try {
+          const result = await this.aiService.db.prepare(
+            `SELECT message_type, message_content, created_at
+         FROM ai_conversations
+         WHERE session_id = ?
+         ORDER BY created_at DESC
+         LIMIT ?`
+          ).bind(sessionId, limit).all();
+          return result.results || [];
+        } catch (error) {
+          console.error("[ConversationAgent] Error getting conversation history:", error);
+          return [];
+        }
+      }
+    };
+  }
+});
+
+// src/services/AIAgentFactory.js
+var AIAgentFactory;
+var init_AIAgentFactory = __esm({
+  "src/services/AIAgentFactory.js"() {
+    "use strict";
+    init_TravelPlannerAgent();
+    init_KnowledgeExtractorAgent();
+    init_RecommendationAgent();
+    init_ConversationAgent();
+    AIAgentFactory = class {
+      /**
+       * 創建 AI Agent 工廠實例
+       * @param {Object} serviceFactory - ServiceFactory 實例
+       * @param {Object} options - 可選配置
+       */
+      constructor(serviceFactory, options = {}) {
+        if (!serviceFactory) {
+          throw new Error("ServiceFactory is required for AIAgentFactory");
+        }
+        this.serviceFactory = serviceFactory;
+        this.options = {
+          enableLogging: options.enableLogging ?? true,
+          enableCaching: options.enableCaching ?? true,
+          ...options
+        };
+        this._agents = /* @__PURE__ */ new Map();
+        this._aiService = null;
+        this._recommendationService = null;
+      }
+      /**
+       * 獲取 AIService（延遲初始化）
+       * @returns {Object} AIService 實例
+       * @private
+       */
+      _getAIService() {
+        if (!this._aiService) {
+          this._aiService = this.serviceFactory.getService("aiService");
+        }
+        return this._aiService;
+      }
+      /**
+       * 獲取 RecommendationService（延遲初始化）
+       * @returns {Object} RecommendationService 實例
+       * @private
+       */
+      _getRecommendationService() {
+        if (!this._recommendationService) {
+          try {
+            this._recommendationService = this.serviceFactory.getService("recommendationService");
+          } catch (error) {
+            if (this.options.enableLogging) {
+              console.warn("[AIAgentFactory] RecommendationService not available:", error.message);
+            }
+            return null;
+          }
+        }
+        return this._recommendationService;
+      }
+      /**
+       * 創建 AI Agent
+       * @param {string} agentType - Agent 類型
+       * @param {Object} config - Agent 配置
+       * @returns {Object} AI Agent 實例
+       */
+      createAgent(agentType, config = {}) {
+        const cacheKey = `${agentType}_${JSON.stringify(config)}`;
+        if (this.options.enableCaching && this._agents.has(cacheKey)) {
+          if (this.options.enableLogging) {
+            console.log(`[AIAgentFactory] Returning cached agent: ${agentType}`);
+          }
+          return this._agents.get(cacheKey);
+        }
+        if (this.options.enableLogging) {
+          console.log(`[AIAgentFactory] Creating agent: ${agentType}`);
+        }
+        const aiService = this._getAIService();
+        let agent;
+        try {
+          switch (agentType) {
+            case "travel_planner":
+            case "travelPlanner":
+              agent = new TravelPlannerAgent(aiService, config);
+              break;
+            case "knowledge_extractor":
+            case "knowledgeExtractor":
+              agent = new KnowledgeExtractorAgent(aiService, config);
+              break;
+            case "recommendation":
+            case "recommendationEngine":
+              const recommendationService = this._getRecommendationService();
+              agent = new RecommendationAgent(aiService, recommendationService, config);
+              break;
+            case "conversation":
+            case "conversationAgent":
+              agent = new ConversationAgent(aiService, config);
+              break;
+            default:
+              throw new Error(`Unknown agent type: ${agentType}`);
+          }
+          agent.initialize().catch((error) => {
+            console.error(`[AIAgentFactory] Error initializing agent ${agentType}:`, error);
+          });
+          if (this.options.enableCaching) {
+            this._agents.set(cacheKey, agent);
+          }
+          return agent;
+        } catch (error) {
+          console.error(`[AIAgentFactory] Error creating agent ${agentType}:`, error);
+          throw error;
+        }
+      }
+      /**
+       * 獲取或創建 Agent（單例模式）
+       * @param {string} agentType - Agent 類型
+       * @param {Object} config - Agent 配置
+       * @returns {Object} AI Agent 實例
+       */
+      getAgent(agentType, config = {}) {
+        return this.createAgent(agentType, config);
+      }
+      /**
+       * 創建多個 Agent 並編排執行
+       * @param {Array} agentConfigs - Agent 配置列表
+       * @returns {Array} Agent 實例列表
+       */
+      createAgentChain(agentConfigs) {
+        return agentConfigs.map((config) => {
+          const { type, ...agentConfig } = config;
+          return this.createAgent(type, agentConfig);
+        });
+      }
+      /**
+       * 清除 Agent 緩存
+       * @param {string} agentType - Agent 類型（可選，如果不提供則清除所有）
+       */
+      clearCache(agentType = null) {
+        if (agentType) {
+          const keysToDelete = [];
+          for (const [key, agent] of this._agents.entries()) {
+            if (key.startsWith(agentType)) {
+              keysToDelete.push(key);
+            }
+          }
+          keysToDelete.forEach((key) => this._agents.delete(key));
+        } else {
+          this._agents.clear();
+        }
+      }
+      /**
+       * 獲取所有 Agent 的狀態
+       * @returns {Array} Agent 狀態列表
+       */
+      getAllAgentStates() {
+        const states = [];
+        for (const [key, agent] of this._agents.entries()) {
+          states.push({
+            cacheKey: key,
+            state: agent.getState()
+          });
+        }
+        return states;
+      }
+      /**
+       * 獲取 Agent 統計信息
+       * @returns {Object} 統計信息
+       */
+      getStats() {
+        const stats = {
+          totalAgents: this._agents.size,
+          agentsByType: {},
+          totalUsage: 0,
+          lastUsed: null
+        };
+        for (const [key, agent] of this._agents.entries()) {
+          const agentState = agent.getState();
+          const type = agentState.agentType;
+          if (!stats.agentsByType[type]) {
+            stats.agentsByType[type] = {
+              count: 0,
+              totalUsage: 0
+            };
+          }
+          stats.agentsByType[type].count++;
+          stats.agentsByType[type].totalUsage += agentState.usageCount;
+          stats.totalUsage += agentState.usageCount;
+          if (!stats.lastUsed || agentState.lastUsed > stats.lastUsed) {
+            stats.lastUsed = agentState.lastUsed;
+          }
+        }
+        return stats;
+      }
+    };
+  }
+});
+
+// src/services/EcosystemService.js
+var EcosystemService;
+var init_EcosystemService = __esm({
+  "src/services/EcosystemService.js"() {
+    "use strict";
+    EcosystemService = class {
+      /**
+       * 創建生態平衡服務實例
+       * @param {Object} db - 數據庫連接
+       * @param {Object} options - 可選配置
+       */
+      constructor(db, options = {}) {
+        if (!db) {
+          throw new Error("Database connection is required for EcosystemService");
+        }
+        this.db = db;
+        this.options = {
+          enableLogging: options.enableLogging ?? true,
+          enableCaching: options.enableCaching ?? true,
+          cacheTTL: options.cacheTTL ?? 36e5,
+          // 1 小時
+          ...options
+        };
+        this._cache = /* @__PURE__ */ new Map();
+        this._cacheTimestamps = /* @__PURE__ */ new Map();
+      }
+      /**
+       * 追蹤用戶福祉（User Wellbeing）
+       * 符合「有更好的生活」理念
+       * 
+       * @param {string} userId - 用戶 ID
+       * @param {Object} metrics - 福祉指標
+       * @returns {Promise<Object>} 追蹤結果
+       */
+      async trackUserWellbeing(userId, metrics = {}) {
+        try {
+          const wellbeingData = {
+            userId,
+            satisfaction: metrics.satisfaction || null,
+            engagement: metrics.engagement || null,
+            experience: metrics.experience || null,
+            timestamp: (/* @__PURE__ */ new Date()).toISOString(),
+            metadata: metrics.metadata || {}
+          };
+          try {
+            await this.db.prepare(
+              `INSERT INTO user_wellbeing_tracking 
+           (user_id, satisfaction_score, engagement_score, experience_score, tracked_at, metadata)
+           VALUES (?, ?, ?, ?, ?, ?)`
+            ).bind(
+              userId,
+              wellbeingData.satisfaction,
+              wellbeingData.engagement,
+              wellbeingData.experience,
+              wellbeingData.timestamp,
+              JSON.stringify(wellbeingData.metadata)
+            ).run();
+          } catch (error) {
+            if (this.options.enableLogging) {
+              console.warn("[EcosystemService] Wellbeing tracking table may not exist:", error.message);
+            }
+          }
+          return {
+            success: true,
+            data: wellbeingData
+          };
+        } catch (error) {
+          console.error("[EcosystemService] Error tracking user wellbeing:", error);
+          throw error;
+        }
+      }
+      /**
+       * 獲取用戶福祉指標
+       * @param {string} userId - 用戶 ID
+       * @param {Object} options - 查詢選項
+       * @returns {Promise<Object>} 福祉指標
+       */
+      async getUserWellbeing(userId, options = {}) {
+        const cacheKey = `wellbeing_${userId}_${JSON.stringify(options)}`;
+        if (this.options.enableCaching && this._cache.has(cacheKey)) {
+          const cached = this._cache.get(cacheKey);
+          const timestamp = this._cacheTimestamps.get(cacheKey);
+          const age = Date.now() - timestamp;
+          if (age < this.options.cacheTTL) {
+            return cached;
+          }
+        }
+        try {
+          const limit = options.limit || 30;
+          const days = options.days || 30;
+          const result = await this.db.prepare(
+            `SELECT 
+           AVG(satisfaction_score) as avg_satisfaction,
+           AVG(engagement_score) as avg_engagement,
+           AVG(experience_score) as avg_experience,
+           COUNT(*) as tracking_count
+         FROM user_wellbeing_tracking
+         WHERE user_id = ? 
+           AND tracked_at >= datetime('now', '-' || ? || ' days')
+         LIMIT ?`
+          ).bind(userId, days, limit).first();
+          const wellbeing = {
+            userId,
+            averageSatisfaction: (result == null ? void 0 : result.avg_satisfaction) || null,
+            averageEngagement: (result == null ? void 0 : result.avg_engagement) || null,
+            averageExperience: (result == null ? void 0 : result.avg_experience) || null,
+            trackingCount: (result == null ? void 0 : result.tracking_count) || 0,
+            period: `${days} days`,
+            timestamp: (/* @__PURE__ */ new Date()).toISOString()
+          };
+          if (this.options.enableCaching) {
+            this._cache.set(cacheKey, wellbeing);
+            this._cacheTimestamps.set(cacheKey, Date.now());
+          }
+          return wellbeing;
+        } catch (error) {
+          if (this.options.enableLogging) {
+            console.warn("[EcosystemService] Wellbeing table may not exist:", error.message);
+          }
+          return {
+            userId,
+            averageSatisfaction: null,
+            averageEngagement: null,
+            averageExperience: null,
+            trackingCount: 0,
+            period: `${options.days || 30} days`,
+            timestamp: (/* @__PURE__ */ new Date()).toISOString(),
+            note: "Data not available"
+          };
+        }
+      }
+      /**
+       * 追蹤資源使用（Resource Usage）
+       * 符合「世界是球、更好更平衡」理念
+       * 
+       * @param {Object} usage - 資源使用數據
+       * @returns {Promise<Object>} 追蹤結果
+       */
+      async trackResourceUsage(usage = {}) {
+        try {
+          const resourceData = {
+            apiCalls: usage.apiCalls || 0,
+            aiCalls: usage.aiCalls || 0,
+            storage: usage.storage || 0,
+            bandwidth: usage.bandwidth || 0,
+            cost: usage.cost || 0,
+            timestamp: (/* @__PURE__ */ new Date()).toISOString(),
+            metadata: usage.metadata || {}
+          };
+          try {
+            await this.db.prepare(
+              `INSERT INTO resource_usage_tracking 
+           (api_calls, ai_calls, storage_mb, bandwidth_mb, cost_usd, tracked_at, metadata)
+           VALUES (?, ?, ?, ?, ?, ?, ?)`
+            ).bind(
+              resourceData.apiCalls,
+              resourceData.aiCalls,
+              resourceData.storage,
+              resourceData.bandwidth,
+              resourceData.cost,
+              resourceData.timestamp,
+              JSON.stringify(resourceData.metadata)
+            ).run();
+          } catch (error) {
+            if (this.options.enableLogging) {
+              console.warn("[EcosystemService] Resource usage table may not exist:", error.message);
+            }
+          }
+          return {
+            success: true,
+            data: resourceData
+          };
+        } catch (error) {
+          console.error("[EcosystemService] Error tracking resource usage:", error);
+          throw error;
+        }
+      }
+      /**
+       * 獲取資源使用統計
+       * @param {Object} options - 查詢選項
+       * @returns {Promise<Object>} 資源使用統計
+       */
+      async getResourceUsage(options = {}) {
+        const cacheKey = `resource_${JSON.stringify(options)}`;
+        if (this.options.enableCaching && this._cache.has(cacheKey)) {
+          const cached = this._cache.get(cacheKey);
+          const timestamp = this._cacheTimestamps.get(cacheKey);
+          const age = Date.now() - timestamp;
+          if (age < this.options.cacheTTL) {
+            return cached;
+          }
+        }
+        try {
+          const days = options.days || 7;
+          const result = await this.db.prepare(
+            `SELECT 
+           SUM(api_calls) as total_api_calls,
+           SUM(ai_calls) as total_ai_calls,
+           AVG(storage_mb) as avg_storage,
+           SUM(bandwidth_mb) as total_bandwidth,
+           SUM(cost_usd) as total_cost
+         FROM resource_usage_tracking
+         WHERE tracked_at >= datetime('now', '-' || ? || ' days')`
+          ).bind(days).first();
+          const usage = {
+            period: `${days} days`,
+            totalApiCalls: (result == null ? void 0 : result.total_api_calls) || 0,
+            totalAiCalls: (result == null ? void 0 : result.total_ai_calls) || 0,
+            averageStorage: (result == null ? void 0 : result.avg_storage) || 0,
+            totalBandwidth: (result == null ? void 0 : result.total_bandwidth) || 0,
+            totalCost: (result == null ? void 0 : result.total_cost) || 0,
+            timestamp: (/* @__PURE__ */ new Date()).toISOString()
+          };
+          if (this.options.enableCaching) {
+            this._cache.set(cacheKey, usage);
+            this._cacheTimestamps.set(cacheKey, Date.now());
+          }
+          return usage;
+        } catch (error) {
+          if (this.options.enableLogging) {
+            console.warn("[EcosystemService] Resource usage table may not exist:", error.message);
+          }
+          return {
+            period: `${options.days || 7} days`,
+            totalApiCalls: 0,
+            totalAiCalls: 0,
+            averageStorage: 0,
+            totalBandwidth: 0,
+            totalCost: 0,
+            timestamp: (/* @__PURE__ */ new Date()).toISOString(),
+            note: "Data not available"
+          };
+        }
+      }
+      /**
+       * 追蹤社區健康（Community Health）
+       * 符合「更好更平衡」理念
+       * 
+       * @param {Object} metrics - 社區指標
+       * @returns {Promise<Object>} 追蹤結果
+       */
+      async trackCommunityHealth(metrics = {}) {
+        try {
+          const healthData = {
+            activeUsers: metrics.activeUsers || 0,
+            interactions: metrics.interactions || 0,
+            contentDiversity: metrics.contentDiversity || 0,
+            engagementRate: metrics.engagementRate || 0,
+            timestamp: (/* @__PURE__ */ new Date()).toISOString(),
+            metadata: metrics.metadata || {}
+          };
+          try {
+            await this.db.prepare(
+              `INSERT INTO community_health_tracking 
+           (active_users, interactions, content_diversity, engagement_rate, tracked_at, metadata)
+           VALUES (?, ?, ?, ?, ?, ?)`
+            ).bind(
+              healthData.activeUsers,
+              healthData.interactions,
+              healthData.contentDiversity,
+              healthData.engagementRate,
+              healthData.timestamp,
+              JSON.stringify(healthData.metadata)
+            ).run();
+          } catch (error) {
+            if (this.options.enableLogging) {
+              console.warn("[EcosystemService] Community health table may not exist:", error.message);
+            }
+          }
+          return {
+            success: true,
+            data: healthData
+          };
+        } catch (error) {
+          console.error("[EcosystemService] Error tracking community health:", error);
+          throw error;
+        }
+      }
+      /**
+       * 獲取社區健康指標
+       * @param {Object} options - 查詢選項
+       * @returns {Promise<Object>} 社區健康指標
+       */
+      async getCommunityHealth(options = {}) {
+        const cacheKey = `community_${JSON.stringify(options)}`;
+        if (this.options.enableCaching && this._cache.has(cacheKey)) {
+          const cached = this._cache.get(cacheKey);
+          const timestamp = this._cacheTimestamps.get(cacheKey);
+          const age = Date.now() - timestamp;
+          if (age < this.options.cacheTTL) {
+            return cached;
+          }
+        }
+        try {
+          const days = options.days || 7;
+          const result = await this.db.prepare(
+            `SELECT 
+           AVG(active_users) as avg_active_users,
+           SUM(interactions) as total_interactions,
+           AVG(content_diversity) as avg_diversity,
+           AVG(engagement_rate) as avg_engagement_rate
+         FROM community_health_tracking
+         WHERE tracked_at >= datetime('now', '-' || ? || ' days')`
+          ).bind(days).first();
+          const health = {
+            period: `${days} days`,
+            averageActiveUsers: (result == null ? void 0 : result.avg_active_users) || 0,
+            totalInteractions: (result == null ? void 0 : result.total_interactions) || 0,
+            averageDiversity: (result == null ? void 0 : result.avg_diversity) || 0,
+            averageEngagementRate: (result == null ? void 0 : result.avg_engagement_rate) || 0,
+            healthScore: this._calculateHealthScore(result),
+            timestamp: (/* @__PURE__ */ new Date()).toISOString()
+          };
+          if (this.options.enableCaching) {
+            this._cache.set(cacheKey, health);
+            this._cacheTimestamps.set(cacheKey, Date.now());
+          }
+          return health;
+        } catch (error) {
+          if (this.options.enableLogging) {
+            console.warn("[EcosystemService] Community health table may not exist:", error.message);
+          }
+          return {
+            period: `${options.days || 7} days`,
+            averageActiveUsers: 0,
+            totalInteractions: 0,
+            averageDiversity: 0,
+            averageEngagementRate: 0,
+            healthScore: 0,
+            timestamp: (/* @__PURE__ */ new Date()).toISOString(),
+            note: "Data not available"
+          };
+        }
+      }
+      /**
+       * 計算健康分數
+       * @param {Object} metrics - 指標數據
+       * @returns {number} 健康分數 (0-100)
+       * @private
+       */
+      _calculateHealthScore(metrics) {
+        if (!metrics)
+          return 0;
+        const diversity = (metrics.avg_diversity || 0) * 30;
+        const engagement = (metrics.avg_engagement_rate || 0) * 40;
+        const activity = Math.min((metrics.avg_active_users || 0) / 100, 1) * 30;
+        return Math.min(Math.round(diversity + engagement + activity), 100);
+      }
+      /**
+       * 獲取完整的生態系統報告
+       * @param {Object} options - 查詢選項
+       * @returns {Promise<Object>} 生態系統報告
+       */
+      async getEcosystemReport(options = {}) {
+        const [wellbeing, resourceUsage, communityHealth] = await Promise.all([
+          this.getUserWellbeing(null, options),
+          // 整體用戶福祉
+          this.getResourceUsage(options),
+          this.getCommunityHealth(options)
+        ]);
+        return {
+          period: options.days || 7,
+          wellbeing,
+          resourceUsage,
+          communityHealth,
+          overallScore: this._calculateOverallScore(wellbeing, resourceUsage, communityHealth),
+          timestamp: (/* @__PURE__ */ new Date()).toISOString(),
+          recommendations: this._generateRecommendations(wellbeing, resourceUsage, communityHealth)
+        };
+      }
+      /**
+       * 計算總體分數
+       * @param {Object} wellbeing - 福祉數據
+       * @param {Object} resourceUsage - 資源使用數據
+       * @param {Object} communityHealth - 社區健康數據
+       * @returns {number} 總體分數 (0-100)
+       * @private
+       */
+      _calculateOverallScore(wellbeing, resourceUsage, communityHealth) {
+        const wellbeingScore = (wellbeing.averageSatisfaction || 0) * 0.4;
+        const resourceScore = resourceUsage.totalCost > 0 ? Math.max(0, 100 - resourceUsage.totalCost / 100) * 0.3 : 50 * 0.3;
+        const healthScore = (communityHealth.healthScore || 0) * 0.3;
+        return Math.min(Math.round(wellbeingScore + resourceScore + healthScore), 100);
+      }
+      /**
+       * 生成改進建議
+       * @param {Object} wellbeing - 福祉數據
+       * @param {Object} resourceUsage - 資源使用數據
+       * @param {Object} communityHealth - 社區健康數據
+       * @returns {Array} 建議列表
+       * @private
+       */
+      _generateRecommendations(wellbeing, resourceUsage, communityHealth) {
+        const recommendations = [];
+        if (wellbeing.averageSatisfaction && wellbeing.averageSatisfaction < 70) {
+          recommendations.push({
+            type: "wellbeing",
+            priority: "high",
+            message: "\u7528\u6236\u6EFF\u610F\u5EA6\u8F03\u4F4E\uFF0C\u5EFA\u8B70\u6539\u9032\u7528\u6236\u9AD4\u9A57",
+            action: "review_user_feedback"
+          });
+        }
+        if (resourceUsage.totalCost > 100) {
+          recommendations.push({
+            type: "resource",
+            priority: "medium",
+            message: "\u8CC7\u6E90\u4F7F\u7528\u6210\u672C\u8F03\u9AD8\uFF0C\u5EFA\u8B70\u512A\u5316 API \u8ABF\u7528",
+            action: "optimize_api_usage"
+          });
+        }
+        if (communityHealth.healthScore && communityHealth.healthScore < 60) {
+          recommendations.push({
+            type: "community",
+            priority: "high",
+            message: "\u793E\u5340\u5065\u5EB7\u5EA6\u8F03\u4F4E\uFF0C\u5EFA\u8B70\u589E\u52A0\u7528\u6236\u4E92\u52D5",
+            action: "improve_engagement"
+          });
+        }
+        return recommendations;
+      }
+      /**
+       * 清除緩存
+       */
+      clearCache() {
+        this._cache.clear();
+        this._cacheTimestamps.clear();
+      }
+    };
+  }
+});
+
+// src/services/ServiceFactory.js
+var ServiceFactory;
+var init_ServiceFactory = __esm({
+  "src/services/ServiceFactory.js"() {
+    "use strict";
+    init_AuthService();
+    init_UserService();
+    init_SessionService();
+    init_GoogleAuthService();
+    init_locationService();
+    init_LocationInvitationService();
+    init_AIService();
+    init_BusinessVerificationService();
+    init_ItineraryService();
+    init_RecommendationService();
+    init_SearchService();
+    init_FavoritesService();
+    init_SecurityService();
+    init_RateLimitService();
+    init_AIAgentFactory();
+    init_EcosystemService();
+    ServiceFactory = class {
+      /**
+       * 創建服務工廠實例
+       * @param {Object} env - 環境變數對象
+       * @param {Object} options - 可選配置
+       */
+      constructor(env, options = {}) {
+        if (!env || !env.DB) {
+          throw new Error("Environment with DB connection is required for ServiceFactory");
+        }
+        this.env = env;
+        this.options = {
+          enableLogging: options.enableLogging ?? true,
+          enableCaching: options.enableCaching ?? true,
+          ...options
+        };
+        this._services = /* @__PURE__ */ new Map();
+      }
+      /**
+       * 獲取或創建服務實例（單例模式）
+       * @param {string} serviceName - 服務名稱
+       * @returns {Object} 服務實例
+       */
+      getService(serviceName) {
+        if (this._services.has(serviceName)) {
+          return this._services.get(serviceName);
+        }
+        const service = this._createService(serviceName);
+        this._services.set(serviceName, service);
+        return service;
+      }
+      /**
+       * 創建服務實例
+       * @param {string} serviceName - 服務名稱
+       * @returns {Object} 服務實例
+       * @private
+       */
+      _createService(serviceName) {
+        const { env, options } = this;
+        if (options.enableLogging) {
+          console.log(`[ServiceFactory] Creating service: ${serviceName}`);
+        }
+        try {
+          switch (serviceName) {
+            case "userService":
+              return new UserService(env.DB);
+            case "sessionService":
+              return new SessionService(env.DB);
+            case "googleAuthService":
+              return new GoogleAuthService(env);
+            case "locationService":
+              if (!env.GOOGLE_MAPS_API_KEY) {
+                throw new Error("GOOGLE_MAPS_API_KEY is required for LocationService");
+              }
+              return new LocationService(env.DB, env.GOOGLE_MAPS_API_KEY);
+            case "locationInvitationService":
+              return new LocationInvitationService(env.DB);
+            case "businessVerificationService":
+              return new BusinessVerificationService(env.DB);
+            case "aiService":
+              if (!env.OPENAI_API_KEY) {
+                throw new Error("OPENAI_API_KEY is required for AIService");
+              }
+              const locationService = this.getService("locationService");
+              return new AIService(
+                env.DB,
+                env.OPENAI_API_KEY,
+                env.GEMINI_API_KEY,
+                locationService,
+                env.GOOGLE_MAPS_API_KEY
+              );
+            case "authService":
+              return new AuthService(
+                this.getService("userService"),
+                this.getService("sessionService"),
+                this.getService("googleAuthService")
+              );
+            case "itineraryService":
+              return new ItineraryService(
+                env.DB,
+                this.getService("locationService"),
+                this.getService("aiService")
+              );
+            case "recommendationService":
+              return new RecommendationService(env.DB);
+            case "searchService":
+              return new SearchService(env.DB);
+            case "favoritesService":
+              return new FavoritesService(env.DB);
+            case "securityService":
+              return new SecurityService(env.DB);
+            case "rateLimitService":
+              return new RateLimitService(env.DB);
+            case "aiAgentFactory":
+              return new AIAgentFactory(this, options);
+            case "ecosystemService":
+              return new EcosystemService(env.DB, options);
+            default:
+              throw new Error(`Unknown service: ${serviceName}`);
+          }
+        } catch (error) {
+          console.error(`[ServiceFactory] Error creating service ${serviceName}:`, error);
+          throw error;
+        }
+      }
+      /**
+       * 初始化核心服務（用於快速啟動）
+       * @returns {Object} 核心服務對象
+       */
+      initializeCoreServices() {
+        return {
+          userService: this.getService("userService"),
+          sessionService: this.getService("sessionService"),
+          googleAuthService: this.getService("googleAuthService"),
+          locationService: this.getService("locationService"),
+          locationInvitationService: this.getService("locationInvitationService"),
+          businessVerificationService: this.getService("businessVerificationService"),
+          authService: this.getService("authService")
+        };
+      }
+      /**
+       * 初始化所有服務（用於完整功能）
+       * @returns {Object} 所有服務對象
+       */
+      initializeAllServices() {
+        const coreServices = this.initializeCoreServices();
+        return {
+          ...coreServices,
+          aiService: this.getService("aiService"),
+          itineraryService: this.getService("itineraryService"),
+          recommendationService: this.getService("recommendationService"),
+          searchService: this.getService("searchService"),
+          favoritesService: this.getService("favoritesService"),
+          securityService: this.getService("securityService"),
+          rateLimitService: this.getService("rateLimitService"),
+          aiAgentFactory: this.getService("aiAgentFactory"),
+          ecosystemService: this.getService("ecosystemService")
+        };
+      }
+      /**
+       * 清除服務緩存（用於測試或重新初始化）
+       */
+      clearCache() {
+        this._services.clear();
+        if (this.options.enableLogging) {
+          console.log("[ServiceFactory] Service cache cleared");
+        }
+      }
+      /**
+       * 獲取服務狀態（用於調試）
+       * @returns {Object} 服務狀態信息
+       */
+      getServiceStatus() {
+        return {
+          initializedServices: Array.from(this._services.keys()),
+          totalServices: this._services.size,
+          environment: {
+            hasDB: !!this.env.DB,
+            hasGoogleMapsKey: !!this.env.GOOGLE_MAPS_API_KEY,
+            hasOpenAIKey: !!this.env.OPENAI_API_KEY,
+            hasGeminiKey: !!this.env.GEMINI_API_KEY
+          }
+        };
+      }
+    };
+  }
+});
+
+// src/pages/TripPlanner.js
+var TripPlanner_exports = {};
+__export(TripPlanner_exports, {
+  renderSharedTripPage: () => renderSharedTripPage,
+  renderTripPlannerPage: () => renderTripPlannerPage
+});
+async function renderTripPlannerPage(request, env, session, user, nonce, cssContent) {
+  if (!user) {
+    return Response.redirect(new URL(request.url).origin + "/login", 302);
+  }
+  const url = new URL(request.url);
+  const content = `
+    <div class="bg-white w-full h-full flex flex-col overflow-hidden">
+        <h1 class="text-2xl font-bold mb-4 text-gray-800 flex-shrink-0 hidden">\u884C\u7A0B\u898F\u5283</h1>
+
+        <!-- Header Controls -->
+        <div class="p-4 flex-shrink-0 bg-white border-b border-gray-200 z-10 flex items-center justify-between">
+            <div class="flex items-center gap-4">
+                <button id="add-day-btn" class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
+                    + \u65B0\u589E\u4E00\u5929
+                </button>
+                <div class="flex gap-2" id="day-tabs">
+                    <!-- \u5929\u6578\u6A19\u7C64\u6703\u52D5\u614B\u751F\u6210 -->
+                </div>
+            </div>
+            <div class="text-sm text-gray-600">
+                \u5DF2\u9078 <span id="selected-count">0</span> \u500B\u5730\u9EDE
+            </div>
+        </div>
+
+        <!-- Main Content Area -->
+        <div class="flex flex-col md:flex-row flex-grow min-h-0 relative overflow-hidden trip-planner-main-area">
+            <!-- Map Container -->
+            <div id="map-container" class="w-full md:w-3/4 relative trip-planner-map-container">
+                <div id="map" class="trip-planner-map"></div>
+                <div id="map-message-area" class="absolute bottom-4 left-4 text-sm text-gray-500 bg-white bg-opacity-90 px-2 py-1 rounded shadow-sm z-20">
+                    \u9EDE\u64CA\u5730\u5716\u4E0A\u7684\u5716\u793A\u4EE5\u9078\u64C7\u5730\u6A19\u52A0\u5165\u884C\u7A0B
+                </div>
+            </div>
+
+            <!-- Trip Panel (\u53F3\u5074/\u4E0B\u65B9) -->
+            <div id="trip-panel" class="w-full md:w-1/4 h-full bg-white border-l border-gray-200 flex flex-col transform transition-all duration-300 ease-in-out">
+                <div class="p-4 border-b border-gray-100 flex-shrink-0">
+                    <h2 class="text-lg font-semibold text-gray-800">\u884C\u7A0B\u898F\u5283</h2>
+                    <p class="text-sm text-gray-500 mt-1">\u62D6\u62FD\u8ABF\u6574\u9806\u5E8F\u548C\u6642\u9593</p>
+                </div>
+
+                    <!-- Current Day Selector -->
+                    <div class="px-4 py-2 border-b border-gray-100 flex-shrink-0">
+                        <label for="current-day-date" class="text-sm font-medium text-gray-700">\u9078\u64C7\u65E5\u671F\uFF1A</label>
+                        <input type="date" id="current-day-date" name="current-day-date" class="mt-1 w-full border border-gray-300 rounded px-2 py-1 text-sm">
+                    </div>
+
+                <!-- Trip Items List (\u53EF\u62D6\u62FD) -->
+                <div id="trip-items-list" class="flex-grow overflow-y-auto p-4 space-y-3">
+                    <div id="empty-state" class="text-center text-gray-400 py-8">
+                        <p>\u5C1A\u672A\u9078\u64C7\u4EFB\u4F55\u5730\u9EDE</p>
+                        <p class="text-sm mt-2">\u9EDE\u64CA\u5730\u5716\u4E0A\u7684\u5716\u793A\u958B\u59CB\u898F\u5283</p>
+                    </div>
+                    <!-- \u884C\u7A0B\u9805\u76EE\u6703\u52D5\u614B\u63D2\u5165\u9019\u88E1 -->
+                </div>
+
+                    <!-- Action Buttons -->
+                    <div class="flex-shrink-0 border-t border-gray-100 bg-white p-4 space-y-2">
+                        <button id="save-trip-btn" class="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded disabled:opacity-50 transition-colors" disabled>
+                            \u5132\u5B58\u884C\u7A0B
+                        </button>
+                        <button id="share-trip-btn" class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded disabled:opacity-50 transition-colors" disabled>
+                            \u5206\u4EAB\u884C\u7A0B
+                        </button>
+                    </div>
+            </div>
+        </div>
+    </div>
+
+    <style nonce="${nonce}">
+        /* Map Container Styles */
+        .trip-planner-main-area {
+            height: calc(100vh - 128px - 60px);
+        }
+        
+        #map-container {
+            height: 100%;
+            min-height: 400px;
+        }
+        
+        .trip-planner-map {
+            width: 100%;
+            height: 100%;
+            min-height: 400px;
+            background-color: #e5e7eb;
+            position: relative;
+        }
+        
+        /* Loading indicator for map */
+        .trip-planner-map::before {
+            content: '\u8F09\u5165\u5730\u5716\u4E2D...';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #6b7280;
+            font-size: 14px;
+            z-index: 1;
+        }
+
+        /* Trip Item Styles */
+        .trip-item {
+            background: white;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 12px;
+            cursor: move;
+            transition: all 0.2s;
+            position: relative;
+        }
+
+        .trip-item:hover {
+            border-color: #3b82f6;
+            box-shadow: 0 2px 8px rgba(59, 130, 246, 0.2);
+        }
+
+        .trip-item.dragging {
+            opacity: 0.5;
+            border-color: #3b82f6;
+        }
+
+        .trip-item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .trip-item-name {
+            font-weight: 600;
+            color: #1f2937;
+            flex: 1;
+        }
+
+        .trip-item-time {
+            font-size: 0.875rem;
+            color: #6b7280;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .trip-item-actions {
+            display: flex;
+            gap: 4px;
+        }
+
+        .trip-item-btn {
+            padding: 4px 8px;
+            border: none;
+            background: #f3f4f6;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.75rem;
+        }
+
+        .trip-item-btn:hover {
+            background: #e5e7eb;
+        }
+
+        .trip-item-btn.delete {
+            color: #ef4444;
+        }
+
+        .time-input {
+            width: 80px;
+            padding: 4px;
+            border: 1px solid #d1d5db;
+            border-radius: 4px;
+            font-size: 0.875rem;
+        }
+
+        /* Day Tab Styles */
+        .day-tab {
+            padding: 6px 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            background: white;
+            cursor: pointer;
+            font-size: 0.875rem;
+            transition: all 0.2s;
+        }
+
+        .day-tab:hover {
+            background: #f3f4f6;
+        }
+
+        .day-tab.active {
+            background: #3b82f6;
+            color: white;
+            border-color: #3b82f6;
+        }
+
+        /* Drag and Drop Indicators */
+        .drag-over {
+            border-top: 3px solid #3b82f6;
+        }
+
+        /* Location Detail Panel */
+        .location-detail-panel {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: 1000;
+            display: none;
+            pointer-events: none;
+        }
+
+        .location-detail-panel.visible {
+            display: block;
+            pointer-events: all;
+        }
+
+        .detail-panel-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(4px);
+        }
+
+        .detail-panel-content {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            border-radius: 12px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+
+        .detail-panel-close {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            z-index: 10;
+            background: white;
+            border: none;
+            border-radius: 50%;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            transition: all 0.2s;
+        }
+
+        .detail-panel-close:hover {
+            background: #f3f4f6;
+            transform: scale(1.1);
+        }
+
+        .detail-panel-image {
+            width: 100%;
+            height: 200px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .detail-panel-img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .detail-panel-info {
+            padding: 20px;
+        }
+
+        .detail-panel-title {
+            font-size: 24px;
+            font-weight: bold;
+            color: #1f2937;
+            margin-bottom: 12px;
+        }
+
+        .detail-panel-meta {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+
+        .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #6b7280;
+            font-size: 14px;
+        }
+
+        .meta-item svg {
+            flex-shrink: 0;
+        }
+
+        .meta-item a {
+            color: #3b82f6;
+            text-decoration: none;
+        }
+
+        .meta-item a:hover {
+            text-decoration: underline;
+        }
+
+        .detail-panel-description,
+        .detail-panel-booking {
+            margin-top: 16px;
+            padding-top: 16px;
+            border-top: 1px solid #e5e7eb;
+        }
+
+        .detail-panel-description h3,
+        .detail-panel-booking h3 {
+            font-size: 16px;
+            font-weight: 600;
+            color: #1f2937;
+            margin-bottom: 8px;
+        }
+
+        .detail-panel-description p {
+            color: #4b5563;
+            line-height: 1.6;
+        }
+
+        /* Clickable location name */
+        .clickable-location-name {
+            cursor: pointer;
+        }
+
+        /* Clipboard fallback textarea */
+        .clipboard-fallback-textarea {
+            position: fixed;
+            left: -9999px;
+            top: 0;
+        }
+
+        /* Mobile adjustments */
+        @media (max-width: 768px) {
+            #trip-panel {
+                position: fixed;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                height: 50vh;
+                transform: translateY(100%);
+                z-index: 50;
+                border-left: none;
+                border-top: 2px solid #e5e7eb;
+            }
+
+            #trip-panel.show {
+                transform: translateY(0);
+            }
+
+            #map-container {
+                width: 100% !important;
+            }
+
+            .detail-panel-content {
+                width: 95%;
+                max-height: 90vh;
+            }
+        }
+    </style>
+
+    <script nonce="${nonce}">
+        // \u5168\u5C40\u932F\u8AA4\u8655\u7406\uFF1A\u975C\u9ED8\u8655\u7406 Google Maps Directions API \u932F\u8AA4
+        (function() {
+            // \u8655\u7406\u672A\u6355\u7372\u7684 Promise \u932F\u8AA4\uFF08\u5305\u62EC Directions API \u932F\u8AA4\uFF09
+            window.addEventListener('unhandledrejection', (event) => {
+                const errorSource = event.reason?.stack || event.reason?.message || String(event.reason || '');
+                const errorString = errorSource.toLowerCase();
+                
+                // \u6AA2\u67E5\u662F\u5426\u662F Directions API \u76F8\u95DC\u932F\u8AA4
+                if (errorString.includes('directions') || 
+                    errorString.includes('request_denied') ||
+                    errorString.includes('mapsrequesterror') ||
+                    (errorString.includes('route') && errorString.includes('denied'))) {
+                    event.preventDefault(); // \u963B\u6B62\u932F\u8AA4\u986F\u793A\u5728\u63A7\u5236\u53F0
+                    return; // \u975C\u9ED8\u5FFD\u7565
+                }
+            });
+            
+            // \u8655\u7406\u672A\u6355\u7372\u7684\u540C\u6B65\u932F\u8AA4
+            window.addEventListener('error', (event) => {
+                const errorSource = (event.filename || event.message || '').toLowerCase();
+                const errorMessage = (event.message || '').toLowerCase();
+                
+                // \u6AA2\u67E5\u662F\u5426\u662F Directions API \u76F8\u95DC\u932F\u8AA4
+                if (errorSource.includes('directions') || 
+                    errorMessage.includes('directions') ||
+                    errorSource.includes('request_denied') ||
+                    errorMessage.includes('request_denied') ||
+                    errorSource.includes('mapsrequesterror') ||
+                    errorMessage.includes('mapsrequesterror')) {
+                    event.preventDefault(); // \u963B\u6B62\u932F\u8AA4\u986F\u793A\u5728\u63A7\u5236\u53F0
+                    return; // \u975C\u9ED8\u5FFD\u7565
+                }
+            });
+        })();
+        
+        // TripPlanner \u985E\u5225 - \u7269\u4EF6\u5C0E\u5411\u67B6\u69CB
+        class TripPlanner {
+            constructor() {
+                this.mapsApiKey = null;
+                this.map = null;
+                this.selectedPlaces = []; // Array of { placeId, placeData, dayIndex, time, order, bookingStatus, bookingUrl, bookingPhone, bookingNotes, itemId }
+                this.currentDayIndex = 0;
+                this.days = [new Date()]; // Array of Date objects
+                this.markers = []; // Map markers
+                this.draggedElement = null;
+                this.dragOverElement = null;
+                this.currentTripId = null; // \u7576\u524D\u884C\u7A0B ID\uFF08\u7528\u65BC\u66F4\u65B0\uFF09
+                this.shareToken = null; // \u5206\u4EAB\u4EE4\u724C
+                this.directionsService = null; // \u8DEF\u7DDA\u670D\u52D9
+                this.directionsRenderer = null; // \u8DEF\u7DDA\u6E32\u67D3\u5668
+                this.routePolylines = []; // \u8DEF\u7DDA\u591A\u908A\u5F62
+                this.directionsApiDenied = false; // Directions API \u662F\u5426\u88AB\u62D2\u7D55
+            }
+
+            // \u521D\u59CB\u5316\u5730\u5716
+            async initMap() {
+                try {
+                    const configResponse = await fetch('/api/maps/config');
+                    if (!configResponse.ok) {
+                        throw new Error('Failed to fetch Maps config');
+                    }
+                    const config = await configResponse.json();
+                    this.mapsApiKey = config.apiKey;
+                    if (!this.mapsApiKey) {
+                        throw new Error('Maps API Key not provided');
+                    }
+
+                    // \u6AA2\u67E5\u662F\u5426\u5DF2\u7D93\u8F09\u5165
+                    if (typeof google !== 'undefined' && google.maps && google.maps.Map) {
+                        console.log('Google Maps API already loaded');
+                        this.initializeMap();
+                        return;
+                    }
+
+                    const script = document.createElement('script');
+                    script.src = 'https://maps.googleapis.com/maps/api/js?key=' + this.mapsApiKey + '&libraries=places&loading=async';
+                    script.async = true;
+                    script.defer = true;
+
+                    // \u4F7F\u7528\u8F2A\u8A62\u6AA2\u67E5 API \u662F\u5426\u5DF2\u8F09\u5165
+                    script.onload = () => {
+                        console.log('Google Maps API script loaded');
+                        // \u8F2A\u8A62\u6AA2\u67E5\u76F4\u5230 API \u5B8C\u5168\u8F09\u5165
+                        const checkApiReady = () => {
+                            if (typeof google !== 'undefined' && google.maps && google.maps.Map) {
+                                console.log('Google Maps API is ready');
+                                this.initializeMap();
+                            } else {
+                                // \u5982\u679C 5 \u79D2\u5F8C\u9084\u6C92\u8F09\u5165\uFF0C\u986F\u793A\u932F\u8AA4
+                                setTimeout(() => {
+                                    if (typeof google === 'undefined' || !google.maps || !google.maps.Map) {
+                                        console.error('Google Maps API failed to initialize');
+                                        this.showMessage('\u932F\u8AA4\uFF1AGoogle Maps API \u8F09\u5165\u8D85\u6642', 'error');
+                                    }
+                                }, 5000);
+                                // \u7E7C\u7E8C\u6AA2\u67E5
+                                setTimeout(checkApiReady, 100);
+                            }
+                        };
+                        // \u958B\u59CB\u6AA2\u67E5\uFF08\u7D66\u4E00\u9EDE\u6642\u9593\u8B93 API \u521D\u59CB\u5316\uFF09
+                        setTimeout(checkApiReady, 200);
+                    };
+
+                    script.onerror = () => {
+                        console.error('Failed to load Google Maps API');
+                        this.showMessage('\u932F\u8AA4\uFF1A\u7121\u6CD5\u8F09\u5165 Google Maps API', 'error');
+                    };
+
+                    document.head.appendChild(script);
+                } catch (error) {
+                    console.error('Error initializing map:', error);
+                    this.showMessage('\u932F\u8AA4\uFF1A\u7121\u6CD5\u958B\u59CB\u8F09\u5165\u5730\u5716', 'error');
+                }
+            }
+
+            // \u521D\u59CB\u5316\u5730\u5716\u5BE6\u4F8B
+            initializeMap() {
+                // \u78BA\u4FDD Google Maps API \u5DF2\u5B8C\u5168\u8F09\u5165
+                if (typeof google === 'undefined' || !google.maps || !google.maps.Map) {
+                    console.error('Google Maps API not ready');
+                    this.showMessage('\u932F\u8AA4\uFF1AGoogle Maps API \u5C1A\u672A\u8F09\u5165\u5B8C\u6210', 'error');
+                    // \u91CD\u8A66
+                    setTimeout(() => {
+                        if (typeof google !== 'undefined' && google.maps && google.maps.Map) {
+                            this.initializeMap();
+                        }
+                    }, 500);
+                    return;
+                }
+
+                const initialCenter = { lat: 23.5687, lng: 119.5775 }; // \u6F8E\u6E56\u4E2D\u5FC3
+                const mapDiv = document.getElementById('map');
+                
+                if (!mapDiv) {
+                    console.error('Map container not found');
+                    return;
+                }
+
+                try {
+                    // \u5730\u5716\u5143\u7D20\u5DF2\u7D93\u901A\u904E CSS \u985E\u8A2D\u7F6E\u4E86\u6A23\u5F0F\uFF0C\u4E0D\u9700\u8981 inline style
+                    this.map = new google.maps.Map(mapDiv, {
+                        center: initialCenter,
+                        zoom: 12,
+                        mapTypeControl: false,
+                        clickableIcons: true
+                    });
+
+                    // \u89F8\u767C resize \u4E8B\u4EF6\u78BA\u4FDD\u5730\u5716\u6B63\u78BA\u6E32\u67D3
+                    setTimeout(() => {
+                        if (this.map && google && google.maps) {
+                            google.maps.event.trigger(this.map, 'resize');
+                            // \u91CD\u65B0\u8A2D\u7F6E\u4E2D\u5FC3\u9EDE\u78BA\u4FDD\u5730\u5716\u6B63\u78BA\u986F\u793A
+                            this.map.setCenter(initialCenter);
+                            console.log('Map initialized and resized');
+                        }
+                    }, 200);
+
+                    // \u76E3\u807D\u5730\u5716\u4E0A\u7684 POI \u9EDE\u64CA
+                    this.map.addListener('click', (event) => {
+                        if (event.placeId) {
+                            event.stop();
+                            this.handlePoiClick(event.placeId);
+                        }
+                    });
+
+                    console.log('Map initialized successfully');
+                } catch (error) {
+                    console.error('Error creating map:', error);
+                    this.showMessage('\u932F\u8AA4\uFF1A\u7121\u6CD5\u5EFA\u7ACB\u5730\u5716 - ' + error.message, 'error');
+                    return;
+                }
+
+                    // \u8DEF\u7DDA\u670D\u52D9\u5C07\u5728\u9996\u6B21\u4F7F\u7528\u6642\u521D\u59CB\u5316\uFF08\u5EF6\u9072\u521D\u59CB\u5316\u4EE5\u907F\u514D API \u6B0A\u9650\u554F\u984C\uFF09
+
+                    // \u521D\u59CB\u5316 UI
+                    this.initializeDays();
+                    this.updateDayTabs();
+                    this.updateTripPanel();
+            }
+
+            // \u8655\u7406 POI \u9EDE\u64CA
+            async handlePoiClick(placeId) {
+                try {
+                    const response = await fetch('/api/locations/details-by-placeid/' + placeId);
+                    if (!response.ok) {
+                        throw new Error('Failed to fetch place details');
+                    }
+
+                    const placeData = await response.json();
+                    
+                    // \u6AA2\u67E5\u662F\u5426\u5DF2\u7D93\u9078\u904E
+                    const existingIndex = this.selectedPlaces.findIndex(p => p.placeId === placeId);
+                    if (existingIndex >= 0) {
+                        this.showMessage('\u6B64\u5730\u9EDE\u5DF2\u5728\u884C\u7A0B\u4E2D', 'warning');
+                        return;
+                    }
+
+                    // \u6DFB\u52A0\u5230\u7576\u524D\u65E5\u671F
+                    const newPlace = {
+                        placeId: placeId,
+                        placeData: placeData,
+                        dayIndex: this.currentDayIndex,
+                        time: this.getDefaultTime(),
+                        order: this.selectedPlaces.filter(p => p.dayIndex === this.currentDayIndex).length,
+                        bookingStatus: 'planned',
+                        bookingUrl: placeData.website || null,
+                        bookingPhone: placeData.phone_number || placeData.formatted_phone_number || null,
+                        bookingNotes: null,
+                        itemId: null
+                    };
+
+                    this.selectedPlaces.push(newPlace);
+                    
+                    // \u5728\u5730\u5716\u4E0A\u6DFB\u52A0\u6A19\u8A18
+                    this.addMarker(placeData, newPlace);
+                    
+                    // \u66F4\u65B0 UI
+                    this.updateTripPanel();
+                    this.updateSelectedCount();
+                    this.updateSaveButton();
+                    this.showMessage('\u5DF2\u52A0\u5165\u884C\u7A0B', 'success');
+                } catch (error) {
+                    console.error('Error handling POI click:', error);
+                    this.showMessage('\u7121\u6CD5\u8F09\u5165\u5730\u9EDE\u8CC7\u8A0A', 'error');
+                }
+            }
+
+            // \u6DFB\u52A0\u5730\u5716\u6A19\u8A18
+            addMarker(placeData, place) {
+                if (!placeData.latitude || !placeData.longitude) return;
+
+                const position = { lat: placeData.latitude, lng: placeData.longitude };
+                const markerNumber = this.getMarkerNumber(place);
+                
+                // \u6CE8\u610F\uFF1Agoogle.maps.Marker \u5DF2\u68C4\u7528\uFF0C\u5EFA\u8B70\u4F7F\u7528 AdvancedMarkerElement
+                // \u4F46\u70BA\u4E86\u517C\u5BB9\u6027\uFF0C\u66AB\u6642\u7E7C\u7E8C\u4F7F\u7528 Marker
+                // TODO: \u9077\u79FB\u5230 google.maps.marker.AdvancedMarkerElement
+                const marker = new google.maps.Marker({
+                    position: position,
+                    map: this.map,
+                    title: placeData.name,
+                    icon: {
+                        url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(
+                            '<svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">' +
+                            '<circle cx="16" cy="16" r="12" fill="#3b82f6" stroke="white" stroke-width="2"/>' +
+                            '<text x="16" y="20" text-anchor="middle" fill="white" font-size="12" font-weight="bold">' +
+                            markerNumber + '</text></svg>'
+                        ),
+                        scaledSize: new google.maps.Size(32, 32),
+                        anchor: new google.maps.Point(16, 16)
+                    }
+                });
+
+                // \u6DFB\u52A0\u9EDE\u64CA\u4E8B\u4EF6\u986F\u793A\u8A73\u60C5
+                marker.addListener('click', () => {
+                    this.showLocationDetail(placeData, place);
+                });
+
+                this.markers.push({ marker, place });
+                this.updateMarkerNumbers();
+            }
+
+            // \u7372\u53D6\u6A19\u8A18\u7DE8\u865F\uFF08\u6839\u64DA\u7576\u524D\u5929\u6578\u7684\u9806\u5E8F\uFF09
+            getMarkerNumber(place) {
+                const currentDayPlaces = this.selectedPlaces
+                    .filter(p => p.dayIndex === place.dayIndex)
+                    .sort((a, b) => {
+                        if (a.time !== b.time) {
+                            return a.time.localeCompare(b.time);
+                        }
+                        return a.order - b.order;
+                    });
+                const index = currentDayPlaces.findIndex(p => p.placeId === place.placeId);
+                return index >= 0 ? index + 1 : this.selectedPlaces.length;
+            }
+
+            // \u66F4\u65B0\u6240\u6709\u6A19\u8A18\u7684\u7DE8\u865F
+            updateMarkerNumbers() {
+                this.markers.forEach(({ marker, place }) => {
+                    const markerNumber = this.getMarkerNumber(place);
+                    marker.setIcon({
+                        url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(
+                            '<svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">' +
+                            '<circle cx="16" cy="16" r="12" fill="#3b82f6" stroke="white" stroke-width="2"/>' +
+                            '<text x="16" y="20" text-anchor="middle" fill="white" font-size="12" font-weight="bold">' +
+                            markerNumber + '</text></svg>'
+                        ),
+                        scaledSize: new google.maps.Size(32, 32),
+                        anchor: new google.maps.Point(16, 16)
+                    });
+                });
+            }
+
+            // \u521D\u59CB\u5316\u5929\u6578
+            initializeDays() {
+                const today = new Date();
+                this.days = [today];
+                this.currentDayIndex = 0;
+            }
+
+            // \u66F4\u65B0\u5929\u6578\u6A19\u7C64
+            updateDayTabs() {
+                const tabsContainer = document.getElementById('day-tabs');
+                if (!tabsContainer) return;
+
+                tabsContainer.innerHTML = this.days.map((day, index) => {
+                    const dateStr = this.formatDate(day);
+                    const isActive = index === this.currentDayIndex;
+                    return \`
+                        <button class="day-tab \${isActive ? 'active' : ''}" 
+                                data-day-index="\${index}"
+                                data-action="switch-day">
+                            \u7B2C \${index + 1} \u5929<br>
+                            <span class="text-xs">\${dateStr}</span>
+                        </button>
+                    \`;
+                }).join('');
+                
+                // \u7D81\u5B9A\u5929\u6578\u5207\u63DB\u4E8B\u4EF6
+                tabsContainer.querySelectorAll('[data-action="switch-day"]').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        const dayIndex = parseInt(e.target.closest('[data-day-index]').dataset.dayIndex);
+                        this.switchDay(dayIndex);
+                    });
+                });
+            }
+
+            // \u5207\u63DB\u5929\u6578
+            switchDay(dayIndex) {
+                this.currentDayIndex = dayIndex;
+                this.updateDayTabs();
+                this.updateTripPanel();
+                this.updateRoute(); // \u66F4\u65B0\u8DEF\u7DDA
+                
+                // \u66F4\u65B0\u65E5\u671F\u9078\u64C7\u5668
+                const dateInput = document.getElementById('current-day-date');
+                if (dateInput) {
+                    dateInput.value = this.formatDateInput(this.days[dayIndex]);
+                }
+            }
+
+            // \u65B0\u589E\u4E00\u5929
+            addDay() {
+                const lastDay = this.days[this.days.length - 1];
+                const newDay = new Date(lastDay);
+                newDay.setDate(newDay.getDate() + 1);
+                this.days.push(newDay);
+                this.updateDayTabs();
+            }
+
+            // \u66F4\u65B0\u884C\u7A0B\u9762\u677F
+            updateTripPanel() {
+                const listContainer = document.getElementById('trip-items-list');
+                if (!listContainer) return;
+
+                const currentDayPlaces = this.selectedPlaces
+                    .filter(p => p.dayIndex === this.currentDayIndex)
+                    .sort((a, b) => {
+                        // \u5148\u6309\u6642\u9593\u6392\u5E8F\uFF0C\u518D\u6309\u9806\u5E8F\u6392\u5E8F
+                        if (a.time !== b.time) {
+                            return a.time.localeCompare(b.time);
+                        }
+                        return a.order - b.order;
+                    });
+
+                if (currentDayPlaces.length === 0) {
+                    listContainer.innerHTML = \`
+                        <div id="empty-state" class="text-center text-gray-400 py-8">
+                            <p>\u5C1A\u672A\u9078\u64C7\u4EFB\u4F55\u5730\u9EDE</p>
+                            <p class="text-sm mt-2">\u9EDE\u64CA\u5730\u5716\u4E0A\u7684\u5716\u793A\u958B\u59CB\u898F\u5283</p>
+                        </div>
+                    \`;
+                    return;
+                }
+
+                listContainer.innerHTML = currentDayPlaces.map((place, index) => {
+                    const placeData = place.placeData;
+                    const bookingStatus = place.bookingStatus || 'planned';
+                    const statusLabels = {
+                        'planned': { text: '\u5DF2\u898F\u5283', class: 'bg-yellow-100 text-yellow-800', icon: '\u{1F7E1}' },
+                        'booked': { text: '\u5DF2\u9810\u8A02', class: 'bg-green-100 text-green-800', icon: '\u{1F7E2}' },
+                        'completed': { text: '\u5DF2\u5B8C\u6210', class: 'bg-blue-100 text-blue-800', icon: '\u2705' },
+                        'cancelled': { text: '\u5DF2\u53D6\u6D88', class: 'bg-red-100 text-red-800', icon: '\u{1F534}' }
+                    };
+                    const statusInfo = statusLabels[bookingStatus] || statusLabels['planned'];
+                    
+                    return \`
+                        <div class="trip-item" 
+                             draggable="true"
+                             data-place-id="\${place.placeId}"
+                             data-day-index="\${place.dayIndex}"
+                             data-order="\${place.order}">
+                            <div class="trip-item-header">
+                                <div class="trip-item-name clickable-location-name" 
+                                     data-place-id="\${place.placeId}"
+                                     data-action="show-location-detail">
+                                    \${placeData.name || '\u672A\u77E5\u5730\u9EDE'}
+                                </div>
+                                <div class="trip-item-actions">
+                                    <input type="time" 
+                                           id="time-input-\${place.placeId}"
+                                           name="time-input-\${place.placeId}"
+                                           class="time-input" 
+                                           value="\${place.time}"
+                                           data-place-id="\${place.placeId}"
+                                           data-action="update-time">
+                                    <button type="button" 
+                                            class="trip-item-btn delete" 
+                                            data-place-id="\${place.placeId}"
+                                            data-action="remove-place">
+                                        \u522A\u9664
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="trip-item-time">
+                                <span>\${placeData.address || '\u7121\u5730\u5740'}</span>
+                            </div>
+                            <div class="trip-item-booking mt-2 flex items-center justify-between">
+                                <div class="flex items-center gap-2">
+                                    <span class="booking-status-badge \${statusInfo.class} px-2 py-1 rounded text-xs">
+                                        \${statusInfo.icon} \${statusInfo.text}
+                                    </span>
+                                    <select id="booking-status-\${place.placeId}"
+                                            name="booking-status-\${place.placeId}"
+                                            class="booking-status-select text-xs border rounded px-2 py-1"
+                                            data-place-id="\${place.placeId}"
+                                            data-action="update-booking-status">
+                                        <option value="planned" \${bookingStatus === 'planned' ? 'selected' : ''}>\u5DF2\u898F\u5283</option>
+                                        <option value="booked" \${bookingStatus === 'booked' ? 'selected' : ''}>\u5DF2\u9810\u8A02</option>
+                                        <option value="completed" \${bookingStatus === 'completed' ? 'selected' : ''}>\u5DF2\u5B8C\u6210</option>
+                                        <option value="cancelled" \${bookingStatus === 'cancelled' ? 'selected' : ''}>\u5DF2\u53D6\u6D88</option>
+                                    </select>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    \${place.bookingPhone ? \`
+                                        <a href="tel:\${place.bookingPhone}" 
+                                           class="trip-item-btn text-xs bg-blue-500 text-white hover:bg-blue-600">
+                                            \u96FB\u8A71
+                                        </a>
+                                    \` : ''}
+                                    \${place.bookingUrl ? \`
+                                        <a href="\${place.bookingUrl}" 
+                                           target="_blank" 
+                                           rel="noopener noreferrer"
+                                           class="trip-item-btn text-xs bg-green-500 text-white hover:bg-green-600">
+                                            \u7DB2\u7AD9
+                                        </a>
+                                    \` : ''}
+                                </div>
+                            </div>
+                        </div>
+                    \`;
+                }).join('');
+                
+                // \u7D81\u5B9A\u6240\u6709\u4E8B\u4EF6\u76E3\u807D\u5668
+                this.attachTripItemEventListeners(listContainer);
+                
+                // \u66F4\u65B0\u8DEF\u7DDA
+                this.updateRoute();
+            }
+
+            // \u7D81\u5B9A\u884C\u7A0B\u9805\u76EE\u7684\u4E8B\u4EF6\u76E3\u807D\u5668
+            attachTripItemEventListeners(container) {
+                // \u7D81\u5B9A\u62D6\u62FD\u4E8B\u4EF6
+                container.querySelectorAll('.trip-item').forEach(item => {
+                    item.addEventListener('dragstart', (e) => this.handleDragStart(e));
+                    item.addEventListener('dragend', (e) => this.handleDragEnd(e));
+                    item.addEventListener('dragover', (e) => this.handleDragOver(e));
+                    item.addEventListener('drop', (e) => this.handleDrop(e));
+                    item.addEventListener('dragleave', (e) => this.handleDragLeave(e));
+                });
+
+                // \u7D81\u5B9A\u6642\u9593\u8F38\u5165\u4E8B\u4EF6
+                container.querySelectorAll('[data-action="update-time"]').forEach(input => {
+                    input.addEventListener('change', (e) => {
+                        const placeId = e.target.dataset.placeId;
+                        const newTime = e.target.value;
+                        this.updateTime(placeId, newTime);
+                    });
+                });
+
+                // \u7D81\u5B9A\u522A\u9664\u6309\u9215\u4E8B\u4EF6
+                container.querySelectorAll('[data-action="remove-place"]').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        const placeId = e.target.closest('[data-place-id]').dataset.placeId;
+                        this.removePlace(placeId);
+                    });
+                });
+
+                // \u7D81\u5B9A\u9810\u8A02\u72C0\u614B\u9078\u64C7\u4E8B\u4EF6
+                container.querySelectorAll('[data-action="update-booking-status"]').forEach(select => {
+                    select.addEventListener('change', (e) => {
+                        const placeId = e.target.dataset.placeId;
+                        const newStatus = e.target.value;
+                        this.updateBookingStatus(placeId, newStatus);
+                    });
+                });
+
+                // \u7D81\u5B9A\u5730\u9EDE\u8A73\u60C5\u9EDE\u64CA\u4E8B\u4EF6
+                container.querySelectorAll('[data-action="show-location-detail"]').forEach(element => {
+                    element.addEventListener('click', (e) => {
+                        const placeId = e.target.closest('[data-place-id]').dataset.placeId;
+                        const place = this.selectedPlaces.find(p => p.placeId === placeId);
+                        if (place) {
+                            this.showLocationDetail(place.placeData, place);
+                        }
+                    });
+                });
+            }
+
+            // \u986F\u793A\u5730\u9EDE\u8A73\u60C5
+            showLocationDetail(placeData, place) {
+                // \u5275\u5EFA\u6216\u66F4\u65B0\u8A73\u60C5\u9762\u677F
+                let panel = document.getElementById('location-detail-panel');
+                if (!panel) {
+                    panel = document.createElement('div');
+                    panel.id = 'location-detail-panel';
+                    panel.className = 'location-detail-panel';
+                    document.body.appendChild(panel);
+                }
+
+                panel.innerHTML = \`
+                    <div class="detail-panel-overlay" data-action="close-detail"></div>
+                    <div class="detail-panel-content">
+                        <button class="detail-panel-close" data-action="close-detail">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M18 6L6 18M6 6l12 12"/>
+                            </svg>
+                        </button>
+                        <div class="detail-panel-image">
+                            <img src="\${placeData.thumbnail_url || 'https://placehold.co/600x400/6B7280/FFFFFF?text=Location+Image'}" 
+                                 alt="\${placeData.name || '\u5730\u9EDE\u7167\u7247'}" 
+                                 class="detail-panel-img"
+                                 data-fallback-src="https://placehold.co/600x400/6B7280/FFFFFF?text=Location+Image">
+                        </div>
+                        <div class="detail-panel-info">
+                            <h2 class="detail-panel-title">\${placeData.name || '\u672A\u547D\u540D\u5730\u9EDE'}</h2>
+                            <div class="detail-panel-meta">
+                                <div class="meta-item">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+                                        <circle cx="12" cy="10" r="3"/>
+                                    </svg>
+                                    <span>\${placeData.address || '\u7121\u5730\u5740\u8CC7\u8A0A'}</span>
+                                </div>
+                                \${placeData.phone_number || placeData.formatted_phone_number ? \`
+                                    <div class="meta-item">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
+                                        </svg>
+                                        <span>\${placeData.formatted_phone_number || placeData.phone_number}</span>
+                                    </div>
+                                \` : ''}
+                                \${placeData.website ? \`
+                                    <div class="meta-item">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3"/>
+                                        </svg>
+                                        <a href="\${placeData.website}" target="_blank" rel="noopener noreferrer">\u7DB2\u7AD9</a>
+                                    </div>
+                                \` : ''}
+                            </div>
+                            \${placeData.editorial_summary ? \`
+                                <div class="detail-panel-description">
+                                    <h3>\u7C21\u4ECB</h3>
+                                    <p>\${placeData.editorial_summary}</p>
+                                </div>
+                            \` : ''}
+                            \${place && place.bookingStatus ? \`
+                                <div class="detail-panel-booking">
+                                    <h3>\u9810\u8A02\u72C0\u614B</h3>
+                                    <p>\u72C0\u614B: <span class="booking-status-\${place.bookingStatus}">\${this.getBookingStatusText(place.bookingStatus)}</span></p>
+                                </div>
+                            \` : ''}
+                        </div>
+                    </div>
+                \`;
+
+                // \u986F\u793A\u9762\u677F
+                panel.classList.add('visible');
+
+                // \u7D81\u5B9A\u95DC\u9589\u4E8B\u4EF6
+                panel.querySelectorAll('[data-action="close-detail"]').forEach(btn => {
+                    btn.addEventListener('click', () => this.hideLocationDetail());
+                });
+
+                // \u8655\u7406\u5716\u7247\u8F09\u5165\u932F\u8AA4\uFF08CSP \u517C\u5BB9\uFF09
+                const img = panel.querySelector('.detail-panel-img');
+                if (img) {
+                    img.addEventListener('error', function() {
+                        const fallbackSrc = this.dataset.fallbackSrc;
+                        if (fallbackSrc && this.src !== fallbackSrc) {
+                            this.src = fallbackSrc;
+                        }
+                    });
+                }
+
+                // ESC \u9375\u95DC\u9589
+                const escHandler = (e) => {
+                    if (e.key === 'Escape') {
+                        this.hideLocationDetail();
+                        document.removeEventListener('keydown', escHandler);
+                    }
+                };
+                document.addEventListener('keydown', escHandler);
+            }
+
+            // \u96B1\u85CF\u5730\u9EDE\u8A73\u60C5
+            hideLocationDetail() {
+                const panel = document.getElementById('location-detail-panel');
+                if (panel) {
+                    panel.classList.remove('visible');
+                }
+            }
+
+            // \u7372\u53D6\u9810\u8A02\u72C0\u614B\u6587\u5B57
+            getBookingStatusText(status) {
+                const statusMap = {
+                    'planned': '\u5DF2\u898F\u5283',
+                    'booked': '\u5DF2\u9810\u8A02',
+                    'completed': '\u5DF2\u5B8C\u6210',
+                    'cancelled': '\u5DF2\u53D6\u6D88'
+                };
+                return statusMap[status] || '\u672A\u77E5';
+            }
+
+            // \u66F4\u65B0\u8DEF\u7DDA
+            updateRoute() {
+                // \u5982\u679C Directions API \u5DF2\u88AB\u62D2\u7D55\uFF0C\u76F4\u63A5\u4F7F\u7528\u964D\u7D1A\u65B9\u6848
+                if (this.directionsApiDenied) {
+                    const currentDayPlaces = this.selectedPlaces
+                        .filter(p => p.dayIndex === this.currentDayIndex)
+                        .sort((a, b) => {
+                            if (a.time !== b.time) {
+                                return a.time.localeCompare(b.time);
+                            }
+                            return a.order - b.order;
+                        })
+                        .filter(p => p.placeData && p.placeData.latitude && p.placeData.longitude);
+                    if (currentDayPlaces.length >= 2) {
+                        this.drawSimpleRoute(currentDayPlaces);
+                    }
+                    return;
+                }
+
+                // \u6AA2\u67E5 Directions Service \u662F\u5426\u53EF\u7528
+                if (!google.maps.DirectionsService || !google.maps.DirectionsRenderer) {
+                    // \u975C\u9ED8\u8655\u7406\uFF0C\u76F4\u63A5\u4F7F\u7528\u964D\u7D1A\u65B9\u6848
+                    const currentDayPlaces = this.selectedPlaces
+                        .filter(p => p.dayIndex === this.currentDayIndex)
+                        .sort((a, b) => {
+                            if (a.time !== b.time) {
+                                return a.time.localeCompare(b.time);
+                            }
+                            return a.order - b.order;
+                        })
+                        .filter(p => p.placeData && p.placeData.latitude && p.placeData.longitude);
+                    if (currentDayPlaces.length >= 2) {
+                        this.drawSimpleRoute(currentDayPlaces);
+                    }
+                    return;
+                }
+
+                // \u521D\u59CB\u5316\u670D\u52D9\uFF08\u5982\u679C\u5C1A\u672A\u521D\u59CB\u5316\uFF09
+                if (!this.directionsService) {
+                    try {
+                        this.directionsService = new google.maps.DirectionsService();
+                        this.directionsRenderer = new google.maps.DirectionsRenderer({
+                            map: this.map,
+                            suppressMarkers: true // \u4E0D\u986F\u793A\u9ED8\u8A8D\u6A19\u8A18\uFF0C\u4F7F\u7528\u6211\u5011\u81EA\u5B9A\u7FA9\u7684
+                        });
+                    } catch (error) {
+                        // \u975C\u9ED8\u8655\u7406\u932F\u8AA4\uFF08\u5DF2\u7531\u5168\u5C40\u932F\u8AA4\u8655\u7406\u5668\u8655\u7406\uFF09
+                        this.directionsApiDenied = true;
+                        return;
+                    }
+                }
+
+                // \u6E05\u9664\u73FE\u6709\u8DEF\u7DDA
+                try {
+                    this.directionsRenderer.setDirections({ routes: [] });
+                } catch (error) {
+                    // \u5FFD\u7565\u6E05\u9664\u932F\u8AA4
+                }
+                this.routePolylines.forEach(polyline => {
+                    try {
+                        polyline.setMap(null);
+                    } catch (error) {
+                        // \u5FFD\u7565\u6E05\u9664\u932F\u8AA4
+                    }
+                });
+                this.routePolylines = [];
+
+                // \u7372\u53D6\u7576\u524D\u5929\u6578\u7684\u5730\u9EDE\uFF0C\u6309\u6642\u9593\u548C\u9806\u5E8F\u6392\u5E8F
+                const currentDayPlaces = this.selectedPlaces
+                    .filter(p => p.dayIndex === this.currentDayIndex)
+                    .sort((a, b) => {
+                        if (a.time !== b.time) {
+                            return a.time.localeCompare(b.time);
+                        }
+                        return a.order - b.order;
+                    })
+                    .filter(p => p.placeData && p.placeData.latitude && p.placeData.longitude);
+
+                if (currentDayPlaces.length < 2) return;
+
+                // \u69CB\u5EFA\u8DEF\u7DDA\u9EDE
+                const waypoints = currentDayPlaces.slice(1, -1).map(place => ({
+                    location: { lat: place.placeData.latitude, lng: place.placeData.longitude },
+                    stopover: true
+                }));
+
+                const origin = { 
+                    lat: currentDayPlaces[0].placeData.latitude, 
+                    lng: currentDayPlaces[0].placeData.longitude 
+                };
+                const destination = { 
+                    lat: currentDayPlaces[currentDayPlaces.length - 1].placeData.latitude, 
+                    lng: currentDayPlaces[currentDayPlaces.length - 1].placeData.longitude 
+                };
+
+                // \u8ACB\u6C42\u8DEF\u7DDA
+                try {
+                    this.directionsService.route({
+                        origin: origin,
+                        destination: destination,
+                        waypoints: waypoints.length > 0 ? waypoints : undefined,
+                        travelMode: google.maps.TravelMode.DRIVING,
+                        optimizeWaypoints: false // \u4FDD\u6301\u7528\u6236\u8A2D\u5B9A\u7684\u9806\u5E8F
+                    }, (result, status) => {
+                        if (status === 'OK' && result) {
+                            try {
+                                this.directionsRenderer.setDirections(result);
+                            } catch (error) {
+                                console.warn('\u8A2D\u7F6E\u8DEF\u7DDA\u5931\u6557:', error);
+                            }
+                        } else if (status === 'REQUEST_DENIED') {
+                            // \u6A19\u8A18 API \u5DF2\u88AB\u62D2\u7D55\uFF0C\u907F\u514D\u91CD\u8907\u5617\u8A66
+                            if (!this.directionsApiDenied) {
+                                // \u975C\u9ED8\u8655\u7406\uFF0C\u4E0D\u986F\u793A\u8B66\u544A\uFF08\u5DF2\u7531\u5168\u5C40\u932F\u8AA4\u8655\u7406\u5668\u8655\u7406\uFF09
+                                this.directionsApiDenied = true;
+                            }
+                            // \u4F7F\u7528\u7C21\u55AE\u7684\u6298\u7DDA\u9023\u63A5\u5730\u9EDE\u4F5C\u70BA\u964D\u7D1A\u65B9\u6848
+                            this.drawSimpleRoute(currentDayPlaces);
+                        } else {
+                            // \u5176\u4ED6\u932F\u8AA4\u4E5F\u4F7F\u7528\u964D\u7D1A\u65B9\u6848\uFF08\u975C\u9ED8\u8655\u7406\uFF09
+                            this.drawSimpleRoute(currentDayPlaces);
+                        }
+                    });
+                } catch (error) {
+                    // \u975C\u9ED8\u8655\u7406\u932F\u8AA4\uFF08\u5DF2\u7531\u5168\u5C40\u932F\u8AA4\u8655\u7406\u5668\u8655\u7406\uFF09
+                    // \u4F7F\u7528\u7C21\u55AE\u7684\u6298\u7DDA\u9023\u63A5\u5730\u9EDE\u4F5C\u70BA\u964D\u7D1A\u65B9\u6848
+                    this.drawSimpleRoute(currentDayPlaces);
+                }
+            }
+
+            // \u7C21\u55AE\u8DEF\u7DDA\u7E6A\u88FD\uFF08\u964D\u7D1A\u65B9\u6848\uFF09
+            drawSimpleRoute(places) {
+                if (places.length < 2) return;
+
+                const path = places.map(place => ({
+                    lat: place.placeData.latitude,
+                    lng: place.placeData.longitude
+                }));
+
+                const polyline = new google.maps.Polyline({
+                    path: path,
+                    geodesic: true,
+                    strokeColor: '#3b82f6',
+                    strokeOpacity: 0.6,
+                    strokeWeight: 3
+                });
+
+                polyline.setMap(this.map);
+                this.routePolylines.push(polyline);
+            }
+
+            // \u62D6\u62FD\u8655\u7406
+            handleDragStart(event) {
+                this.draggedElement = event.target.closest('.trip-item');
+                if (this.draggedElement) {
+                    this.draggedElement.classList.add('dragging');
+                    event.dataTransfer.effectAllowed = 'move';
+                }
+            }
+
+            handleDragEnd(event) {
+                if (this.draggedElement) {
+                    this.draggedElement.classList.remove('dragging');
+                }
+                if (this.dragOverElement) {
+                    this.dragOverElement.classList.remove('drag-over');
+                }
+                this.draggedElement = null;
+                this.dragOverElement = null;
+            }
+
+            handleDragOver(event) {
+                event.preventDefault();
+                event.dataTransfer.dropEffect = 'move';
+                
+                const tripItem = event.target.closest('.trip-item');
+                if (tripItem && tripItem !== this.draggedElement) {
+                    if (this.dragOverElement && this.dragOverElement !== tripItem) {
+                        this.dragOverElement.classList.remove('drag-over');
+                    }
+                    tripItem.classList.add('drag-over');
+                    this.dragOverElement = tripItem;
+                }
+            }
+
+            handleDragLeave(event) {
+                const tripItem = event.target.closest('.trip-item');
+                if (tripItem) {
+                    tripItem.classList.remove('drag-over');
+                }
+            }
+
+            handleDrop(event) {
+                event.preventDefault();
+                
+                const tripItem = event.target.closest('.trip-item');
+                if (tripItem) {
+                    tripItem.classList.remove('drag-over');
+                }
+
+                if (!this.draggedElement) return;
+
+                const draggedPlaceId = this.draggedElement.dataset.placeId;
+                const targetPlaceId = tripItem ? tripItem.dataset.placeId : null;
+
+                if (!targetPlaceId || draggedPlaceId === targetPlaceId) return;
+
+                // \u91CD\u65B0\u6392\u5E8F
+                const draggedPlace = this.selectedPlaces.find(p => p.placeId === draggedPlaceId);
+                const targetPlace = this.selectedPlaces.find(p => p.placeId === targetPlaceId);
+
+                if (draggedPlace && targetPlace && draggedPlace.dayIndex === targetPlace.dayIndex) {
+                    // \u7372\u53D6\u7576\u524D\u5929\u6578\u7684\u6240\u6709\u5730\u9EDE\uFF0C\u6309\u6642\u9593\u548C\u9806\u5E8F\u6392\u5E8F
+                    const currentDayPlaces = this.selectedPlaces
+                        .filter(p => p.dayIndex === draggedPlace.dayIndex)
+                        .sort((a, b) => {
+                            if (a.time !== b.time) {
+                                return a.time.localeCompare(b.time);
+                            }
+                            return a.order - b.order;
+                        });
+
+                    // \u627E\u5230\u62D6\u62FD\u548C\u76EE\u6A19\u5730\u9EDE\u5728\u6392\u5E8F\u5217\u8868\u4E2D\u7684\u4F4D\u7F6E
+                    const draggedIndex = currentDayPlaces.findIndex(p => p.placeId === draggedPlaceId);
+                    const targetIndex = currentDayPlaces.findIndex(p => p.placeId === targetPlaceId);
+
+                    if (draggedIndex >= 0 && targetIndex >= 0) {
+                        // \u91CD\u65B0\u8A08\u7B97\u6240\u6709\u9805\u76EE\u7684\u9806\u5E8F
+                        const newPlaces = [...currentDayPlaces];
+                        const [removed] = newPlaces.splice(draggedIndex, 1);
+                        newPlaces.splice(targetIndex, 0, removed);
+
+                        // \u66F4\u65B0\u9806\u5E8F
+                        newPlaces.forEach((place, index) => {
+                            place.order = index;
+                        });
+
+                        // \u66F4\u65B0 UI \u548C\u5730\u5716\u6A19\u8A18
+                        this.updateTripPanel();
+                        this.updateMarkerNumbers();
+                        this.updateRoute(); // \u66F4\u65B0\u8DEF\u7DDA
+                        this.updateSaveButton();
+                    }
+                }
+            }
+
+            // \u66F4\u65B0\u6642\u9593
+            updateTime(placeId, newTime) {
+                const place = this.selectedPlaces.find(p => p.placeId === placeId);
+                if (place) {
+                    place.time = newTime;
+                    this.updateTripPanel();
+                    this.updateRoute(); // \u66F4\u65B0\u8DEF\u7DDA
+                    this.updateSaveButton();
+                }
+            }
+
+            // \u66F4\u65B0\u9810\u8A02\u72C0\u614B
+            async updateBookingStatus(placeId, newStatus) {
+                const place = this.selectedPlaces.find(p => p.placeId === placeId);
+                if (!place) return;
+
+                place.bookingStatus = newStatus;
+                this.updateTripPanel();
+
+                // \u5982\u679C\u6709 itemId\uFF0C\u66F4\u65B0\u8CC7\u6599\u5EAB
+                if (place.itemId) {
+                    try {
+                        const response = await fetch(\`/api/trip-planner/item/\${place.itemId}/booking-status\`, {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ bookingStatus: newStatus }),
+                            credentials: 'include'
+                        });
+
+                        if (!response.ok) {
+                            throw new Error('Failed to update booking status');
+                        }
+                    } catch (error) {
+                        console.error('Error updating booking status:', error);
+                        this.showMessage('\u66F4\u65B0\u9810\u8A02\u72C0\u614B\u5931\u6557', 'error');
+                    }
+                }
+            }
+
+            // \u79FB\u9664\u5730\u9EDE
+            removePlace(placeId) {
+                if (confirm('\u78BA\u5B9A\u8981\u79FB\u9664\u9019\u500B\u5730\u9EDE\u55CE\uFF1F')) {
+                    this.selectedPlaces = this.selectedPlaces.filter(p => p.placeId !== placeId);
+                    
+                    // \u79FB\u9664\u5730\u5716\u6A19\u8A18
+                    const markerIndex = this.markers.findIndex(m => m.place.placeId === placeId);
+                    if (markerIndex >= 0) {
+                        this.markers[markerIndex].marker.setMap(null);
+                        this.markers.splice(markerIndex, 1);
+                    }
+                    
+                    this.updateTripPanel();
+                    this.updateSelectedCount();
+                    this.updateSaveButton();
+                }
+            }
+
+            // \u7372\u53D6\u9810\u8A2D\u6642\u9593
+            getDefaultTime() {
+                const currentPlaces = this.selectedPlaces.filter(p => p.dayIndex === this.currentDayIndex);
+                if (currentPlaces.length === 0) {
+                    return '09:00';
+                }
+                
+                // \u6700\u5F8C\u4E00\u500B\u5730\u9EDE\u7684\u6642\u9593 + 2\u5C0F\u6642
+                const lastTime = currentPlaces[currentPlaces.length - 1].time;
+                const [hours, minutes] = lastTime.split(':').map(Number);
+                const nextHours = (hours + 2) % 24;
+                return \`\${String(nextHours).padStart(2, '0')}:\${String(minutes).padStart(2, '0')}\`;
+            }
+
+            // \u66F4\u65B0\u5DF2\u9078\u6578\u91CF
+            updateSelectedCount() {
+                const countEl = document.getElementById('selected-count');
+                if (countEl) {
+                    countEl.textContent = this.selectedPlaces.length;
+                }
+            }
+
+            // \u66F4\u65B0\u5132\u5B58\u6309\u9215\u72C0\u614B
+            updateSaveButton() {
+                const saveBtn = document.getElementById('save-trip-btn');
+                const shareBtn = document.getElementById('share-trip-btn');
+                if (saveBtn) {
+                    saveBtn.disabled = this.selectedPlaces.length === 0;
+                }
+                if (shareBtn) {
+                    shareBtn.disabled = !this.currentTripId || this.selectedPlaces.length === 0;
+                }
+            }
+
+            // \u5206\u4EAB\u884C\u7A0B
+            async shareTrip() {
+                if (!this.currentTripId) {
+                    this.showMessage('\u8ACB\u5148\u5132\u5B58\u884C\u7A0B', 'warning');
+                    return;
+                }
+
+                const shareBtn = document.getElementById('share-trip-btn');
+                if (!shareBtn) return;
+
+                shareBtn.disabled = true;
+                shareBtn.textContent = '\u751F\u6210\u4E2D...';
+
+                try {
+                    const response = await fetch(\`/api/trip-planner/\${this.currentTripId}/share\`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ isPublic: true }),
+                        credentials: 'include'
+                    });
+
+                    if (response.ok) {
+                        const result = await response.json();
+                        this.shareToken = result.shareToken;
+                        
+                        // \u986F\u793A\u5206\u4EAB\u9023\u7D50
+                        const shareUrl = result.shareUrl;
+                        const copySuccess = await this.copyToClipboard(shareUrl);
+                        
+                        if (copySuccess) {
+                            this.showMessage('\u5206\u4EAB\u9023\u7D50\u5DF2\u8907\u88FD\u5230\u526A\u8CBC\u7C3F\uFF01', 'success');
+                        } else {
+                            // \u5982\u679C\u8907\u88FD\u5931\u6557\uFF0C\u986F\u793A\u9023\u7D50\u8B93\u7528\u6236\u624B\u52D5\u8907\u88FD
+                            const linkDisplay = document.createElement('div');
+                            linkDisplay.className = 'fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50';
+                            linkDisplay.innerHTML = \`
+                                <div class="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+                                    <h3 class="text-lg font-bold mb-4">\u5206\u4EAB\u9023\u7D50</h3>
+                                    <p class="text-sm text-gray-600 mb-2">\u8ACB\u624B\u52D5\u8907\u88FD\u4EE5\u4E0B\u9023\u7D50\uFF1A</p>
+                                    <div class="flex items-center gap-2 mb-4">
+                                        <input type="text" 
+                                               value="\${shareUrl}" 
+                                               readonly 
+                                               class="flex-1 border border-gray-300 rounded px-3 py-2 text-sm"
+                                               id="share-url-input">
+                                        <button type="button" 
+                                                class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+                                                data-action="copy-share-url">
+                                            \u8907\u88FD
+                                        </button>
+                                    </div>
+                                    <button type="button" 
+                                            class="w-full bg-gray-200 text-gray-700 px-4 py-2 rounded hover:bg-gray-300"
+                                            data-action="close-share-dialog">
+                                        \u95DC\u9589
+                                    </button>
+                                </div>
+                            \`;
+                            document.body.appendChild(linkDisplay);
+                            
+                            // \u7D81\u5B9A\u4E8B\u4EF6
+                            linkDisplay.querySelector('[data-action="copy-share-url"]').addEventListener('click', () => {
+                                const input = linkDisplay.querySelector('#share-url-input');
+                                input.select();
+                                input.setSelectionRange(0, 99999);
+                                try {
+                                    document.execCommand('copy');
+                                    this.showMessage('\u9023\u7D50\u5DF2\u8907\u88FD\uFF01', 'success');
+                                    linkDisplay.remove();
+                                } catch (err) {
+                                    this.showMessage('\u8907\u88FD\u5931\u6557\uFF0C\u8ACB\u624B\u52D5\u9078\u64C7\u4E26\u8907\u88FD', 'warning');
+                                }
+                            });
+                            
+                            linkDisplay.querySelector('[data-action="close-share-dialog"]').addEventListener('click', () => {
+                                linkDisplay.remove();
+                            });
+                            
+                            linkDisplay.addEventListener('click', (e) => {
+                                if (e.target === linkDisplay) {
+                                    linkDisplay.remove();
+                                }
+                            });
+                        }
+                    } else {
+                        throw new Error('\u5206\u4EAB\u5931\u6557');
+                    }
+                } catch (error) {
+                    console.error('Error sharing trip:', error);
+                    this.showMessage('\u5206\u4EAB\u5931\u6557', 'error');
+                } finally {
+                    shareBtn.disabled = false;
+                    shareBtn.textContent = '\u5206\u4EAB\u884C\u7A0B';
+                }
+            }
+
+            // \u8907\u88FD\u5230\u526A\u8CBC\u7C3F
+            async copyToClipboard(text) {
+                try {
+                    // \u6AA2\u67E5\u662F\u5426\u5728\u5B89\u5168\u4E0A\u4E0B\u6587\u4E2D\uFF08HTTPS \u6216 localhost\uFF09
+                    if (navigator.clipboard && navigator.clipboard.writeText) {
+                        // \u6AA2\u67E5\u6B0A\u9650
+                        const permissionStatus = await navigator.permissions.query({ name: 'clipboard-write' }).catch(() => null);
+                        if (permissionStatus && permissionStatus.state === 'denied') {
+                            throw new Error('\u526A\u8CBC\u7C3F\u6B0A\u9650\u88AB\u62D2\u7D55');
+                        }
+                        
+                        await navigator.clipboard.writeText(text);
+                        return true;
+                    } else {
+                        // \u964D\u7D1A\u65B9\u6848\uFF1A\u4F7F\u7528\u50B3\u7D71\u65B9\u6CD5
+                        const textArea = document.createElement('textarea');
+                        textArea.value = text;
+                        // \u4F7F\u7528 CSS \u985E\u4EE3\u66FF inline style
+                        textArea.className = 'clipboard-fallback-textarea';
+                        textArea.setAttribute('readonly', '');
+                        textArea.setAttribute('aria-hidden', 'true');
+                        document.body.appendChild(textArea);
+                        
+                        // \u9078\u64C7\u6587\u672C
+                        textArea.select();
+                        textArea.setSelectionRange(0, text.length);
+                        
+                        try {
+                            const successful = document.execCommand('copy');
+                            document.body.removeChild(textArea);
+                            return successful;
+                        } catch (err) {
+                            document.body.removeChild(textArea);
+                            throw err;
+                        }
+                    }
+                } catch (error) {
+                    console.error('\u8907\u88FD\u5230\u526A\u8CBC\u7C3F\u5931\u6557:', error);
+                    // \u5982\u679C\u8907\u88FD\u5931\u6557\uFF0C\u986F\u793A\u9023\u7D50\u8B93\u7528\u6236\u624B\u52D5\u8907\u88FD
+                    return false;
+                }
+            }
+
+            // \u683C\u5F0F\u5316\u65E5\u671F
+            formatDate(date) {
+                return date.toLocaleDateString('zh-TW', { month: 'short', day: 'numeric' });
+            }
+
+            formatDateInput(date) {
+                return date.toISOString().split('T')[0];
+            }
+
+            // \u986F\u793A\u8A0A\u606F
+            showMessage(text, type = 'info') {
+                // \u7C21\u55AE\u7684\u8A0A\u606F\u986F\u793A\uFF0C\u53EF\u4EE5\u6539\u9032
+                console.log(\`[\${type}] \${text}\`);
+                const messageArea = document.getElementById('map-message-area');
+                if (messageArea) {
+                    messageArea.textContent = text;
+                    messageArea.className = 'absolute bottom-4 left-4 text-sm px-2 py-1 rounded shadow-sm z-20 ' + 
+                        (type === 'error' ? 'bg-red-100 text-red-700' : 
+                         type === 'success' ? 'bg-green-100 text-green-700' : 
+                         type === 'warning' ? 'bg-yellow-100 text-yellow-700' : 
+                         'bg-white text-gray-500');
+                    setTimeout(() => {
+                        messageArea.textContent = '\u9EDE\u64CA\u5730\u5716\u4E0A\u7684\u5716\u793A\u4EE5\u9078\u64C7\u5730\u6A19\u52A0\u5165\u884C\u7A0B';
+                        messageArea.className = 'absolute bottom-4 left-4 text-sm text-gray-500 bg-white bg-opacity-90 px-2 py-1 rounded shadow-sm z-20';
+                    }, 3000);
+                }
+            }
+
+            // \u5132\u5B58\u884C\u7A0B
+            async saveTrip() {
+                const saveBtn = document.getElementById('save-trip-btn');
+                if (!saveBtn) return;
+
+                saveBtn.disabled = true;
+                saveBtn.textContent = '\u5132\u5B58\u4E2D...';
+
+                try {
+                    const tripData = {
+                        tripId: this.currentTripId, // \u5982\u679C\u6709\uFF0C\u5247\u66F4\u65B0\uFF1B\u5426\u5247\u5275\u5EFA\u65B0\u884C\u7A0B
+                        title: \`\u6F8E\u6E56\u884C\u7A0B - \${this.formatDate(this.days[0])}\`,
+                        shareToken: this.shareToken,
+                        isPublic: false,
+                        days: this.days.map((day, dayIndex) => ({
+                            date: this.formatDateInput(day),
+                            places: this.selectedPlaces
+                                .filter(p => p.dayIndex === dayIndex)
+                                .sort((a, b) => {
+                                    if (a.time !== b.time) {
+                                        return a.time.localeCompare(b.time);
+                                    }
+                                    return a.order - b.order;
+                                })
+                                .map(p => ({
+                                    placeId: p.placeId,
+                                    time: p.time,
+                                    order: p.order,
+                                    bookingStatus: p.bookingStatus || 'planned',
+                                    bookingUrl: p.bookingUrl || null,
+                                    bookingPhone: p.bookingPhone || null,
+                                    bookingNotes: p.bookingNotes || null
+                                }))
+                        }))
+                    };
+
+                    const response = await fetch('/api/trip-planner/save', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(tripData),
+                        credentials: 'include'
+                    });
+
+                    if (response.ok) {
+                        const result = await response.json();
+                        this.showMessage('\u884C\u7A0B\u5DF2\u5132\u5B58', 'success');
+                        if (result.tripId) {
+                            this.currentTripId = result.tripId;
+                            // \u66F4\u65B0\u4FDD\u5B58\u6309\u9215\u72C0\u614B
+                            this.updateSaveButton();
+                            console.log('Trip saved with ID:', result.tripId);
+                        }
+                    } else {
+                        const error = await response.json().catch(() => ({ error: '\u5132\u5B58\u5931\u6557' }));
+                        throw new Error(error.error || '\u5132\u5B58\u5931\u6557');
+                    }
+                } catch (error) {
+                    console.error('Error saving trip:', error);
+                    this.showMessage('\u5132\u5B58\u5931\u6557: ' + error.message, 'error');
+                } finally {
+                    saveBtn.disabled = false;
+                    saveBtn.textContent = '\u5132\u5B58\u884C\u7A0B';
+                }
+            }
+
+            // \u521D\u59CB\u5316\u4E8B\u4EF6\u76E3\u807D\u5668
+            initEventListeners() {
+                const addDayBtn = document.getElementById('add-day-btn');
+                if (addDayBtn) {
+                    addDayBtn.addEventListener('click', () => this.addDay());
+                }
+
+                const saveBtn = document.getElementById('save-trip-btn');
+                if (saveBtn) {
+                    saveBtn.addEventListener('click', () => this.saveTrip());
+                }
+
+                const shareBtn = document.getElementById('share-trip-btn');
+                if (shareBtn) {
+                    shareBtn.addEventListener('click', () => this.shareTrip());
+                }
+
+                const dateInput = document.getElementById('current-day-date');
+                if (dateInput) {
+                    dateInput.value = this.formatDateInput(this.days[0]);
+                    dateInput.addEventListener('change', (e) => {
+                        const newDate = new Date(e.target.value);
+                        this.days[this.currentDayIndex] = newDate;
+                        this.updateDayTabs();
+                    });
+                }
+            }
+        }
+
+        // \u5275\u5EFA\u5168\u5C40\u5BE6\u4F8B
+        let tripPlanner = null;
+
+        // \u521D\u59CB\u5316
+        document.addEventListener('DOMContentLoaded', () => {
+            tripPlanner = new TripPlanner();
+            tripPlanner.initMap();
+            tripPlanner.initEventListeners();
+        });
+    </script>
+  `;
+  const csp = [
+    "default-src 'self'",
+    `script-src 'self' 'nonce-${nonce}' 'unsafe-inline' 'unsafe-eval' https://apis.google.com https://maps.googleapis.com https://accounts.google.com https://ajax.googleapis.com`,
+    `style-src 'self' https://fonts.googleapis.com https://maps.googleapis.com https://maps.gstatic.com 'nonce-${nonce}' 'unsafe-inline'`,
+    `style-src-attr 'unsafe-inline'`,
+    "font-src 'self' data: https://fonts.gstatic.com",
+    "img-src 'self' data: https: https://www.gstatic.com https://maps.googleapis.com https://maps.gstatic.com",
+    "connect-src 'self' https://apis.google.com https://accounts.google.com https://maps.googleapis.com https://www.googleapis.com https://oauth2.googleapis.com https://generativelanguage.googleapis.com https://api.openai.com https://*.googleapis.com https://*.gstatic.com",
+    "frame-src 'self' https://accounts.google.com",
+    "base-uri 'self'",
+    "form-action 'self'",
+    "frame-ancestors 'none'",
+    "object-src 'none'"
+  ].join("; ");
+  const securityHeaders = {
+    "Content-Security-Policy": csp,
+    "X-Content-Type-Options": "nosniff",
+    "X-Frame-Options": "DENY",
+    "X-XSS-Protection": "1; mode=block",
+    "Referrer-Policy": "strict-origin-when-cross-origin",
+    "Permissions-Policy": "geolocation=(), microphone=(), camera=()"
+  };
+  return new Response(pageTemplate2({
+    title: "\u884C\u7A0B\u898F\u5283 - \u597D\u6F8E\u6E56",
+    content,
+    user,
+    nonce,
+    cssContent: cssContent + `
+      body { overflow-x: hidden; }
+    `,
+    currentPath: url.pathname
+  }), {
+    headers: {
+      "Content-Type": "text/html;charset=utf-8",
+      "Cache-Control": "no-cache, no-store, must-revalidate",
+      ...securityHeaders
+    }
+  });
+}
+async function renderSharedTripPage(request, env, session, user, nonce, cssContent, shareToken) {
+  const url = new URL(request.url);
+  try {
+    const response = await fetch(`${url.origin}/api/trip-planner/shared/${shareToken}`);
+    if (!response.ok) {
+      return new Response(pageTemplate2({
+        title: "\u884C\u7A0B\u4E0D\u5B58\u5728 - \u597D\u6F8E\u6E56",
+        content: '<div class="p-8 text-center"><h1 class="text-2xl font-bold mb-4">\u884C\u7A0B\u4E0D\u5B58\u5728\u6216\u5DF2\u53D6\u6D88\u5206\u4EAB</h1><p class="text-gray-600">\u6B64\u884C\u7A0B\u9023\u7D50\u53EF\u80FD\u5DF2\u5931\u6548\u3002</p></div>',
+        user: null,
+        nonce,
+        cssContent,
+        currentPath: url.pathname
+      }), {
+        headers: { "Content-Type": "text/html;charset=utf-8" }
+      });
+    }
+    const result = await response.json();
+    const trip = result.trip;
+    const locationService = new (await Promise.resolve().then(() => (init_locationService(), locationService_exports))).LocationService(
+      env.DB,
+      env.GOOGLE_MAPS_API_KEY
+    );
+    const daysWithPlaces = await Promise.all(
+      trip.days.map(async (day) => {
+        const places = await Promise.all(
+          day.places.map(async (place) => {
+            try {
+              const placeDetails = await locationService.getLocationByGooglePlaceId(place.placeId);
+              return {
+                ...place,
+                placeData: placeDetails || { name: "\u672A\u77E5\u5730\u9EDE", address: "" }
+              };
+            } catch (error) {
+              console.error("Error fetching place details:", error);
+              return {
+                ...place,
+                placeData: { name: "\u672A\u77E5\u5730\u9EDE", address: "" }
+              };
+            }
+          })
+        );
+        return { ...day, places };
+      })
+    );
+    const content = `
+      <div class="max-w-4xl mx-auto p-6">
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+          <h1 class="text-3xl font-bold text-gray-800 mb-2">${trip.title || "\u6F8E\u6E56\u884C\u7A0B"}</h1>
+          <p class="text-gray-600 text-sm">\u5206\u4EAB\u7684\u884C\u7A0B</p>
+        </div>
+
+        ${daysWithPlaces.map((day, dayIndex) => `
+          <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+            <h2 class="text-xl font-semibold text-gray-800 mb-4">\u7B2C ${dayIndex + 1} \u5929</h2>
+            <div class="space-y-4">
+              ${day.places.map((place, placeIndex) => {
+      const placeData = place.placeData || {};
+      const statusLabels = {
+        "planned": { text: "\u5DF2\u898F\u5283", class: "bg-yellow-100 text-yellow-800", icon: "\u{1F7E1}" },
+        "booked": { text: "\u5DF2\u9810\u8A02", class: "bg-green-100 text-green-800", icon: "\u{1F7E2}" },
+        "completed": { text: "\u5DF2\u5B8C\u6210", class: "bg-blue-100 text-blue-800", icon: "\u2705" },
+        "cancelled": { text: "\u5DF2\u53D6\u6D88", class: "bg-red-100 text-red-800", icon: "\u{1F534}" }
+      };
+      const statusInfo = statusLabels[place.bookingStatus] || statusLabels["planned"];
+      return `
+                  <div class="border border-gray-200 rounded-lg p-4">
+                    <div class="flex items-start justify-between mb-2">
+                      <div class="flex-1">
+                        <h3 class="text-lg font-semibold text-gray-800">${placeData.name || "\u672A\u77E5\u5730\u9EDE"}</h3>
+                        <p class="text-sm text-gray-600 mt-1">${placeData.address || "\u7121\u5730\u5740"}</p>
+                      </div>
+                      <div class="ml-4">
+                        <span class="booking-status-badge ${statusInfo.class} px-2 py-1 rounded text-xs">
+                          ${statusInfo.icon} ${statusInfo.text}
+                        </span>
+                      </div>
+                    </div>
+                    <div class="mt-2 text-sm text-gray-500">
+                      <span class="font-medium">\u6642\u9593\uFF1A</span>${place.time || "\u672A\u8A2D\u5B9A"}
+                    </div>
+                  </div>
+                `;
+    }).join("")}
+            </div>
+          </div>
+        `).join("")}
+
+        <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 text-center">
+          <p class="text-blue-800">\u60F3\u8981\u898F\u5283\u81EA\u5DF1\u7684\u884C\u7A0B\u55CE\uFF1F</p>
+          <a href="/trip-planner" class="inline-block mt-2 bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-6 rounded">
+            \u958B\u59CB\u898F\u5283\u884C\u7A0B
+          </a>
+        </div>
+      </div>
+    `;
+    const securityService = new SecurityService();
+    const securityHeaders = securityService.getCSPHeaders();
+    return new Response(pageTemplate2({
+      title: `${trip.title || "\u884C\u7A0B"} - \u597D\u6F8E\u6E56`,
+      content,
+      user: null,
+      nonce,
+      cssContent: cssContent + `
+        .booking-status-badge {
+          display: inline-block;
+          padding: 4px 8px;
+          border-radius: 4px;
+          font-size: 0.75rem;
+          font-weight: 500;
+        }
+      `,
+      currentPath: url.pathname
+    }), {
+      headers: {
+        "Content-Type": "text/html;charset=utf-8",
+        "Cache-Control": "no-cache, no-store, must-revalidate",
+        ...securityHeaders
+      }
+    });
+  } catch (error) {
+    console.error("[SharedTripPage] Error:", error);
+    return new Response(pageTemplate2({
+      title: "\u932F\u8AA4 - \u597D\u6F8E\u6E56",
+      content: '<div class="p-8 text-center"><h1 class="text-2xl font-bold mb-4">\u8F09\u5165\u884C\u7A0B\u6642\u767C\u751F\u932F\u8AA4</h1><p class="text-gray-600">\u8ACB\u7A0D\u5F8C\u518D\u8A66\u3002</p></div>',
+      user: null,
+      nonce,
+      cssContent,
+      currentPath: url.pathname
+    }), {
+      headers: { "Content-Type": "text/html;charset=utf-8" }
+    });
+  }
+}
+var init_TripPlanner = __esm({
+  "src/pages/TripPlanner.js"() {
+    "use strict";
+    init_layout();
+    init_SecurityService();
   }
 });
 
@@ -11809,309 +15678,6 @@ var init_BackupService = __esm({
   }
 });
 
-// src/services/RateLimitService.js
-var RateLimitService;
-var init_RateLimitService = __esm({
-  "src/services/RateLimitService.js"() {
-    "use strict";
-    RateLimitService = class {
-      constructor(env) {
-        this.env = env;
-        this.db = env.DB;
-        this.defaultLimits = {
-          // Google Places API 限制
-          "google_places": {
-            requestsPerMinute: 10,
-            requestsPerHour: 100,
-            requestsPerDay: 1e3
-          },
-          // 一般 API 限制
-          "api": {
-            requestsPerMinute: 60,
-            requestsPerHour: 1e3,
-            requestsPerDay: 1e4
-          },
-          // 圖片代理限制
-          "image_proxy": {
-            requestsPerMinute: 30,
-            requestsPerHour: 500,
-            requestsPerDay: 5e3
-          },
-          // 管理員 API 限制
-          "admin": {
-            requestsPerMinute: 100,
-            requestsPerHour: 2e3,
-            requestsPerDay: 2e4
-          }
-        };
-      }
-      /**
-       * 檢查請求是否超過限制
-       * @param {string} clientId 客戶端識別碼 (IP 或用戶ID)
-       * @param {string} endpoint 端點類型
-       * @returns {Promise<object>} 檢查結果
-       */
-      async checkRateLimit(clientId, endpoint = "api") {
-        try {
-          const limits = this.defaultLimits[endpoint] || this.defaultLimits["api"];
-          const now = /* @__PURE__ */ new Date();
-          const minuteCheck = await this.checkWindow(clientId, endpoint, "minute", limits.requestsPerMinute, now);
-          if (!minuteCheck.allowed) {
-            return {
-              allowed: false,
-              limit: "minute",
-              remaining: minuteCheck.remaining,
-              resetTime: minuteCheck.resetTime,
-              retryAfter: minuteCheck.retryAfter
-            };
-          }
-          const hourCheck = await this.checkWindow(clientId, endpoint, "hour", limits.requestsPerHour, now);
-          if (!hourCheck.allowed) {
-            return {
-              allowed: false,
-              limit: "hour",
-              remaining: hourCheck.remaining,
-              resetTime: hourCheck.resetTime,
-              retryAfter: hourCheck.retryAfter
-            };
-          }
-          const dayCheck = await this.checkWindow(clientId, endpoint, "day", limits.requestsPerDay, now);
-          if (!dayCheck.allowed) {
-            return {
-              allowed: false,
-              limit: "day",
-              remaining: dayCheck.remaining,
-              resetTime: dayCheck.resetTime,
-              retryAfter: dayCheck.retryAfter
-            };
-          }
-          await this.recordRequest(clientId, endpoint, now);
-          return {
-            allowed: true,
-            remaining: Math.min(minuteCheck.remaining, hourCheck.remaining, dayCheck.remaining),
-            resetTime: Math.min(minuteCheck.resetTime, hourCheck.resetTime, dayCheck.resetTime)
-          };
-        } catch (error) {
-          console.error("[RateLimitService] Error checking rate limit:", error);
-          return {
-            allowed: true,
-            error: error.message
-          };
-        }
-      }
-      /**
-       * 檢查特定時間窗口的限制
-       */
-      async checkWindow(clientId, endpoint, window, limit, now) {
-        let startTime, windowName;
-        switch (window) {
-          case "minute":
-            startTime = new Date(now.getTime() - 60 * 1e3);
-            windowName = "minute";
-            break;
-          case "hour":
-            startTime = new Date(now.getTime() - 60 * 60 * 1e3);
-            windowName = "hour";
-            break;
-          case "day":
-            startTime = new Date(now.getTime() - 24 * 60 * 60 * 1e3);
-            windowName = "day";
-            break;
-          default:
-            throw new Error(`Invalid window: ${window}`);
-        }
-        const stmt = this.db.prepare(`
-            SELECT COUNT(*) as count
-            FROM rate_limit_logs
-            WHERE client_id = ? 
-            AND endpoint = ? 
-            AND window_type = ?
-            AND request_time > ?
-        `);
-        const result = await stmt.bind(clientId, endpoint, windowName, startTime.toISOString()).first();
-        const count = result.count || 0;
-        const remaining = Math.max(0, limit - count);
-        const allowed = count < limit;
-        let resetTime;
-        switch (window) {
-          case "minute":
-            resetTime = new Date(now.getTime() + 60 * 1e3);
-            break;
-          case "hour":
-            resetTime = new Date(now.getTime() + 60 * 60 * 1e3);
-            break;
-          case "day":
-            resetTime = new Date(now.getTime() + 24 * 60 * 60 * 1e3);
-            break;
-        }
-        return {
-          allowed,
-          remaining,
-          resetTime: resetTime.toISOString(),
-          retryAfter: Math.ceil((resetTime.getTime() - now.getTime()) / 1e3)
-        };
-      }
-      /**
-       * 記錄請求
-       */
-      async recordRequest(clientId, endpoint, timestamp) {
-        try {
-          const stmt = this.db.prepare(`
-                INSERT INTO rate_limit_logs 
-                (client_id, endpoint, window_type, request_time, created_at)
-                VALUES (?, ?, ?, ?, ?)
-            `);
-          await stmt.bind(clientId, endpoint, "minute", timestamp.toISOString(), timestamp.toISOString()).run();
-          await stmt.bind(clientId, endpoint, "hour", timestamp.toISOString(), timestamp.toISOString()).run();
-          await stmt.bind(clientId, endpoint, "day", timestamp.toISOString(), timestamp.toISOString()).run();
-        } catch (error) {
-          console.error("[RateLimitService] Failed to record request:", error);
-        }
-      }
-      /**
-       * 獲取客戶端使用統計
-       * @param {string} clientId 客戶端識別碼
-       * @param {string} endpoint 端點類型
-       * @returns {Promise<object>} 使用統計
-       */
-      async getClientStats(clientId, endpoint = "api") {
-        try {
-          const now = /* @__PURE__ */ new Date();
-          const minuteAgo = new Date(now.getTime() - 60 * 1e3);
-          const hourAgo = new Date(now.getTime() - 60 * 60 * 1e3);
-          const dayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1e3);
-          const stmt = this.db.prepare(`
-                SELECT 
-                    window_type,
-                    COUNT(*) as count
-                FROM rate_limit_logs
-                WHERE client_id = ? 
-                AND endpoint = ?
-                AND request_time > ?
-                GROUP BY window_type
-            `);
-          const minuteResult = await stmt.bind(clientId, endpoint, minuteAgo.toISOString()).all();
-          const hourResult = await stmt.bind(clientId, endpoint, hourAgo.toISOString()).all();
-          const dayResult = await stmt.bind(clientId, endpoint, dayAgo.toISOString()).all();
-          const limits = this.defaultLimits[endpoint] || this.defaultLimits["api"];
-          return {
-            clientId,
-            endpoint,
-            usage: {
-              minute: minuteResult.length > 0 ? minuteResult[0].count : 0,
-              hour: hourResult.length > 0 ? hourResult[0].count : 0,
-              day: dayResult.length > 0 ? dayResult[0].count : 0
-            },
-            limits,
-            remaining: {
-              minute: Math.max(0, limits.requestsPerMinute - (minuteResult.length > 0 ? minuteResult[0].count : 0)),
-              hour: Math.max(0, limits.requestsPerHour - (hourResult.length > 0 ? hourResult[0].count : 0)),
-              day: Math.max(0, limits.requestsPerDay - (dayResult.length > 0 ? dayResult[0].count : 0))
-            }
-          };
-        } catch (error) {
-          console.error("[RateLimitService] Failed to get client stats:", error);
-          return {
-            clientId,
-            endpoint,
-            error: error.message
-          };
-        }
-      }
-      /**
-       * 清理過期的速率限制日誌
-       * @param {number} daysToKeep 保留天數
-       * @returns {Promise<object>} 清理結果
-       */
-      async cleanupOldLogs(daysToKeep = 7) {
-        try {
-          const cutoffDate = /* @__PURE__ */ new Date();
-          cutoffDate.setDate(cutoffDate.getDate() - daysToKeep);
-          const stmt = this.db.prepare(`
-                DELETE FROM rate_limit_logs
-                WHERE request_time < ?
-            `);
-          const result = await stmt.bind(cutoffDate.toISOString()).run();
-          return {
-            success: true,
-            deletedCount: result.changes || 0
-          };
-        } catch (error) {
-          console.error("[RateLimitService] Failed to cleanup old logs:", error);
-          return {
-            success: false,
-            error: error.message
-          };
-        }
-      }
-      /**
-       * 獲取速率限制統計
-       * @returns {Promise<object>} 統計資訊
-       */
-      async getRateLimitStats() {
-        try {
-          const now = /* @__PURE__ */ new Date();
-          const dayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1e3);
-          const stmt = this.db.prepare(`
-                SELECT 
-                    endpoint,
-                    COUNT(*) as total_requests,
-                    COUNT(DISTINCT client_id) as unique_clients
-                FROM rate_limit_logs
-                WHERE request_time > ?
-                GROUP BY endpoint
-            `);
-          const { results } = await stmt.bind(dayAgo.toISOString()).all();
-          return {
-            period: "24h",
-            stats: results,
-            totalRequests: results.reduce((sum, row) => sum + row.total_requests, 0),
-            uniqueClients: results.reduce((sum, row) => sum + row.unique_clients, 0)
-          };
-        } catch (error) {
-          console.error("[RateLimitService] Failed to get stats:", error);
-          return {
-            error: error.message
-          };
-        }
-      }
-      /**
-       * 檢查 Google Places API 使用量
-       * @returns {Promise<object>} API 使用量
-       */
-      async checkGooglePlacesUsage() {
-        try {
-          const now = /* @__PURE__ */ new Date();
-          const dayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1e3);
-          const stmt = this.db.prepare(`
-                SELECT COUNT(*) as count
-                FROM rate_limit_logs
-                WHERE endpoint = 'google_places'
-                AND request_time > ?
-            `);
-          const result = await stmt.bind(dayAgo.toISOString()).first();
-          const dailyUsage = result.count || 0;
-          const limit = this.defaultLimits.google_places.requestsPerDay;
-          const remaining = Math.max(0, limit - dailyUsage);
-          const usagePercentage = dailyUsage / limit * 100;
-          return {
-            dailyUsage,
-            limit,
-            remaining,
-            usagePercentage: Math.round(usagePercentage * 100) / 100,
-            status: usagePercentage > 90 ? "warning" : usagePercentage > 75 ? "caution" : "normal"
-          };
-        } catch (error) {
-          console.error("[RateLimitService] Failed to check Google Places usage:", error);
-          return {
-            error: error.message
-          };
-        }
-      }
-    };
-  }
-});
-
 // src/services/SecurityAuditService.js
 var SecurityAuditService;
 var init_SecurityAuditService = __esm({
@@ -12677,6 +16243,21 @@ async function handleAdminRequest(request, env, user) {
     if (pathname2 === "/api/admin/users/get-role") {
       return await handleGetUserRole(request, env);
     }
+    if (pathname2 === "/api/admin/ecosystem/report") {
+      return await handleEcosystemReport(request, env);
+    }
+    if (pathname2 === "/api/admin/ecosystem/wellbeing") {
+      return await handleEcosystemWellbeing(request, env);
+    }
+    if (pathname2 === "/api/admin/ecosystem/resources") {
+      return await handleEcosystemResources(request, env);
+    }
+    if (pathname2 === "/api/admin/ecosystem/community") {
+      return await handleEcosystemCommunity(request, env);
+    }
+    if (pathname2 === "/api/admin/ecosystem/agents") {
+      return await handleEcosystemAgents(request, env);
+    }
     return new Response("Not Found", { status: 404 });
   } catch (error) {
     console.error("[Admin API] Error:", error);
@@ -13058,6 +16639,119 @@ async function handleGetUserRole(request, env) {
     });
   }
 }
+async function handleEcosystemReport(request, env) {
+  try {
+    const url = new URL(request.url);
+    const days = parseInt(url.searchParams.get("days") || "7");
+    const serviceFactory = new ServiceFactory(env);
+    const ecosystemService = serviceFactory.getService("ecosystemService");
+    const report = await ecosystemService.getEcosystemReport({ days });
+    return new Response(JSON.stringify(report), {
+      status: 200,
+      headers: { "Content-Type": "application/json" }
+    });
+  } catch (error) {
+    console.error("[Admin API] Ecosystem report failed:", error);
+    return new Response(JSON.stringify({
+      error: "Failed to get ecosystem report",
+      message: error.message
+    }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" }
+    });
+  }
+}
+async function handleEcosystemWellbeing(request, env) {
+  try {
+    const url = new URL(request.url);
+    const userId = url.searchParams.get("userId");
+    const days = parseInt(url.searchParams.get("days") || "30");
+    const serviceFactory = new ServiceFactory(env);
+    const ecosystemService = serviceFactory.getService("ecosystemService");
+    const wellbeing = await ecosystemService.getUserWellbeing(userId, { days });
+    return new Response(JSON.stringify(wellbeing), {
+      status: 200,
+      headers: { "Content-Type": "application/json" }
+    });
+  } catch (error) {
+    console.error("[Admin API] Ecosystem wellbeing failed:", error);
+    return new Response(JSON.stringify({
+      error: "Failed to get wellbeing data",
+      message: error.message
+    }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" }
+    });
+  }
+}
+async function handleEcosystemResources(request, env) {
+  try {
+    const url = new URL(request.url);
+    const days = parseInt(url.searchParams.get("days") || "7");
+    const serviceFactory = new ServiceFactory(env);
+    const ecosystemService = serviceFactory.getService("ecosystemService");
+    const usage = await ecosystemService.getResourceUsage({ days });
+    return new Response(JSON.stringify(usage), {
+      status: 200,
+      headers: { "Content-Type": "application/json" }
+    });
+  } catch (error) {
+    console.error("[Admin API] Ecosystem resources failed:", error);
+    return new Response(JSON.stringify({
+      error: "Failed to get resource usage",
+      message: error.message
+    }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" }
+    });
+  }
+}
+async function handleEcosystemCommunity(request, env) {
+  try {
+    const url = new URL(request.url);
+    const days = parseInt(url.searchParams.get("days") || "7");
+    const serviceFactory = new ServiceFactory(env);
+    const ecosystemService = serviceFactory.getService("ecosystemService");
+    const health = await ecosystemService.getCommunityHealth({ days });
+    return new Response(JSON.stringify(health), {
+      status: 200,
+      headers: { "Content-Type": "application/json" }
+    });
+  } catch (error) {
+    console.error("[Admin API] Ecosystem community failed:", error);
+    return new Response(JSON.stringify({
+      error: "Failed to get community health",
+      message: error.message
+    }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" }
+    });
+  }
+}
+async function handleEcosystemAgents(request, env) {
+  try {
+    const serviceFactory = new ServiceFactory(env);
+    const aiAgentFactory = serviceFactory.getService("aiAgentFactory");
+    const stats = aiAgentFactory.getStats();
+    const allStates = aiAgentFactory.getAllAgentStates();
+    return new Response(JSON.stringify({
+      stats,
+      agents: allStates
+    }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" }
+    });
+  } catch (error) {
+    console.error("[Admin API] Ecosystem agents failed:", error);
+    return new Response(JSON.stringify({
+      error: "Failed to get agent stats",
+      message: error.message
+    }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" }
+    });
+  }
+}
 var init_admin = __esm({
   "src/api/admin.js"() {
     "use strict";
@@ -13066,6 +16760,7 @@ var init_admin = __esm({
     init_SecurityAuditService();
     init_auth();
     init_cacheMonitor();
+    init_ServiceFactory();
   }
 });
 
@@ -15962,7 +19657,15 @@ async function handleItineraryRequest(request, env, user) {
       env.GOOGLE_MAPS_API_KEY
     );
     const itineraryService = new ItineraryService(env.DB, locationService, aiService);
-    if (path === "/api/itinerary" && method === "GET") {
+    if (path === "/api/itinerary/maps-api-key" && method === "GET") {
+      return new Response(JSON.stringify({
+        success: true,
+        apiKey: env.GOOGLE_MAPS_API_KEY || ""
+      }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" }
+      });
+    } else if (path === "/api/itinerary" && method === "GET") {
       return await handleGetUserItineraries(request, env, user, itineraryService);
     } else if (path === "/api/itinerary" && method === "POST") {
       return await handleCreateItinerary(request, env, user, itineraryService);
@@ -15989,14 +19692,6 @@ async function handleItineraryRequest(request, env, user) {
     } else if (path.startsWith("/api/itinerary/location/personal/") && method === "PUT") {
       const locationId = path.split("/").pop();
       return await handleUpdateUserLocationStatus(request, env, user, locationService, locationId);
-    } else if (path === "/api/itinerary/maps-api-key" && method === "GET") {
-      return new Response(JSON.stringify({
-        success: true,
-        apiKey: env.GOOGLE_MAPS_API_KEY || ""
-      }), {
-        status: 200,
-        headers: { "Content-Type": "application/json" }
-      });
     }
     return new Response(JSON.stringify({
       success: false,
@@ -16401,6 +20096,562 @@ var init_itinerary = __esm({
     "use strict";
     init_ItineraryService();
     init_itinerary_location();
+  }
+});
+
+// src/api/trip-planner.js
+var trip_planner_exports = {};
+__export(trip_planner_exports, {
+  handleTripPlannerRequest: () => handleTripPlannerRequest
+});
+async function handleTripPlannerRequest(request, env, user) {
+  const url = new URL(request.url);
+  const path = url.pathname;
+  const method = request.method;
+  try {
+    if (path.startsWith("/api/trip-planner/shared/") && method === "GET") {
+      const shareToken = path.split("/").pop();
+      if (shareToken && shareToken !== "shared") {
+        return await handleGetSharedTrip(shareToken, env);
+      }
+    }
+    if (!user) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: "Unauthorized"
+      }), {
+        status: 401,
+        headers: { "Content-Type": "application/json" }
+      });
+    }
+    if (path === "/api/trip-planner/save" && method === "POST") {
+      return await handleSaveTrip(request, env, user);
+    }
+    if (path === "/api/trip-planner/list" && method === "GET") {
+      return await handleGetUserTrips(request, env, user);
+    }
+    if (path.startsWith("/api/trip-planner/item/") && path.endsWith("/booking-status") && method === "PUT") {
+      const itemId = path.split("/")[4];
+      return await handleUpdateBookingStatus(itemId, request, env, user);
+    }
+    if (path.startsWith("/api/trip-planner/item/") && path.endsWith("/booking-info") && method === "PUT") {
+      const itemId = path.split("/")[4];
+      return await handleUpdateBookingInfo(itemId, request, env, user);
+    }
+    if (path.startsWith("/api/trip-planner/") && path.endsWith("/share") && method === "POST") {
+      const tripId = path.split("/")[3];
+      return await handleShareTrip(tripId, request, env, user);
+    }
+    if (path.startsWith("/api/trip-planner/") && path.endsWith("/share") && method === "DELETE") {
+      const tripId = path.split("/")[3];
+      return await handleUnshareTrip(tripId, env, user);
+    }
+    if (path.startsWith("/api/trip-planner/") && method === "GET") {
+      const tripId = path.split("/").pop();
+      if (tripId && tripId !== "save" && tripId !== "list" && tripId !== "shared") {
+        return await handleGetTrip(tripId, env, user);
+      }
+    }
+    if (path.startsWith("/api/trip-planner/") && method === "DELETE") {
+      const tripId = path.split("/").pop();
+      if (tripId && tripId !== "save" && tripId !== "list" && tripId !== "shared") {
+        return await handleDeleteTrip(tripId, env, user);
+      }
+    }
+    return new Response(JSON.stringify({
+      success: false,
+      error: "API endpoint not found"
+    }), {
+      status: 404,
+      headers: { "Content-Type": "application/json" }
+    });
+  } catch (error) {
+    console.error("[Trip Planner API] Error:", error);
+    return new Response(JSON.stringify({
+      success: false,
+      error: "Internal server error",
+      message: error.message
+    }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" }
+    });
+  }
+}
+async function handleSaveTrip(request, env, user) {
+  try {
+    const body = await request.json();
+    const { title, days } = body;
+    if (!title || !days || !Array.isArray(days)) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: "Invalid request data"
+      }), {
+        status: 400,
+        headers: { "Content-Type": "application/json" }
+      });
+    }
+    const tripId = body.tripId || `trip_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const now = Date.now();
+    const shareToken = body.shareToken || null;
+    const isPublic = body.isPublic ? 1 : 0;
+    const existingTrip = await env.DB.prepare(
+      `SELECT id FROM trip_plans WHERE id = ? AND user_id = ?`
+    ).bind(tripId, user.id).first();
+    if (existingTrip) {
+      await env.DB.prepare(
+        `UPDATE trip_plans SET title = ?, updated_at = ?, share_token = ?, is_public = ? WHERE id = ?`
+      ).bind(title, now, shareToken, isPublic, tripId).run();
+      await env.DB.prepare(
+        `DELETE FROM trip_plan_items WHERE trip_id = ?`
+      ).bind(tripId).run();
+    } else {
+      await env.DB.prepare(
+        `INSERT INTO trip_plans (id, user_id, title, share_token, is_public, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`
+      ).bind(tripId, user.id, title, shareToken, isPublic, now, now).run();
+    }
+    for (let dayIndex = 0; dayIndex < days.length; dayIndex++) {
+      const day = days[dayIndex];
+      if (!day.date || !day.places || !Array.isArray(day.places)) {
+        continue;
+      }
+      for (let placeIndex = 0; placeIndex < day.places.length; placeIndex++) {
+        const place = day.places[placeIndex];
+        if (!place.placeId) {
+          continue;
+        }
+        const itemId = `trip_item_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        await env.DB.prepare(
+          `INSERT INTO trip_plan_items (id, trip_id, day_index, place_id, time, order_index, booking_status, booking_url, booking_phone, booking_notes, created_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        ).bind(
+          itemId,
+          tripId,
+          dayIndex,
+          place.placeId,
+          place.time || "09:00",
+          place.order || placeIndex,
+          place.bookingStatus || "planned",
+          place.bookingUrl || null,
+          place.bookingPhone || null,
+          place.bookingNotes || null,
+          now
+        ).run();
+      }
+    }
+    return new Response(JSON.stringify({
+      success: true,
+      tripId,
+      message: "\u884C\u7A0B\u5DF2\u5132\u5B58"
+    }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" }
+    });
+  } catch (error) {
+    console.error("[Trip Planner API] Error saving trip:", error);
+    return new Response(JSON.stringify({
+      success: false,
+      error: "Failed to save trip",
+      message: error.message
+    }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" }
+    });
+  }
+}
+async function handleGetUserTrips(request, env, user) {
+  try {
+    const trips = await env.DB.prepare(
+      `SELECT id, title, created_at, updated_at
+       FROM trip_plans
+       WHERE user_id = ?
+       ORDER BY updated_at DESC
+       LIMIT 50`
+    ).bind(user.id).all();
+    return new Response(JSON.stringify({
+      success: true,
+      trips: trips.results || []
+    }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" }
+    });
+  } catch (error) {
+    console.error("[Trip Planner API] Error getting user trips:", error);
+    return new Response(JSON.stringify({
+      success: false,
+      error: "Failed to get trips",
+      message: error.message
+    }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" }
+    });
+  }
+}
+async function handleGetTrip(tripId, env, user) {
+  try {
+    const trip = await env.DB.prepare(
+      `SELECT id, user_id, title, share_token, is_public, created_at, updated_at
+       FROM trip_plans
+       WHERE id = ? AND user_id = ?`
+    ).bind(tripId, user.id).first();
+    if (!trip) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: "Trip not found"
+      }), {
+        status: 404,
+        headers: { "Content-Type": "application/json" }
+      });
+    }
+    const items = await env.DB.prepare(
+      `SELECT id, day_index, place_id, time, order_index, booking_status, booking_url, booking_phone, booking_notes
+       FROM trip_plan_items
+       WHERE trip_id = ?
+       ORDER BY day_index, order_index`
+    ).bind(tripId).all();
+    const daysMap = /* @__PURE__ */ new Map();
+    for (const item of items.results || []) {
+      const dayIndex = item.day_index;
+      if (!daysMap.has(dayIndex)) {
+        daysMap.set(dayIndex, []);
+      }
+      daysMap.get(dayIndex).push({
+        id: item.id,
+        placeId: item.place_id,
+        time: item.time,
+        order: item.order_index,
+        bookingStatus: item.booking_status || "planned",
+        bookingUrl: item.booking_url,
+        bookingPhone: item.booking_phone,
+        bookingNotes: item.booking_notes
+      });
+    }
+    const days = Array.from(daysMap.entries()).sort((a, b) => a[0] - b[0]).map(([dayIndex, places]) => ({
+      dayIndex,
+      places
+    }));
+    return new Response(JSON.stringify({
+      success: true,
+      trip: {
+        id: trip.id,
+        title: trip.title,
+        shareToken: trip.share_token,
+        isPublic: trip.is_public === 1,
+        createdAt: trip.created_at,
+        updatedAt: trip.updated_at,
+        days
+      }
+    }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" }
+    });
+  } catch (error) {
+    console.error("[Trip Planner API] Error getting trip:", error);
+    return new Response(JSON.stringify({
+      success: false,
+      error: "Failed to get trip",
+      message: error.message
+    }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" }
+    });
+  }
+}
+async function handleDeleteTrip(tripId, env, user) {
+  try {
+    const trip = await env.DB.prepare(
+      `SELECT id FROM trip_plans WHERE id = ? AND user_id = ?`
+    ).bind(tripId, user.id).first();
+    if (!trip) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: "Trip not found"
+      }), {
+        status: 404,
+        headers: { "Content-Type": "application/json" }
+      });
+    }
+    await env.DB.prepare(
+      `DELETE FROM trip_plan_items WHERE trip_id = ?`
+    ).bind(tripId).run();
+    await env.DB.prepare(
+      `DELETE FROM trip_plans WHERE id = ?`
+    ).bind(tripId).run();
+    return new Response(JSON.stringify({
+      success: true,
+      message: "Trip deleted"
+    }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" }
+    });
+  } catch (error) {
+    console.error("[Trip Planner API] Error deleting trip:", error);
+    return new Response(JSON.stringify({
+      success: false,
+      error: "Failed to delete trip",
+      message: error.message
+    }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" }
+    });
+  }
+}
+async function handleUpdateBookingStatus(itemId, request, env, user) {
+  try {
+    const body = await request.json();
+    const { bookingStatus } = body;
+    if (!bookingStatus || !["planned", "booked", "completed", "cancelled"].includes(bookingStatus)) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: "Invalid booking status"
+      }), {
+        status: 400,
+        headers: { "Content-Type": "application/json" }
+      });
+    }
+    const item = await env.DB.prepare(
+      `SELECT tpi.id, tp.user_id 
+       FROM trip_plan_items tpi
+       JOIN trip_plans tp ON tpi.trip_id = tp.id
+       WHERE tpi.id = ? AND tp.user_id = ?`
+    ).bind(itemId, user.id).first();
+    if (!item) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: "Item not found or unauthorized"
+      }), {
+        status: 404,
+        headers: { "Content-Type": "application/json" }
+      });
+    }
+    await env.DB.prepare(
+      `UPDATE trip_plan_items SET booking_status = ? WHERE id = ?`
+    ).bind(bookingStatus, itemId).run();
+    return new Response(JSON.stringify({
+      success: true,
+      message: "Booking status updated"
+    }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" }
+    });
+  } catch (error) {
+    console.error("[Trip Planner API] Error updating booking status:", error);
+    return new Response(JSON.stringify({
+      success: false,
+      error: "Failed to update booking status",
+      message: error.message
+    }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" }
+    });
+  }
+}
+async function handleUpdateBookingInfo(itemId, request, env, user) {
+  try {
+    const body = await request.json();
+    const { bookingUrl, bookingPhone, bookingNotes } = body;
+    const item = await env.DB.prepare(
+      `SELECT tpi.id, tp.user_id 
+       FROM trip_plan_items tpi
+       JOIN trip_plans tp ON tpi.trip_id = tp.id
+       WHERE tpi.id = ? AND tp.user_id = ?`
+    ).bind(itemId, user.id).first();
+    if (!item) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: "Item not found or unauthorized"
+      }), {
+        status: 404,
+        headers: { "Content-Type": "application/json" }
+      });
+    }
+    await env.DB.prepare(
+      `UPDATE trip_plan_items 
+       SET booking_url = ?, booking_phone = ?, booking_notes = ?
+       WHERE id = ?`
+    ).bind(bookingUrl || null, bookingPhone || null, bookingNotes || null, itemId).run();
+    return new Response(JSON.stringify({
+      success: true,
+      message: "Booking info updated"
+    }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" }
+    });
+  } catch (error) {
+    console.error("[Trip Planner API] Error updating booking info:", error);
+    return new Response(JSON.stringify({
+      success: false,
+      error: "Failed to update booking info",
+      message: error.message
+    }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" }
+    });
+  }
+}
+async function handleShareTrip(tripId, request, env, user) {
+  try {
+    const body = await request.json();
+    const { isPublic } = body;
+    const trip = await env.DB.prepare(
+      `SELECT id FROM trip_plans WHERE id = ? AND user_id = ?`
+    ).bind(tripId, user.id).first();
+    if (!trip) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: "Trip not found or unauthorized"
+      }), {
+        status: 404,
+        headers: { "Content-Type": "application/json" }
+      });
+    }
+    let shareToken = await env.DB.prepare(
+      `SELECT share_token FROM trip_plans WHERE id = ?`
+    ).bind(tripId).first();
+    if (!shareToken || !shareToken.share_token) {
+      shareToken = `share_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      let attempts = 0;
+      while (attempts < 10) {
+        const existing = await env.DB.prepare(
+          `SELECT id FROM trip_plans WHERE share_token = ?`
+        ).bind(shareToken).first();
+        if (!existing)
+          break;
+        shareToken = `share_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        attempts++;
+      }
+    } else {
+      shareToken = shareToken.share_token;
+    }
+    await env.DB.prepare(
+      `UPDATE trip_plans SET share_token = ?, is_public = ? WHERE id = ?`
+    ).bind(shareToken, isPublic ? 1 : 0, tripId).run();
+    const shareUrl = `${new URL(request.url).origin}/trip-planner/shared/${shareToken}`;
+    return new Response(JSON.stringify({
+      success: true,
+      shareToken,
+      shareUrl,
+      isPublic
+    }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" }
+    });
+  } catch (error) {
+    console.error("[Trip Planner API] Error sharing trip:", error);
+    return new Response(JSON.stringify({
+      success: false,
+      error: "Failed to share trip",
+      message: error.message
+    }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" }
+    });
+  }
+}
+async function handleUnshareTrip(tripId, env, user) {
+  try {
+    const trip = await env.DB.prepare(
+      `SELECT id FROM trip_plans WHERE id = ? AND user_id = ?`
+    ).bind(tripId, user.id).first();
+    if (!trip) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: "Trip not found or unauthorized"
+      }), {
+        status: 404,
+        headers: { "Content-Type": "application/json" }
+      });
+    }
+    await env.DB.prepare(
+      `UPDATE trip_plans SET share_token = NULL, is_public = 0 WHERE id = ?`
+    ).bind(tripId).run();
+    return new Response(JSON.stringify({
+      success: true,
+      message: "Trip unshared"
+    }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" }
+    });
+  } catch (error) {
+    console.error("[Trip Planner API] Error unsharing trip:", error);
+    return new Response(JSON.stringify({
+      success: false,
+      error: "Failed to unshare trip",
+      message: error.message
+    }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" }
+    });
+  }
+}
+async function handleGetSharedTrip(shareToken, env) {
+  try {
+    const trip = await env.DB.prepare(
+      `SELECT id, user_id, title, is_public, created_at, updated_at
+       FROM trip_plans
+       WHERE share_token = ? AND is_public = 1`
+    ).bind(shareToken).first();
+    if (!trip) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: "Shared trip not found"
+      }), {
+        status: 404,
+        headers: { "Content-Type": "application/json" }
+      });
+    }
+    const items = await env.DB.prepare(
+      `SELECT id, day_index, place_id, time, order_index, booking_status
+       FROM trip_plan_items
+       WHERE trip_id = ?
+       ORDER BY day_index, order_index`
+    ).bind(trip.id).all();
+    const daysMap = /* @__PURE__ */ new Map();
+    for (const item of items.results || []) {
+      const dayIndex = item.day_index;
+      if (!daysMap.has(dayIndex)) {
+        daysMap.set(dayIndex, []);
+      }
+      daysMap.get(dayIndex).push({
+        id: item.id,
+        placeId: item.place_id,
+        time: item.time,
+        order: item.order_index,
+        bookingStatus: item.booking_status || "planned"
+      });
+    }
+    const days = Array.from(daysMap.entries()).sort((a, b) => a[0] - b[0]).map(([dayIndex, places]) => ({
+      dayIndex,
+      places
+    }));
+    return new Response(JSON.stringify({
+      success: true,
+      trip: {
+        id: trip.id,
+        title: trip.title,
+        createdAt: trip.created_at,
+        updatedAt: trip.updated_at,
+        days
+      }
+    }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" }
+    });
+  } catch (error) {
+    console.error("[Trip Planner API] Error getting shared trip:", error);
+    return new Response(JSON.stringify({
+      success: false,
+      error: "Failed to get shared trip",
+      message: error.message
+    }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" }
+    });
+  }
+}
+var init_trip_planner = __esm({
+  "src/api/trip-planner.js"() {
+    "use strict";
   }
 });
 
@@ -18113,8 +22364,7 @@ function getAddPlacePageContent() {
 
             // 2. Load Google Maps JS API script dynamically
             const script = document.createElement('script');
-            // REMOVED callback=initAutocomplete&loading=async
-            script.src = 'https://maps.googleapis.com/maps/api/js?key=' + mapsApiKey + '&libraries=places,places.element'; 
+            script.src = 'https://maps.googleapis.com/maps/api/js?key=' + mapsApiKey + '&libraries=places,places.element&loading=async'; 
             script.async = true; // Keep async loading
 
             // --- NEW: Initialize AFTER script loads ---
@@ -19965,108 +24215,7 @@ init_UserService();
 init_SessionService();
 init_GoogleAuthService();
 init_locationService();
-
-// src/services/LocationInvitationService.js
-var LocationInvitationService = class {
-  constructor(db) {
-    this.db = db;
-  }
-  /**
-   * Generates a claim link for a location and stores the invitation.
-   * @param {string} locationId - The ID of the location.
-   * @param {string} merchantEmail - The email of the merchant to invite.
-   * @param {string} adminId - The ID of the admin creating the invitation.
-   * @returns {Promise<{claim_url: string, merchant_email: string} | {error: string, status: number}>}
-   */
-  async generateClaimLink(locationId, merchantEmail, adminId) {
-    if (!locationId || !merchantEmail || !adminId) {
-      return { error: "Missing required fields: locationId, merchantEmail, or adminId.", status: 400 };
-    }
-    try {
-      const claimToken = crypto.randomUUID();
-      const now = /* @__PURE__ */ new Date();
-      const createdAtISO = now.toISOString();
-      const expiresAt = new Date(now.setDate(now.getDate() + 7));
-      const expiresAtISO = expiresAt.toISOString();
-      const stmt = this.db.prepare(
-        "INSERT INTO location_invitations (id, location_id, merchant_email, claim_token, status, created_at, created_by_admin_id, expires_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
-      );
-      await stmt.bind(crypto.randomUUID(), locationId, merchantEmail, claimToken, "pending_claim", createdAtISO, adminId, expiresAtISO).run();
-      const claim_url = `https://www.hopenghu.cc/claim-location?token=${claimToken}`;
-      return { claim_url, merchant_email: merchantEmail };
-    } catch (error) {
-      console.error("Error generating claim link:", error);
-      if (error.message && error.message.includes("UNIQUE constraint failed: location_invitations.claim_token")) {
-        return { error: "Failed to generate a unique claim token. Please try again.", status: 500 };
-      }
-      if (error.message && error.message.includes("FOREIGN KEY constraint failed")) {
-        return { error: "Invalid location_id or admin_id provided.", status: 400 };
-      }
-      return { error: "Failed to generate claim link due to a server error.", status: 500 };
-    }
-  }
-  /**
-   * Verifies a claim token.
-   * @param {string} token - The claim token.
-   * @returns {Promise<{isValid: boolean, invitation?: object, error?: string, message?: string}>}
-   */
-  async verifyInvitationToken(token) {
-    console.log(`[LocationInvitationService] verifyInvitationToken called with token: ${token}`);
-    if (!token) {
-      return { isValid: false, error: "invalid_token", message: "\u6B0A\u6756\u4E0D\u53EF\u70BA\u7A7A\u3002" };
-    }
-    try {
-      const stmt = this.db.prepare(
-        "SELECT * FROM location_invitations WHERE claim_token = ?"
-      );
-      const invitation = await stmt.bind(token).first();
-      if (!invitation) {
-        return { isValid: false, error: "invalid_token", message: "\u7121\u6548\u7684\u9080\u8ACB\u6B0A\u6756\u3002" };
-      }
-      if (invitation.status !== "pending_claim") {
-        return { isValid: false, error: "already_used", message: "\u6B64\u9080\u8ACB\u5DF2\u88AB\u4F7F\u7528\u6216\u5DF2\u5931\u6548\u3002" };
-      }
-      const now = /* @__PURE__ */ new Date();
-      const expiresAt = new Date(invitation.expires_at);
-      if (now > expiresAt) {
-        return { isValid: false, error: "expired", message: "\u6B64\u9080\u8ACB\u5DF2\u904E\u671F\u3002" };
-      }
-      return { isValid: true, invitation };
-    } catch (dbError) {
-      console.error("[LocationInvitationService] DB error during verifyInvitationToken:", dbError);
-      return { isValid: false, error: "db_error", message: "\u9A57\u8B49\u9080\u8ACB\u6642\u767C\u751F\u8CC7\u6599\u5EAB\u932F\u8AA4\u3002" };
-    }
-  }
-  /**
-   * Marks an invitation as claimed.
-   * @param {string} invitationId - The ID of the invitation.
-   * @param {string} claimingUserId - The ID of the user claiming the invitation.
-   * @returns {Promise<{success: boolean, error?: string}>}
-   */
-  async markInvitationAsClaimed(invitationId, claimingUserId) {
-    console.log(`[LocationInvitationService] markInvitationAsClaimed called for invitationId: ${invitationId}, claimingUserId: ${claimingUserId}`);
-    if (!invitationId || !claimingUserId) {
-      return { success: false, error: "missing_parameters", message: "\u7F3A\u5C11\u9080\u8ACBID\u6216\u7528\u6236ID\u3002" };
-    }
-    try {
-      const now = (/* @__PURE__ */ new Date()).toISOString();
-      const stmt = this.db.prepare(
-        "UPDATE location_invitations SET status = 'claimed', claimed_at = ?, claimed_by_user_id = ?, updated_at = ? WHERE id = ?"
-      );
-      const result = await stmt.bind(now, claimingUserId, now, invitationId).run();
-      if (result.meta.changes === 0) {
-        return { success: false, error: "not_found", message: "\u627E\u4E0D\u5230\u5C0D\u61C9\u7684\u9080\u8ACB\u6216\u66F4\u65B0\u5931\u6557\u3002" };
-      }
-      return { success: true };
-    } catch (dbError) {
-      console.error("[LocationInvitationService] DB error during markInvitationAsClaimed:", dbError);
-      return { success: false, error: "db_error", message: "\u66F4\u65B0\u9080\u8ACB\u72C0\u614B\u6642\u767C\u751F\u8CC7\u6599\u5EAB\u932F\u8AA4\u3002" };
-    }
-  }
-  // We will add more methods here later for verify-claim-token and confirm-claim
-};
-
-// src/worker.js
+init_LocationInvitationService();
 init_AIService();
 init_BusinessVerificationService();
 
@@ -20316,263 +24465,8 @@ async function handleUserRequestVerification(request, env, ctx) {
   }
 }
 
-// src/components/layout.js
-function pageTemplate2({ title, content, user, nonce, cssContent, useContainer = true, currentPath = "" }) {
-  console.log("pageTemplate called with:", { title, user: !!user, nonce, useContainer, currentPath });
-  const isFootprintsActive = currentPath === "/footprints" || currentPath.startsWith("/footprints");
-  const isItineraryActive = currentPath === "/itinerary" || currentPath.startsWith("/itinerary");
-  try {
-    const html = `
-      <!DOCTYPE html>
-      <html lang="zh-TW">
-      <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>${title || "HOPE PENGHU"} - HOPE PENGHU</title>
-        <link rel="icon" type="image/x-icon" href="/favicon.ico">
-        <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
-        
-        <!-- Removed CSS link tag -->
-        <!-- <link rel="stylesheet" href="/build/worker.css"> -->
-
-        <!-- Inject CSS content -->
-        <style nonce="${nonce}">
-          ${cssContent || "/* CSS content not provided */"}
-          /* \u5B57\u9AD4\u56DE\u9000\uFF1A\u5982\u679C Google Fonts \u7121\u6CD5\u8F09\u5165\uFF0C\u4F7F\u7528\u7CFB\u7D71\u5B57\u9AD4 */
-          body {
-            font-family: 'Noto Sans TC', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft JhengHei', 'PingFang TC', 'Helvetica Neue', Arial, sans-serif;
-          }
-        </style>
-
-      </head>
-      <body>
-        <header class="header">
-          <nav class="nav container">
-            <a href="/" class="nav-logo">HOPE PENGHU</a>
-            <ul class="nav-menu">
-              <li><a href="/footprints" class="nav-link${isFootprintsActive ? " nav-link-active" : ""}">\u8DB3\u8DE1</a></li>
-              ${user ? `<li><a href="/itinerary" class="nav-link${isItineraryActive ? " nav-link-active" : ""}">\u884C\u7A0B\u898F\u5283</a></li>` : ""}
-              ${user ? `
-                <li class="nav-menu-item-avatar">
-                  <div id="avatar-container" role="button" tabindex="0" aria-label="User menu" class="focus:outline-none avatar-container-div"> 
-                     ${user.avatar_url ? `<img src="${user.avatar_url}" alt="User Avatar" class="user-avatar" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" onload="this.nextElementSibling.style.display='none';"><span class="user-avatar avatar-fallback" style="display:none;">${user.name ? user.name.charAt(0).toUpperCase() : "?"}</span>` : `<span class="user-avatar avatar-fallback">${user.name ? user.name.charAt(0).toUpperCase() : "?"}</span>`}
-                  </div>
-                  
-                  <div id="user-dropdown-menu" class="user-dropdown">
-                    <div class="dropdown-header">
-                       <p class="dropdown-header-name">${user.name || "User"}</p>
-                       <p class="dropdown-header-email">${user.email || ""}</p>
-                    </div>
-                    <a href="/profile" class="dropdown-item">\u6211\u7684\u5730\u9EDE</a>
-                    <a href="/itinerary" class="dropdown-item">\u6211\u7684\u884C\u7A0B</a>
-                    <a href="/google-info" class="dropdown-item">\u6211\u7684\u5E33\u865F</a>
-                    ${user.role === "admin" ? `
-                      <a href="/admin/verifications" class="dropdown-item">\u5546\u5BB6\u9A57\u8B49\u7BA1\u7406</a>
-                      <a href="/admin/knowledge" class="dropdown-item">\u77E5\u8B58\u5EAB\u5BE9\u6838</a>
-                      <div class="dropdown-divider"></div>
-                    ` : ""}
-                    <div class="dropdown-divider"></div>
-                    <button id="logout-button" class="dropdown-item">\u767B\u51FA</button>
-                  </div>
-                </li>
-              ` : `
-                <li><a href="/login" class="button button-secondary" style="margin-right: 8px;">\u52A0\u5165</a></li>
-                <li><a href="/login" class="button button-primary">\u767B\u5165</a></li>
-              `}
-            </ul>
-            <button id="mobile-menu-button" class="mobile-menu-toggle">\u2630</button> 
-          </nav>
-        </header>
-
-        <main class="${useContainer ? "container" : ""}">
-          ${content || "<p>\u9801\u9762\u5167\u5BB9\u8F09\u5165\u4E2D...</p>"} 
-        </main>
-
-        <footer class="footer">
-          <div class="container">
-            <p>&copy; ${(/* @__PURE__ */ new Date()).getFullYear()} HOPE PENGHU. All rights reserved.</p>
-          </div>
-        </footer>
-
-        <!-- \u5168\u5C40 Toast \u901A\u77E5\u5BB9\u5668 -->
-        <div id="toast-container" class="fixed top-4 right-4 z-50 flex flex-col gap-2"></div>
-
-        <!-- \u5168\u5C40\u5716\u7247\u8F09\u5165\u8655\u7406\u8173\u672C -->
-        <script nonce="${nonce}">
-          // Toast \u901A\u77E5\u7CFB\u7D71
-          window.showToast = function(message, type = 'info') {
-            const container = document.getElementById('toast-container');
-            if (!container) return;
-
-            const toast = document.createElement('div');
-            
-            // \u6839\u64DA\u985E\u578B\u8A2D\u7F6E\u6A23\u5F0F
-            let bgClass = 'bg-gray-800';
-            let icon = '\u2139\uFE0F';
-            
-            if (type === 'success') {
-              bgClass = 'bg-green-600';
-              icon = '\u2705';
-            } else if (type === 'error') {
-              bgClass = 'bg-red-600';
-              icon = '\u274C';
-            } else if (type === 'warning') {
-              bgClass = 'bg-yellow-600';
-              icon = '\u26A0\uFE0F';
-            }
-
-            toast.className = \`\${bgClass} text-white px-6 py-4 rounded-lg shadow-lg transform transition-all duration-300 translate-x-full opacity-0 flex items-center gap-3 min-w-[300px]\`;
-            
-            toast.innerHTML = \`
-              <span class="text-xl">\${icon}</span>
-              <p class="font-medium">\${message}</p>
-            \`;
-
-            container.appendChild(toast);
-
-            // \u52D5\u756B\uFF1A\u6ED1\u5165
-            requestAnimationFrame(() => {
-              toast.classList.remove('translate-x-full', 'opacity-0');
-            });
-
-            // 3\u79D2\u5F8C\u81EA\u52D5\u79FB\u9664
-            setTimeout(() => {
-              toast.classList.add('opacity-0', 'translate-x-full');
-              setTimeout(() => {
-                if (container.contains(toast)) {
-                  container.removeChild(toast);
-                }
-              }, 300);
-            }, 3000);
-          };
-
-          // \u5716\u7247\u8F09\u5165\u8655\u7406\u51FD\u6578\uFF08\u5168\u5C40\uFF09
-          window.handleImageLoad = function(imageId, containerId) {
-            const img = document.getElementById(imageId);
-            const container = document.getElementById(containerId);
-            if (img && container) {
-              const skeleton = container.querySelector('.image-skeleton');
-              const progress = container.querySelector('.image-progress');
-              const errorMsg = container.querySelector('#error-' + imageId);
-              if (skeleton) skeleton.classList.add('hidden');
-              if (progress) progress.classList.add('hidden');
-              if (errorMsg) errorMsg.classList.add('hidden');
-              img.style.opacity = '1';
-            }
-          };
-
-          window.handleImageError = function(imageId, containerId, defaultImage) {
-            const img = document.getElementById(imageId);
-            const container = document.getElementById(containerId);
-            if (img && container) {
-              const skeleton = container.querySelector('.image-skeleton');
-              const progress = container.querySelector('.image-progress');
-              if (skeleton) skeleton.classList.add('hidden');
-              if (progress) progress.classList.add('hidden');
-              const errorMsg = container.querySelector('#error-' + imageId);
-              if (errorMsg) errorMsg.classList.remove('hidden');
-              if (img.src !== defaultImage) {
-                img.onerror = null;
-                img.src = defaultImage;
-                img.style.opacity = '1';
-              } else {
-                img.style.opacity = '0.3';
-              }
-            }
-          };
-        </script>
-
-        <script nonce="${nonce}">
-          // User Dropdown Menu Logic
-          const avatarContainer = document.getElementById('avatar-container'); 
-          const dropdownMenu = document.getElementById('user-dropdown-menu');
-
-          if (avatarContainer && dropdownMenu) {
-            avatarContainer.addEventListener('click', (event) => {
-              event.stopPropagation(); 
-              dropdownMenu.classList.toggle('dropdown-active');
-            });
-            avatarContainer.addEventListener('keydown', (event) => {
-               if (event.key === 'Enter' || event.key === ' ') {
-                 event.preventDefault();
-                 dropdownMenu.classList.toggle('dropdown-active');
-               }
-            });
-            document.addEventListener('click', (event) => {
-              if (!dropdownMenu.contains(event.target) && !avatarContainer.contains(event.target)) {
-                dropdownMenu.classList.remove('dropdown-active');
-              }
-            });
-            document.addEventListener('keydown', (event) => {
-               if (event.key === 'Escape' && dropdownMenu.classList.contains('dropdown-active')) {
-                 dropdownMenu.classList.remove('dropdown-active');
-                 avatarContainer.focus(); 
-               }
-            });
-          }
-
-          // Event listener for logout button 
-          const logoutButton = document.getElementById('logout-button');
-          if (logoutButton) {
-            logoutButton.addEventListener('click', async () => {
-              if (dropdownMenu) dropdownMenu.classList.remove('dropdown-active'); 
-              
-              try {
-                const response = await fetch('/api/auth/logout', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' }
-                });
-                if (response.ok) {
-                  showToast('\u767B\u51FA\u6210\u529F\uFF01\u671F\u5F85\u4E0B\u6B21\u76F8\u898B \u{1F44B}', 'success');
-                  setTimeout(() => {
-                    window.location.href = '/';
-                  }, 1000);
-                } else {
-                  console.error('Logout failed:', await response.text());
-                  showToast('\u767B\u51FA\u5931\u6557\uFF0C\u8ACB\u7A0D\u5F8C\u518D\u8A66\u3002', 'error'); 
-                }
-              } catch (error) {
-                console.error('Error logging out:', error);
-                showToast('\u767B\u51FA\u6642\u767C\u751F\u932F\u8AA4\u3002', 'error'); 
-              }
-            });
-          }
-
-          // Event listener for mobile menu 
-          const mobileMenuButton = document.getElementById('mobile-menu-button');
-          const navMenu = document.querySelector('.nav-menu');
-          if (mobileMenuButton && navMenu) {
-            mobileMenuButton.addEventListener('click', () => {
-              navMenu.classList.toggle('active'); 
-            });
-          }
-
-          // Register Service Worker for offline support
-          if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-              navigator.serviceWorker.register('/sw.js')
-                .then((registration) => {
-                  console.log('[Service Worker] Registration successful:', registration.scope);
-                })
-                .catch((error) => {
-                  console.error('[Service Worker] Registration failed:', error);
-                });
-            });
-          }
-          
-        </script>
-      </body>
-      </html>
-    `;
-    console.log("pageTemplate finished successfully for title:", title);
-    return html;
-  } catch (e) {
-    console.error("Error during pageTemplate HTML generation:", e);
-    return `<html><body>Template Error for ${title}: ${e.message}</body></html>`;
-  }
-}
-
 // src/pages/AdminKnowledgePage.js
+init_layout();
 init_auth();
 async function renderAdminKnowledgePage(request, env, session, user, nonce, cssContent) {
   const authCheck = requireAdmin(user, request);
@@ -20794,6 +24688,7 @@ async function handleAdminKnowledgeRequest(request, env, user = null) {
 }
 
 // src/pages/Home.js
+init_layout();
 async function renderHomePage(request, env, session, user, nonce, cssContent) {
   const content = `
     <div class="max-w-6xl mx-auto px-4 py-8">
@@ -20829,6 +24724,7 @@ async function renderHomePage(request, env, session, user, nonce, cssContent) {
 }
 
 // src/pages/Login.js
+init_layout();
 async function renderLoginPage(request, env, session, user, nonce, cssContent) {
   const googleLoginUrl = `/api/auth/google`;
   const content = `
@@ -20863,6 +24759,9 @@ async function renderLoginPage(request, env, session, user, nonce, cssContent) {
     headers: { "Content-Type": "text/html;charset=utf-8" }
   });
 }
+
+// src/pages/notFound.js
+init_layout();
 
 // src/utils/nonce.js
 function generateNonce() {
@@ -20923,6 +24822,7 @@ function renderNotFoundPage(request) {
 }
 
 // src/pages/AIChatPage.js
+init_layout();
 async function renderAIChatPage(request, env, session, user, nonce, cssContent) {
   function getTimeBasedGreeting() {
     const hour = (/* @__PURE__ */ new Date()).getHours();
@@ -22303,18 +26203,39 @@ async function renderAIChatPage(request, env, session, user, nonce, cssContent) 
     <script nonce="${nonce}">
       // \u7ACB\u5373\u8A2D\u7F6E\u5168\u5C40\u932F\u8AA4\u8655\u7406\uFF0C\u907F\u514D\u7B2C\u4E09\u65B9\u8173\u672C\u932F\u8AA4\u5F71\u97FF\u61C9\u7528
       (function() {
+        // \u6AA2\u67E5\u662F\u5426\u662F\u7B2C\u4E09\u65B9\u8173\u672C\u932F\u8AA4\u7684\u8F14\u52A9\u51FD\u6578
+        function isThirdPartyError(errorSource, fileName, errorMessage, stack) {
+          const sources = [
+            errorSource || '',
+            fileName || '',
+            errorMessage || '',
+            stack || ''
+          ].join(' ').toLowerCase();
+          
+          return sources.includes('givefreely') ||
+                 sources.includes('cloudflareinsights') ||
+                 sources.includes('beacon') ||
+                 (sources.includes('payload') && sources.includes('givefreely'));
+        }
+        
         // \u8655\u7406\u672A\u6355\u7372\u7684 Promise \u932F\u8AA4
         window.addEventListener('unhandledrejection', (event) => {
           const errorSource = event.reason?.stack || event.reason?.message || String(event.reason || '');
-          const fileName = event.reason?.fileName || '';
+          const fileName = event.reason?.fileName || event.reason?.sourceURL || '';
+          const errorMessage = event.reason?.message || String(event.reason || '');
+          const stack = event.reason?.stack || '';
+          
+          // \u6AA2\u67E5\u932F\u8AA4\u5806\u68E7\u4E2D\u7684\u6587\u4EF6\u540D
+          let stackFileName = '';
+          if (stack) {
+            const match = stack.match(/ats+.*?(([^)]+))/);
+            if (match && match[1]) {
+              stackFileName = match[1];
+            }
+          }
+          
           // \u6AA2\u67E5\u662F\u5426\u662F\u7B2C\u4E09\u65B9\u8173\u672C\u7684\u932F\u8AA4
-          if (errorSource.includes('giveFreely') || 
-              errorSource.includes('givefreely') ||
-              fileName.includes('giveFreely') ||
-              fileName.includes('givefreely') ||
-              errorSource.includes('cloudflareinsights') ||
-              errorSource.includes('beacon') ||
-              errorSource.includes('payload') && (errorSource.includes('giveFreely') || fileName.includes('giveFreely'))) {
+          if (isThirdPartyError(errorSource, fileName || stackFileName, errorMessage, stack)) {
             event.preventDefault(); // \u963B\u6B62\u932F\u8AA4\u986F\u793A\u5728\u63A7\u5236\u53F0
             return; // \u975C\u9ED8\u5FFD\u7565
           }
@@ -22323,11 +26244,11 @@ async function renderAIChatPage(request, env, session, user, nonce, cssContent) 
         // \u8655\u7406\u672A\u6355\u7372\u7684\u540C\u6B65\u932F\u8AA4
         window.addEventListener('error', (event) => {
           const errorSource = event.filename || event.message || '';
+          const errorMessage = event.message || '';
+          const stack = event.error?.stack || '';
+          
           // \u6AA2\u67E5\u662F\u5426\u662F\u7B2C\u4E09\u65B9\u8173\u672C\u7684\u932F\u8AA4
-          if (errorSource.includes('giveFreely') || 
-              errorSource.includes('givefreely') ||
-              errorSource.includes('cloudflareinsights') ||
-              errorSource.includes('beacon')) {
+          if (isThirdPartyError(errorSource, event.filename || '', errorMessage, stack)) {
             event.preventDefault(); // \u963B\u6B62\u932F\u8AA4\u986F\u793A\u5728\u63A7\u5236\u53F0
             return; // \u975C\u9ED8\u5FFD\u7565
           }
@@ -23652,7 +27573,7 @@ async function renderAIChatPage(request, env, session, user, nonce, cssContent) 
           }
 
           const script = document.createElement('script');
-          script.src = 'https://maps.googleapis.com/maps/api/js?key=YOUR_GOOGLE_MAPS_API_KEY_HERE&libraries=places&callback=initChatMapCallback';
+          script.src = 'https://maps.googleapis.com/maps/api/js?key=YOUR_GOOGLE_MAPS_API_KEY_HERE&libraries=places&loading=async&callback=initChatMapCallback';
           script.async = true;
           script.defer = true;
 
@@ -24392,6 +28313,7 @@ async function renderAIChatPage(request, env, session, user, nonce, cssContent) 
 init_auth();
 
 // src/utils/errorHandler.js
+init_layout();
 var ServiceHealthChecker = class {
   /**
    * 檢查數據庫連接
@@ -24843,6 +28765,7 @@ async function renderImageManagementPage(request, env, session, user, nonce, css
 }
 
 // src/pages/AdminDashboard.js
+init_layout();
 init_auth();
 
 // src/templates/adminDashboard.js
@@ -25083,6 +29006,28 @@ function renderFeatureCards() {
           </div>
         </div>
       </div>
+
+      <!-- \u751F\u614B\u7CFB\u7D71\u76E3\u63A7 -->
+      <div class="bg-white shadow rounded-lg">
+        <div class="px-4 py-5 sm:p-6">
+          <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">\u751F\u614B\u7CFB\u7D71\u76E3\u63A7</h3>
+          <div class="space-y-4">
+            <div class="flex items-center justify-between">
+              <span class="text-sm text-gray-500">\u7E3D\u9AD4\u5206\u6578</span>
+              <span class="text-sm font-medium" id="ecosystem-overall-score">--</span>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="text-sm text-gray-500">\u72C0\u614B</span>
+              <span class="text-sm font-medium" id="ecosystem-status">\u6AA2\u67E5\u4E2D...</span>
+            </div>
+            <div class="flex space-x-2">
+              <a href="/admin/ecosystem" class="bg-indigo-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-indigo-700 text-center">
+                \u67E5\u770B\u8A73\u7D30\u5831\u544A
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   `;
 }
@@ -25307,11 +29252,42 @@ async function renderAdminDashboardPage(request, env, session, user, nonce, cssC
         }
       }
 
+      // \u8F09\u5165\u751F\u614B\u7CFB\u7D71\u7E3D\u9AD4\u5206\u6578
+      async function loadEcosystemScore() {
+        try {
+          const response = await fetch('/api/admin/ecosystem/report?days=7', {
+            credentials: 'include'
+          });
+          if (response.ok) {
+            const data = await response.json();
+            if (data.overallScore !== undefined) {
+              document.getElementById('ecosystem-overall-score').textContent = data.overallScore;
+              const statusElement = document.getElementById('ecosystem-status');
+              if (data.overallScore >= 80) {
+                statusElement.textContent = '\u5065\u5EB7';
+                statusElement.className = 'text-sm font-medium text-green-600';
+              } else if (data.overallScore >= 60) {
+                statusElement.textContent = '\u826F\u597D';
+                statusElement.className = 'text-sm font-medium text-yellow-600';
+              } else {
+                statusElement.textContent = '\u9700\u95DC\u6CE8';
+                statusElement.className = 'text-sm font-medium text-red-600';
+              }
+            }
+          }
+        } catch (error) {
+          console.error('\u8F09\u5165\u751F\u614B\u7CFB\u7D71\u5206\u6578\u5931\u6557:', error);
+          document.getElementById('ecosystem-overall-score').textContent = '--';
+          document.getElementById('ecosystem-status').textContent = '\u8F09\u5165\u5931\u6557';
+        }
+      }
+
       document.addEventListener('DOMContentLoaded', function() {
         addLog('\u7BA1\u7406\u54E1\u5100\u8868\u677F\u5DF2\u8F09\u5165', 'info');
         refreshSystemStatus();
         refreshImageStats();
         loadPendingVerificationsCount();
+        loadEcosystemScore();
       });
 
       // \u5B9A\u671F\u5237\u65B0\u72C0\u614B
@@ -25332,6 +29308,7 @@ async function renderAdminDashboardPage(request, env, session, user, nonce, cssC
 }
 
 // src/pages/AIAdminPage.js
+init_layout();
 init_auth();
 
 // src/templates/aiAdminPage.js
@@ -26203,6 +30180,7 @@ async function renderAIAdminPage(request, env, session, user, nonce, cssContent)
 }
 
 // src/pages/BusinessVerificationAdmin.js
+init_layout();
 init_BusinessVerificationService();
 init_auth();
 
@@ -27256,7 +31234,475 @@ async function renderBusinessVerificationAdminPage(request, env, session, user, 
   }
 }
 
+// src/pages/EcosystemDashboard.js
+init_layout();
+init_auth();
+init_ServiceFactory();
+async function renderEcosystemDashboardPage(request, env, session, user, nonce, cssContent) {
+  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z, _A, _B, _C, _D, _E, _F, _G, _H, _I;
+  const authCheck = requireAdmin(user, request);
+  if (authCheck)
+    return authCheck;
+  const dbHealth = await ServiceHealthChecker.checkDatabase(env.DB);
+  if (!dbHealth.healthy) {
+    console.error("[EcosystemDashboard] Database not available:", dbHealth.error);
+    return ErrorResponseBuilder.buildDatabaseErrorPage({
+      user,
+      nonce,
+      cssContent
+    });
+  }
+  const serviceFactory = new ServiceFactory(env);
+  const ecosystemService = serviceFactory.getService("ecosystemService");
+  const aiAgentFactory = serviceFactory.getService("aiAgentFactory");
+  let ecosystemReport = null;
+  let agentStats = null;
+  try {
+    ecosystemReport = await ecosystemService.getEcosystemReport({ days: 7 });
+    agentStats = aiAgentFactory.getStats();
+  } catch (error) {
+    console.error("[EcosystemDashboard] Error fetching ecosystem data:", error);
+  }
+  const content = `
+    <div class="min-h-screen bg-gray-50 py-8">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <!-- \u9801\u9762\u6A19\u984C -->
+        <div class="mb-8">
+          <h1 class="text-3xl font-bold text-gray-900">\u751F\u614B\u7CFB\u7D71\u76E3\u63A7</h1>
+          <p class="mt-2 text-sm text-gray-600">
+            \u76E3\u63A7\u7DB2\u7AD9\u751F\u614B\u5065\u5EB7\u72C0\u6CC1\uFF0C\u78BA\u4FDD\u300C\u670D\u52D9\u751F\u547D\uFF0C\u8B93\u4E16\u754C\u66F4\u597D\u66F4\u5E73\u8861\u300D
+          </p>
+        </div>
+
+        <!-- \u7E3D\u9AD4\u5206\u6578\u5361\u7247 -->
+        <div class="bg-white overflow-hidden shadow rounded-lg mb-8">
+          <div class="p-6">
+            <div class="flex items-center justify-between">
+              <div>
+                <h2 class="text-xl font-semibold text-gray-900">\u751F\u614B\u7CFB\u7D71\u7E3D\u9AD4\u5206\u6578</h2>
+                <p class="mt-1 text-sm text-gray-500">\u57FA\u65BC\u7528\u6236\u798F\u7949\u3001\u8CC7\u6E90\u4F7F\u7528\u3001\u793E\u5340\u5065\u5EB7\u7684\u7D9C\u5408\u8A55\u4F30</p>
+              </div>
+              <div class="text-right">
+                <div class="text-5xl font-bold" id="overall-score" style="color: #10b981;">
+                  ${(ecosystemReport == null ? void 0 : ecosystemReport.overallScore) || "--"}
+                </div>
+                <div class="text-sm text-gray-500 mt-1">/ 100</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- \u4E09\u500B\u4E3B\u8981\u6307\u6A19 -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <!-- \u7528\u6236\u798F\u7949 -->
+          <div class="bg-white overflow-hidden shadow rounded-lg">
+            <div class="p-6">
+              <div class="flex items-center">
+                <div class="flex-shrink-0">
+                  <div class="w-12 h-12 bg-blue-500 rounded-md flex items-center justify-center">
+                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
+                    </svg>
+                  </div>
+                </div>
+                <div class="ml-4">
+                  <h3 class="text-lg font-medium text-gray-900">\u7528\u6236\u798F\u7949</h3>
+                  <p class="text-sm text-gray-500">User Wellbeing</p>
+                </div>
+              </div>
+              <div class="mt-4">
+                <div class="text-2xl font-semibold text-gray-900" id="wellbeing-score">
+                  ${((_a = ecosystemReport == null ? void 0 : ecosystemReport.wellbeing) == null ? void 0 : _a.averageSatisfaction) ? Math.round(ecosystemReport.wellbeing.averageSatisfaction) : "--"}
+                </div>
+                <div class="text-sm text-gray-500 mt-1">
+                  \u5E73\u5747\u6EFF\u610F\u5EA6 (${((_b = ecosystemReport == null ? void 0 : ecosystemReport.wellbeing) == null ? void 0 : _b.period) || "N/A"})
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- \u8CC7\u6E90\u4F7F\u7528 -->
+          <div class="bg-white overflow-hidden shadow rounded-lg">
+            <div class="p-6">
+              <div class="flex items-center">
+                <div class="flex-shrink-0">
+                  <div class="w-12 h-12 bg-green-500 rounded-md flex items-center justify-center">
+                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                    </svg>
+                  </div>
+                </div>
+                <div class="ml-4">
+                  <h3 class="text-lg font-medium text-gray-900">\u8CC7\u6E90\u4F7F\u7528</h3>
+                  <p class="text-sm text-gray-500">Resource Usage</p>
+                </div>
+              </div>
+              <div class="mt-4">
+                <div class="text-2xl font-semibold text-gray-900" id="resource-cost">
+                  $${((_d = (_c = ecosystemReport == null ? void 0 : ecosystemReport.resourceUsage) == null ? void 0 : _c.totalCost) == null ? void 0 : _d.toFixed(2)) || "0.00"}
+                </div>
+                <div class="text-sm text-gray-500 mt-1">
+                  \u7E3D\u6210\u672C (${((_e = ecosystemReport == null ? void 0 : ecosystemReport.resourceUsage) == null ? void 0 : _e.period) || "N/A"})
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- \u793E\u5340\u5065\u5EB7 -->
+          <div class="bg-white overflow-hidden shadow rounded-lg">
+            <div class="p-6">
+              <div class="flex items-center">
+                <div class="flex-shrink-0">
+                  <div class="w-12 h-12 bg-purple-500 rounded-md flex items-center justify-center">
+                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 01 6 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                    </svg>
+                  </div>
+                </div>
+                <div class="ml-4">
+                  <h3 class="text-lg font-medium text-gray-900">\u793E\u5340\u5065\u5EB7</h3>
+                  <p class="text-sm text-gray-500">Community Health</p>
+                </div>
+              </div>
+              <div class="mt-4">
+                <div class="text-2xl font-semibold text-gray-900" id="community-health-score">
+                  ${((_f = ecosystemReport == null ? void 0 : ecosystemReport.communityHealth) == null ? void 0 : _f.healthScore) || "--"}
+                </div>
+                <div class="text-sm text-gray-500 mt-1">
+                  \u5065\u5EB7\u5206\u6578 (${((_g = ecosystemReport == null ? void 0 : ecosystemReport.communityHealth) == null ? void 0 : _g.period) || "N/A"})
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- \u8A73\u7D30\u6578\u64DA -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          <!-- \u7528\u6236\u798F\u7949\u8A73\u60C5 -->
+          <div class="bg-white shadow rounded-lg">
+            <div class="px-4 py-5 sm:p-6">
+              <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">\u7528\u6236\u798F\u7949\u8A73\u60C5</h3>
+              <div class="space-y-4">
+                <div class="flex items-center justify-between">
+                  <span class="text-sm text-gray-500">\u5E73\u5747\u6EFF\u610F\u5EA6</span>
+                  <span class="text-sm font-medium" id="avg-satisfaction">
+                    ${((_i = (_h = ecosystemReport == null ? void 0 : ecosystemReport.wellbeing) == null ? void 0 : _h.averageSatisfaction) == null ? void 0 : _i.toFixed(1)) || "--"} / 100
+                  </span>
+                </div>
+                <div class="flex items-center justify-between">
+                  <span class="text-sm text-gray-500">\u5E73\u5747\u53C3\u8207\u5EA6</span>
+                  <span class="text-sm font-medium" id="avg-engagement">
+                    ${((_k = (_j = ecosystemReport == null ? void 0 : ecosystemReport.wellbeing) == null ? void 0 : _j.averageEngagement) == null ? void 0 : _k.toFixed(1)) || "--"} / 100
+                  </span>
+                </div>
+                <div class="flex items-center justify-between">
+                  <span class="text-sm text-gray-500">\u5E73\u5747\u9AD4\u9A57\u5206\u6578</span>
+                  <span class="text-sm font-medium" id="avg-experience">
+                    ${((_m = (_l = ecosystemReport == null ? void 0 : ecosystemReport.wellbeing) == null ? void 0 : _l.averageExperience) == null ? void 0 : _m.toFixed(1)) || "--"} / 100
+                  </span>
+                </div>
+                <div class="flex items-center justify-between">
+                  <span class="text-sm text-gray-500">\u8FFD\u8E64\u6B21\u6578</span>
+                  <span class="text-sm font-medium" id="tracking-count">
+                    ${((_n = ecosystemReport == null ? void 0 : ecosystemReport.wellbeing) == null ? void 0 : _n.trackingCount) || 0}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- \u8CC7\u6E90\u4F7F\u7528\u8A73\u60C5 -->
+          <div class="bg-white shadow rounded-lg">
+            <div class="px-4 py-5 sm:p-6">
+              <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">\u8CC7\u6E90\u4F7F\u7528\u8A73\u60C5</h3>
+              <div class="space-y-4">
+                <div class="flex items-center justify-between">
+                  <span class="text-sm text-gray-500">API \u8ABF\u7528</span>
+                  <span class="text-sm font-medium" id="api-calls">
+                    ${((_p = (_o = ecosystemReport == null ? void 0 : ecosystemReport.resourceUsage) == null ? void 0 : _o.totalApiCalls) == null ? void 0 : _p.toLocaleString()) || "0"}
+                  </span>
+                </div>
+                <div class="flex items-center justify-between">
+                  <span class="text-sm text-gray-500">AI \u8ABF\u7528</span>
+                  <span class="text-sm font-medium" id="ai-calls">
+                    ${((_r = (_q = ecosystemReport == null ? void 0 : ecosystemReport.resourceUsage) == null ? void 0 : _q.totalAiCalls) == null ? void 0 : _r.toLocaleString()) || "0"}
+                  </span>
+                </div>
+                <div class="flex items-center justify-between">
+                  <span class="text-sm text-gray-500">\u5E73\u5747\u5B58\u5132</span>
+                  <span class="text-sm font-medium" id="avg-storage">
+                    ${((_t = (_s = ecosystemReport == null ? void 0 : ecosystemReport.resourceUsage) == null ? void 0 : _s.averageStorage) == null ? void 0 : _t.toFixed(2)) || "0"} MB
+                  </span>
+                </div>
+                <div class="flex items-center justify-between">
+                  <span class="text-sm text-gray-500">\u7E3D\u5E36\u5BEC</span>
+                  <span class="text-sm font-medium" id="total-bandwidth">
+                    ${((_v = (_u = ecosystemReport == null ? void 0 : ecosystemReport.resourceUsage) == null ? void 0 : _u.totalBandwidth) == null ? void 0 : _v.toFixed(2)) || "0"} MB
+                  </span>
+                </div>
+                <div class="flex items-center justify-between">
+                  <span class="text-sm text-gray-500">\u7E3D\u6210\u672C</span>
+                  <span class="text-sm font-medium text-red-600" id="total-cost">
+                    $${((_x = (_w = ecosystemReport == null ? void 0 : ecosystemReport.resourceUsage) == null ? void 0 : _w.totalCost) == null ? void 0 : _x.toFixed(2)) || "0.00"}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- \u793E\u5340\u5065\u5EB7\u8A73\u60C5 -->
+          <div class="bg-white shadow rounded-lg">
+            <div class="px-4 py-5 sm:p-6">
+              <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">\u793E\u5340\u5065\u5EB7\u8A73\u60C5</h3>
+              <div class="space-y-4">
+                <div class="flex items-center justify-between">
+                  <span class="text-sm text-gray-500">\u5E73\u5747\u6D3B\u8E8D\u7528\u6236</span>
+                  <span class="text-sm font-medium" id="avg-active-users">
+                    ${((_z = (_y = ecosystemReport == null ? void 0 : ecosystemReport.communityHealth) == null ? void 0 : _y.averageActiveUsers) == null ? void 0 : _z.toFixed(0)) || "0"}
+                  </span>
+                </div>
+                <div class="flex items-center justify-between">
+                  <span class="text-sm text-gray-500">\u7E3D\u4E92\u52D5\u6B21\u6578</span>
+                  <span class="text-sm font-medium" id="total-interactions">
+                    ${((_B = (_A = ecosystemReport == null ? void 0 : ecosystemReport.communityHealth) == null ? void 0 : _A.totalInteractions) == null ? void 0 : _B.toLocaleString()) || "0"}
+                  </span>
+                </div>
+                <div class="flex items-center justify-between">
+                  <span class="text-sm text-gray-500">\u5E73\u5747\u591A\u6A23\u6027</span>
+                  <span class="text-sm font-medium" id="avg-diversity">
+                    ${((_D = (_C = ecosystemReport == null ? void 0 : ecosystemReport.communityHealth) == null ? void 0 : _C.averageDiversity) == null ? void 0 : _D.toFixed(1)) || "0"} / 100
+                  </span>
+                </div>
+                <div class="flex items-center justify-between">
+                  <span class="text-sm text-gray-500">\u5E73\u5747\u53C3\u8207\u7387</span>
+                  <span class="text-sm font-medium" id="avg-engagement-rate">
+                    ${((_F = (_E = ecosystemReport == null ? void 0 : ecosystemReport.communityHealth) == null ? void 0 : _E.averageEngagementRate) == null ? void 0 : _F.toFixed(1)) || "0"}%
+                  </span>
+                </div>
+                <div class="flex items-center justify-between">
+                  <span class="text-sm text-gray-500">\u5065\u5EB7\u5206\u6578</span>
+                  <span class="text-sm font-medium text-green-600" id="health-score">
+                    ${((_G = ecosystemReport == null ? void 0 : ecosystemReport.communityHealth) == null ? void 0 : _G.healthScore) || "0"} / 100
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- AI Agent \u7D71\u8A08 -->
+          <div class="bg-white shadow rounded-lg">
+            <div class="px-4 py-5 sm:p-6">
+              <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">AI Agent \u7D71\u8A08</h3>
+              <div class="space-y-4">
+                <div class="flex items-center justify-between">
+                  <span class="text-sm text-gray-500">\u7E3D Agent \u6578</span>
+                  <span class="text-sm font-medium" id="total-agents">
+                    ${(agentStats == null ? void 0 : agentStats.totalAgents) || 0}
+                  </span>
+                </div>
+                <div class="flex items-center justify-between">
+                  <span class="text-sm text-gray-500">\u7E3D\u4F7F\u7528\u6B21\u6578</span>
+                  <span class="text-sm font-medium" id="total-usage">
+                    ${((_H = agentStats == null ? void 0 : agentStats.totalUsage) == null ? void 0 : _H.toLocaleString()) || "0"}
+                  </span>
+                </div>
+                <div class="mt-4">
+                  <h4 class="text-sm font-medium text-gray-700 mb-2">\u6309\u985E\u578B\u7D71\u8A08</h4>
+                  <div class="space-y-2" id="agents-by-type">
+                    ${(agentStats == null ? void 0 : agentStats.agentsByType) ? Object.entries(agentStats.agentsByType).map(([type, data]) => `
+                      <div class="flex items-center justify-between text-sm">
+                        <span class="text-gray-500">${type}</span>
+                        <span class="font-medium">${data.count} \u500B, ${data.totalUsage} \u6B21\u4F7F\u7528</span>
+                      </div>
+                    `).join("") : '<div class="text-sm text-gray-500">\u66AB\u7121\u6578\u64DA</div>'}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- \u6539\u9032\u5EFA\u8B70 -->
+        <div class="bg-white shadow rounded-lg mb-8">
+          <div class="px-4 py-5 sm:p-6">
+            <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">\u6539\u9032\u5EFA\u8B70</h3>
+            <div class="space-y-3" id="recommendations">
+              ${((_I = ecosystemReport == null ? void 0 : ecosystemReport.recommendations) == null ? void 0 : _I.length) > 0 ? ecosystemReport.recommendations.map((rec) => `
+                  <div class="flex items-start p-3 rounded-md ${rec.priority === "high" ? "bg-red-50 border border-red-200" : rec.priority === "medium" ? "bg-yellow-50 border border-yellow-200" : "bg-blue-50 border border-blue-200"}">
+                    <div class="flex-shrink-0">
+                      <span class="text-sm font-medium ${rec.priority === "high" ? "text-red-800" : rec.priority === "medium" ? "text-yellow-800" : "text-blue-800"}">
+                        ${rec.priority === "high" ? "\u{1F534} \u9AD8" : rec.priority === "medium" ? "\u{1F7E1} \u4E2D" : "\u{1F535} \u4F4E"}
+                      </span>
+                    </div>
+                    <div class="ml-3 flex-1">
+                      <p class="text-sm ${rec.priority === "high" ? "text-red-700" : rec.priority === "medium" ? "text-yellow-700" : "text-blue-700"}">
+                        ${rec.message}
+                      </p>
+                      <p class="text-xs ${rec.priority === "high" ? "text-red-600" : rec.priority === "medium" ? "text-yellow-600" : "text-blue-600"} mt-1">
+                        \u5EFA\u8B70\u64CD\u4F5C: ${rec.action}
+                      </p>
+                    </div>
+                  </div>
+                `).join("") : '<div class="text-sm text-gray-500">\u66AB\u7121\u5EFA\u8B70</div>'}
+            </div>
+          </div>
+        </div>
+
+        <!-- \u64CD\u4F5C\u6309\u9215 -->
+        <div class="flex space-x-4 mb-8">
+          <button onclick="refreshEcosystemReport()" class="bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-blue-700">
+            \u5237\u65B0\u5831\u544A
+          </button>
+          <a href="/admin/dashboard" class="bg-gray-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-gray-700 text-center">
+            \u8FD4\u56DE\u7BA1\u7406\u5F8C\u53F0
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <script nonce="${nonce}">
+      // API \u8ABF\u7528\u51FD\u6578
+      async function apiCall(url, method = 'GET', body = null) {
+        try {
+          const options = {
+            method,
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include'
+          };
+          if (body) {
+            options.body = JSON.stringify(body);
+          }
+          const response = await fetch(url, options);
+          if (!response.ok) {
+            throw new Error(\`HTTP \${response.status}: \${response.statusText}\`);
+          }
+          return await response.json();
+        } catch (error) {
+          console.error('API call failed:', error);
+          throw error;
+        }
+      }
+
+      // \u5237\u65B0\u751F\u614B\u7CFB\u7D71\u5831\u544A
+      async function refreshEcosystemReport() {
+        try {
+          const report = await apiCall('/api/admin/ecosystem/report?days=7');
+          
+          // \u66F4\u65B0\u7E3D\u9AD4\u5206\u6578
+          document.getElementById('overall-score').textContent = report.overallScore || '--';
+          
+          // \u66F4\u65B0\u7528\u6236\u798F\u7949
+          document.getElementById('wellbeing-score').textContent = 
+            report.wellbeing?.averageSatisfaction ? Math.round(report.wellbeing.averageSatisfaction) : '--';
+          document.getElementById('avg-satisfaction').textContent = 
+            \`\${report.wellbeing?.averageSatisfaction?.toFixed(1) || '--'} / 100\`;
+          document.getElementById('avg-engagement').textContent = 
+            \`\${report.wellbeing?.averageEngagement?.toFixed(1) || '--'} / 100\`;
+          document.getElementById('avg-experience').textContent = 
+            \`\${report.wellbeing?.averageExperience?.toFixed(1) || '--'} / 100\`;
+          document.getElementById('tracking-count').textContent = 
+            report.wellbeing?.trackingCount || 0;
+          
+          // \u66F4\u65B0\u8CC7\u6E90\u4F7F\u7528
+          document.getElementById('resource-cost').textContent = 
+            \`$\${report.resourceUsage?.totalCost?.toFixed(2) || '0.00'}\`;
+          document.getElementById('api-calls').textContent = 
+            report.resourceUsage?.totalApiCalls?.toLocaleString() || '0';
+          document.getElementById('ai-calls').textContent = 
+            report.resourceUsage?.totalAiCalls?.toLocaleString() || '0';
+          document.getElementById('avg-storage').textContent = 
+            \`\${report.resourceUsage?.averageStorage?.toFixed(2) || '0'} MB\`;
+          document.getElementById('total-bandwidth').textContent = 
+            \`\${report.resourceUsage?.totalBandwidth?.toFixed(2) || '0'} MB\`;
+          document.getElementById('total-cost').textContent = 
+            \`$\${report.resourceUsage?.totalCost?.toFixed(2) || '0.00'}\`;
+          
+          // \u66F4\u65B0\u793E\u5340\u5065\u5EB7
+          document.getElementById('community-health-score').textContent = 
+            report.communityHealth?.healthScore || '--';
+          document.getElementById('avg-active-users').textContent = 
+            report.communityHealth?.averageActiveUsers?.toFixed(0) || '0';
+          document.getElementById('total-interactions').textContent = 
+            report.communityHealth?.totalInteractions?.toLocaleString() || '0';
+          document.getElementById('avg-diversity').textContent = 
+            \`\${report.communityHealth?.averageDiversity?.toFixed(1) || '0'} / 100\`;
+          document.getElementById('avg-engagement-rate').textContent = 
+            \`\${report.communityHealth?.averageEngagementRate?.toFixed(1) || '0'}%\`;
+          document.getElementById('health-score').textContent = 
+            \`\${report.communityHealth?.healthScore || '0'} / 100\`;
+          
+          // \u66F4\u65B0\u6539\u9032\u5EFA\u8B70
+          const recommendationsDiv = document.getElementById('recommendations');
+          if (report.recommendations && report.recommendations.length > 0) {
+            recommendationsDiv.innerHTML = report.recommendations.map(rec => \`
+              <div class="flex items-start p-3 rounded-md \${
+                rec.priority === 'high' ? 'bg-red-50 border border-red-200' :
+                rec.priority === 'medium' ? 'bg-yellow-50 border border-yellow-200' :
+                'bg-blue-50 border border-blue-200'
+              }">
+                <div class="flex-shrink-0">
+                  <span class="text-sm font-medium \${
+                    rec.priority === 'high' ? 'text-red-800' :
+                    rec.priority === 'medium' ? 'text-yellow-800' :
+                    'text-blue-800'
+                  }">
+                    \${rec.priority === 'high' ? '\u{1F534} \u9AD8' : rec.priority === 'medium' ? '\u{1F7E1} \u4E2D' : '\u{1F535} \u4F4E'}
+                  </span>
+                </div>
+                <div class="ml-3 flex-1">
+                  <p class="text-sm \${
+                    rec.priority === 'high' ? 'text-red-700' :
+                    rec.priority === 'medium' ? 'text-yellow-700' :
+                    'text-blue-700'
+                  }">
+                    \${rec.message}
+                  </p>
+                  <p class="text-xs \${
+                    rec.priority === 'high' ? 'text-red-600' :
+                    rec.priority === 'medium' ? 'text-yellow-600' :
+                    'text-blue-600'
+                  } mt-1">
+                    \u5EFA\u8B70\u64CD\u4F5C: \${rec.action}
+                  </p>
+                </div>
+              </div>
+            \`).join('');
+          } else {
+            recommendationsDiv.innerHTML = '<div class="text-sm text-gray-500">\u66AB\u7121\u5EFA\u8B70</div>';
+          }
+          
+          alert('\u5831\u544A\u5DF2\u5237\u65B0\uFF01');
+        } catch (error) {
+          console.error('\u5237\u65B0\u5831\u544A\u5931\u6557:', error);
+          alert('\u5237\u65B0\u5931\u6557: ' + error.message);
+        }
+      }
+
+      // \u5B9A\u671F\u81EA\u52D5\u5237\u65B0\uFF08\u6BCF5\u5206\u9418\uFF09
+      setInterval(() => {
+        refreshEcosystemReport();
+      }, 300000);
+    </script>
+  `;
+  return new Response(pageTemplate2({
+    title: "\u751F\u614B\u7CFB\u7D71\u76E3\u63A7 - \u7BA1\u7406\u5F8C\u53F0",
+    content,
+    user,
+    nonce,
+    cssContent: cssContent + `
+      /* \u751F\u614B\u7CFB\u7D71\u76E3\u63A7\u9801\u9762\u7279\u5B9A\u6A23\u5F0F */
+      .bg-gray-50 { background-color: #f9fafb; }
+    `,
+    currentPath: "/admin/ecosystem"
+  }), {
+    headers: {
+      "Content-Type": "text/html;charset=utf-8"
+    }
+  });
+}
+
 // src/pages/Profile.js
+init_layout();
 init_locationService();
 async function _renderProfilePage(request, env, session, user, nonce, cssContent) {
   console.log("[Profile.js] renderProfilePage called with user:", user ? user.email : "null");
@@ -27800,6 +32246,7 @@ function translatePlaceTypes(types) {
 }
 
 // src/pages/DesignPreview.js
+init_layout();
 async function renderDesignPreviewPage(request, env, session, user, nonce, cssContent) {
   console.log("[DesignPreview.js] renderDesignPreviewPage called");
   const content = `
@@ -27822,6 +32269,9 @@ async function renderDesignPreviewPage(request, env, session, user, nonce, cssCo
     headers: { "Content-Type": "text/html;charset=utf-8" }
   });
 }
+
+// src/pages/GamePage.js
+init_layout();
 
 // src/services/PenghuGameService.js
 init_locationService();
@@ -28725,6 +33175,7 @@ async function renderPenghuGamePage(request, env, session, user, nonce, cssConte
 }
 
 // src/pages/SimpleTestPage.js
+init_layout();
 async function renderSimpleTestPage(request, env, session, user, nonce, cssContent) {
   const content = `
         <div class="min-h-screen bg-gradient-to-br from-blue-50 to-green-50 p-8">
@@ -28867,6 +33318,7 @@ async function renderSimpleTestPage(request, env, session, user, nonce, cssConte
 }
 
 // src/pages/TestPage.js
+init_layout();
 async function renderTestPage(request, env, session, user, nonce, cssContent) {
   const content = `
         <div class="min-h-screen bg-blue-50 p-8">
@@ -28907,6 +33359,7 @@ async function renderTestPage(request, env, session, user, nonce, cssContent) {
 }
 
 // src/pages/Footprints.js
+init_layout();
 init_locationService();
 
 // src/components/ImagePreview.js
@@ -29669,6 +34122,7 @@ var renderFootprintsPage = withErrorHandling(_renderFootprintsPage, {
 });
 
 // src/pages/StoryTimeline.js
+init_layout();
 init_StoryModule();
 init_PersonModule();
 async function renderStoryTimelinePage(request, env, session, user, nonce, cssContent) {
@@ -29858,6 +34312,7 @@ async function renderStoryTimelinePage(request, env, session, user, nonce, cssCo
 }
 
 // src/pages/Recommendations.js
+init_layout();
 init_RecommendationService();
 init_locationService();
 async function renderRecommendationsPage(request, env, session, user, nonce, cssContent) {
@@ -29989,6 +34444,7 @@ async function renderRecommendationsPage(request, env, session, user, nonce, css
 }
 
 // src/pages/Search.js
+init_layout();
 init_SearchService();
 init_Location();
 async function renderSearchPage(request, env, session, user, nonce, cssContent) {
@@ -30212,6 +34668,7 @@ async function renderSearchPage(request, env, session, user, nonce, cssContent) 
 }
 
 // src/pages/Favorites.js
+init_layout();
 init_FavoritesService();
 async function renderFavoritesPage(request, env, session, user, nonce, cssContent) {
   if (!user || !user.id) {
@@ -30403,6 +34860,7 @@ async function renderFavoritesPage(request, env, session, user, nonce, cssConten
 }
 
 // src/pages/LocationDetail.js
+init_layout();
 init_LocationModule();
 init_FavoritesService();
 init_BusinessVerificationService();
@@ -31620,237 +36078,11 @@ var renderLocationDetailPage = withErrorHandling(_renderLocationDetailPage, {
 });
 
 // src/pages/ItineraryPlanner.js
+init_layout();
 init_ItineraryService();
-async function renderItineraryPlannerPage(request, env, session, user, nonce, cssContent) {
-  if (!user) {
-    return Response.redirect(new URL(request.url).origin + "/login", 302);
-  }
-  const url = new URL(request.url);
-  const itineraryId = url.searchParams.get("id");
-  let itinerary = null;
-  let userItineraries = [];
-  try {
-    const locationService = new (await Promise.resolve().then(() => (init_locationService(), locationService_exports))).LocationService(
-      env.DB,
-      env.GOOGLE_MAPS_API_KEY
-    );
-    const aiService = new (await Promise.resolve().then(() => (init_AIService(), AIService_exports))).AIService(
-      env.DB,
-      env.OPENAI_API_KEY,
-      env.GEMINI_API_KEY,
-      locationService,
-      env.GOOGLE_MAPS_API_KEY
-    );
-    const itineraryService = new ItineraryService(env.DB, locationService, aiService);
-    if (itineraryId) {
-      itinerary = await itineraryService.getItinerary(user.id, itineraryId);
-    }
-    userItineraries = await itineraryService.getUserItineraries(user.id);
-  } catch (error) {
-    console.error("[ItineraryPlannerPage] Error loading data:", error);
-  }
-  const itineraryJson = itinerary ? JSON.stringify(itinerary).replace(/</g, "\\u003c").replace(/>/g, "\\u003e") : "null";
-  const userItinerariesJson = JSON.stringify(userItineraries).replace(/</g, "\\u003c").replace(/>/g, "\\u003e");
-  const itineraryStyles = `
-    /* \u884C\u7A0B\u898F\u5283\u5668\u6839\u5BB9\u5668 */
-    #itinerary-planner-root {
-      height: calc(100vh - 64px);
-      margin-top: 64px;
-      width: 100%;
-      overflow: hidden;
-    }
-    
-    /* \u78BA\u4FDD\u884C\u7A0B\u898F\u5283\u5668\u5167\u5BB9\u5728 header \u4E0B\u65B9 */
-    .itinerary-planner-container {
-      min-height: calc(100vh - 64px);
-    }
-  `;
-  const content = `
-    <div id="itinerary-planner-root" class="itinerary-planner-container"></div>
-    
-    <script type="importmap">
-    {
-      "imports": {
-        "react": "https://esm.sh/react@^19.2.3",
-        "react/": "https://esm.sh/react@^19.2.3/",
-        "react-dom": "https://esm.sh/react-dom@^19.2.3",
-        "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
-        "framer-motion": "https://esm.sh/framer-motion@^12.23.26",
-        "@dnd-kit/utilities": "https://esm.sh/@dnd-kit/utilities@^3.2.2",
-        "@dnd-kit/core": "https://esm.sh/@dnd-kit/core@^6.3.1",
-        "@dnd-kit/sortable": "https://esm.sh/@dnd-kit/sortable@^10.0.0",
-        "@google/genai": "https://esm.sh/@google/genai@^1.34.0"
-      }
-    }
-    </script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" crossorigin="anonymous">
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" crossorigin="anonymous">
-    <link rel="stylesheet" href="/ai-smart-itinerary-planner/styles/design-tokens.css">
-    <link rel="stylesheet" href="/ai-smart-itinerary-planner/styles/responsive.css">
-    
-    <script type="module" nonce="${nonce}">
-      // \u7D71\u4E00\u7684 process polyfill\uFF08\u53EA\u5B9A\u7FA9\u4E00\u6B21\uFF09
-      (function() {
-        if (typeof process === 'undefined') {
-          window.process = { 
-            env: { 
-              NODE_ENV: 'production'
-            } 
-          };
-          globalThis.process = window.process;
-        }
-      })();
-      
-      import React from 'react';
-      import { createRoot } from 'react-dom/client';
-      
-      // \u52D5\u614B\u8F09\u5165\u884C\u7A0B\u898F\u5283\u5668\u61C9\u7528
-      async function loadItineraryPlanner() {
-        try {
-          // \u8F09\u5165\u5EFA\u7F6E\u5F8C\u7684 App \u7D44\u4EF6
-          const modulePath = '/ai-smart-itinerary-planner/App.js';
-          console.log('[ItineraryPlanner] \u5617\u8A66\u8F09\u5165\u6A21\u7D44:', modulePath);
-          
-          let module;
-          try {
-            module = await import(modulePath);
-          } catch (importError) {
-            console.error('[ItineraryPlanner] \u8F09\u5165\u6A21\u7D44\u5931\u6557:', importError);
-            throw new Error('\u7121\u6CD5\u8F09\u5165\u884C\u7A0B\u898F\u5283\u5668\u6A21\u7D44\u3002\u932F\u8AA4: ' + (importError.message || '\u672A\u77E5\u932F\u8AA4'));
-          }
-          
-          let App = module.default;
-          
-          // \u5982\u679C default \u4E0D\u5B58\u5728\uFF0C\u5617\u8A66\u5176\u4ED6\u5C0E\u51FA\u65B9\u5F0F
-          if (!App || typeof App !== 'function') {
-            App = module.App;
-          }
-          
-          // \u78BA\u4FDD App \u662F\u4E00\u500B\u6709\u6548\u7684 React \u7D44\u4EF6
-          if (!App || typeof App !== 'function') {
-            console.error('[ItineraryPlanner] \u8F09\u5165\u7684\u6A21\u7D44\u5167\u5BB9:', Object.keys(module));
-            throw new Error('\u7121\u6CD5\u8F09\u5165\u6709\u6548\u7684 App \u7D44\u4EF6\u3002\u8F09\u5165\u7684\u5167\u5BB9\u4E0D\u662F\u4E00\u500B\u51FD\u6578\u7D44\u4EF6\u3002');
-          }
-          
-          console.log('[ItineraryPlanner] \u6210\u529F\u8F09\u5165 App \u7D44\u4EF6');
-          
-          const root = createRoot(document.getElementById('itinerary-planner-root'));
-          
-          // \u521D\u59CB\u5316\u8CC7\u6599
-          const initialItinerary = ${itineraryJson};
-          const userItineraries = ${userItinerariesJson};
-          const currentUser = {
-            id: '${user.id}',
-            email: '${user.email}',
-            name: '${user.name || ""}',
-            avatarUrl: '${user.avatar_url || ""}'
-          };
-          
-          // Toast \u901A\u77E5\u7CFB\u7D71\uFF08\u5982\u679C pageTemplate \u6C92\u6709\u63D0\u4F9B\uFF0C\u5247\u4F7F\u7528\u9019\u500B\uFF09
-          if (!window.showToast) {
-            window.showToast = function(message, type = 'info') {
-              const toast = document.createElement('div');
-              const bgColor = type === 'success' ? 'bg-green-500' : type === 'error' ? 'bg-red-500' : 'bg-blue-500';
-              toast.className = \`fixed top-4 right-4 z-50 \${bgColor} text-white px-6 py-3 rounded-lg shadow-lg transform transition-all duration-300 translate-x-full\`;
-              toast.innerHTML = \`
-                <div class="flex items-center gap-3">
-                  <i class="fas \${type === 'success' ? 'fa-check-circle' : type === 'error' ? 'fa-exclamation-circle' : 'fa-info-circle'}"></i>
-                  <span>\${message}</span>
-                </div>
-              \`;
-              document.body.appendChild(toast);
-              
-              // \u89F8\u767C\u52D5\u756B
-              setTimeout(() => {
-                toast.classList.remove('translate-x-full');
-              }, 10);
-              
-              // \u81EA\u52D5\u79FB\u9664
-              setTimeout(() => {
-                toast.classList.add('translate-x-full');
-                setTimeout(() => toast.remove(), 300);
-              }, 3000);
-            };
-          }
-          
-          // \u5132\u5B58\u51FD\u6578
-          const handleSave = async (itineraryData) => {
-            try {
-              const method = initialItinerary ? 'PUT' : 'POST';
-              const url = initialItinerary 
-                ? \`/api/itinerary/\${initialItinerary.id}\`
-                : '/api/itinerary';
-              
-              const response = await fetch(url, {
-                method,
-                headers: { 'Content-Type': 'application/json' },
-                credentials: 'include',
-                body: JSON.stringify(itineraryData)
-              });
-              
-              const result = await response.json();
-              if (result.success) {
-                if (window.showToast) {
-                  window.showToast('\u884C\u7A0B\u5DF2\u81EA\u52D5\u5132\u5B58\uFF01', 'success');
-                }
-                return result.data;
-              } else {
-                throw new Error(result.error || '\u5132\u5B58\u5931\u6557');
-              }
-            } catch (error) {
-              console.error('\u5132\u5B58\u5931\u6557:', error);
-              if (window.showToast) {
-                window.showToast('\u5132\u5B58\u5931\u6557\uFF1A' + (error.message || '\u8ACB\u7A0D\u5F8C\u518D\u8A66'), 'error');
-              }
-              throw error;
-            }
-          };
-          
-          // \u78BA\u4FDD\u4F7F\u7528 React.createElement \u6B63\u78BA\u6E32\u67D3\u7D44\u4EF6
-          const appElement = React.createElement(App, {
-            initialItinerary,
-            userItineraries,
-            currentUser,
-            onSave: handleSave
-          });
-          
-          root.render(appElement);
-        } catch (error) {
-          console.error('\u8F09\u5165\u884C\u7A0B\u898F\u5283\u5668\u5931\u6557:', error);
-          const rootElement = document.getElementById('itinerary-planner-root');
-          if (rootElement) {
-            rootElement.innerHTML = 
-              '<div class="flex items-center justify-center h-screen"><div class="text-center"><h2 class="text-2xl font-bold text-red-600 mb-4">\u8F09\u5165\u5931\u6557</h2><p class="text-gray-600">' + error.message + '</p></div></div>';
-          }
-        }
-      }
-      
-      loadItineraryPlanner();
-    </script>
-  `;
-  const combinedCssContent = (cssContent || "") + itineraryStyles;
-  return new Response(
-    pageTemplate2({
-      title: "\u884C\u7A0B\u898F\u5283",
-      content,
-      user,
-      nonce,
-      cssContent: combinedCssContent,
-      useContainer: false,
-      // 行程規劃器需要全屏，不使用 container
-      currentPath: url.pathname
-    }),
-    {
-      headers: {
-        "Content-Type": "text/html;charset=utf-8",
-        "Cache-Control": "no-cache, no-store, must-revalidate",
-        "Pragma": "no-cache",
-        "Expires": "0",
-        "Content-Security-Policy": `default-src 'self'; script-src 'self' https://esm.sh https://cdnjs.cloudflare.com https://maps.googleapis.com https://static.cloudflareinsights.com 'unsafe-eval' 'unsafe-inline'; style-src 'self' https://fonts.googleapis.com https://cdnjs.cloudflare.com 'unsafe-inline'; style-src-elem 'self' https://fonts.googleapis.com https://cdnjs.cloudflare.com 'unsafe-inline'; style-src-attr 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https://esm.sh https://*.esm.sh https://maps.googleapis.com https://generativelanguage.googleapis.com https://*.googleapis.com https://static.cloudflareinsights.com wss: ws:; frame-src 'self' https://www.google.com; font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com data:;`
-      }
-    }
-  );
-}
+
+// src/routes/index.js
+init_TripPlanner();
 
 // src/api/auth.js
 init_SessionService();
@@ -33434,7 +37666,11 @@ async function getUserFromSession2(sessionId, db) {
   }
 }
 
+// src/routes/index.js
+init_layout();
+
 // src/pages/ErrorPage.js
+init_layout();
 function renderErrorPage(request, env, session, user, nonce, cssContent, error) {
   const content = `
     <div class="min-h-screen flex items-center justify-center bg-gray-50 px-4 sm:px-6 lg:px-8">
@@ -33557,6 +37793,9 @@ async function routePageRequest(request, env, session, user, nonce, cssContent) 
     if (pathname2 === "/admin/verifications" || pathname2 === "/admin/business-verification") {
       return await renderBusinessVerificationAdminPage(request, env, session, user, nonce, cssContent);
     }
+    if (pathname2 === "/admin/ecosystem") {
+      return await renderEcosystemDashboardPage(request, env, session, user, nonce, cssContent);
+    }
     if (pathname2 === "/profile") {
       return await renderProfilePage(request, env, session, user, nonce, cssContent);
     }
@@ -33578,8 +37817,15 @@ async function routePageRequest(request, env, session, user, nonce, cssContent) 
     if (pathname2 === "/favorites") {
       return await renderFavoritesPage(request, env, session, user, nonce, cssContent);
     }
-    if (pathname2 === "/itinerary" || pathname2 === "/itinerary-planner") {
-      return await renderItineraryPlannerPage(request, env, session, user, nonce, cssContent);
+    if (pathname2 === "/trip-planner") {
+      return await renderTripPlannerPage(request, env, session, user, nonce, cssContent);
+    }
+    if (pathname2.startsWith("/trip-planner/shared/")) {
+      const shareToken = pathname2.split("/").pop();
+      if (shareToken && shareToken !== "shared") {
+        const { renderSharedTripPage: renderSharedTripPage2 } = await Promise.resolve().then(() => (init_TripPlanner(), TripPlanner_exports));
+        return await renderSharedTripPage2(request, env, session, user, nonce, cssContent, shareToken);
+      }
     }
     if (pathname2.startsWith("/location/")) {
       const locationId = pathname2.split("/").pop();
@@ -33655,6 +37901,9 @@ async function handleApiRequest(request, env, session, user, ctx = null) {
         case "itinerary":
           const { handleItineraryRequest: handleItineraryRequest2 } = await Promise.resolve().then(() => (init_itinerary(), itinerary_exports));
           return await handleItineraryRequest2(request, env, user);
+        case "trip-planner":
+          const { handleTripPlannerRequest: handleTripPlannerRequest2 } = await Promise.resolve().then(() => (init_trip_planner(), trip_planner_exports));
+          return await handleTripPlannerRequest2(request, env, user);
         case "business":
           if (path.startsWith("/api/business/verify/")) {
             const { handleBusinessVerificationRequest: handleBusinessVerificationRequest2 } = await Promise.resolve().then(() => (init_business_verification(), business_verification_exports));
@@ -33864,7 +38113,7 @@ async function handleGoogleCallback(request, env) {
 init_html2();
 
 // src/styles/tailwind.output.css
-var tailwind_output_default = '*,::backdrop,:after,:before{--tw-border-spacing-x:0;--tw-border-spacing-y:0;--tw-translate-x:0;--tw-translate-y:0;--tw-rotate:0;--tw-skew-x:0;--tw-skew-y:0;--tw-scale-x:1;--tw-scale-y:1;--tw-pan-x: ;--tw-pan-y: ;--tw-pinch-zoom: ;--tw-scroll-snap-strictness:proximity;--tw-gradient-from-position: ;--tw-gradient-via-position: ;--tw-gradient-to-position: ;--tw-ordinal: ;--tw-slashed-zero: ;--tw-numeric-figure: ;--tw-numeric-spacing: ;--tw-numeric-fraction: ;--tw-ring-inset: ;--tw-ring-offset-width:0px;--tw-ring-offset-color:#fff;--tw-ring-color:#3b82f680;--tw-ring-offset-shadow:0 0 #0000;--tw-ring-shadow:0 0 #0000;--tw-shadow:0 0 #0000;--tw-shadow-colored:0 0 #0000;--tw-blur: ;--tw-brightness: ;--tw-contrast: ;--tw-grayscale: ;--tw-hue-rotate: ;--tw-invert: ;--tw-saturate: ;--tw-sepia: ;--tw-drop-shadow: ;--tw-backdrop-blur: ;--tw-backdrop-brightness: ;--tw-backdrop-contrast: ;--tw-backdrop-grayscale: ;--tw-backdrop-hue-rotate: ;--tw-backdrop-invert: ;--tw-backdrop-opacity: ;--tw-backdrop-saturate: ;--tw-backdrop-sepia: ;--tw-contain-size: ;--tw-contain-layout: ;--tw-contain-paint: ;--tw-contain-style: }/*! tailwindcss v3.4.17 | MIT License | https://tailwindcss.com*/*,:after,:before{border:0 solid #e5e7eb;box-sizing:border-box}:after,:before{--tw-content:""}:host,html{-webkit-text-size-adjust:100%;font-feature-settings:normal;-webkit-tap-highlight-color:transparent;font-family:Noto Sans TC,sans-serif;font-variation-settings:normal;line-height:1.5;tab-size:4}body{line-height:inherit;margin:0}hr{border-top-width:1px;color:inherit;height:0}abbr:where([title]){-webkit-text-decoration:underline dotted;text-decoration:underline dotted}h1,h2,h3,h4,h5,h6{font-size:inherit;font-weight:inherit}a{color:inherit;text-decoration:inherit}b,strong{font-weight:bolder}code,kbd,pre,samp{font-feature-settings:normal;font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,Liberation Mono,Courier New,monospace;font-size:1em;font-variation-settings:normal}small{font-size:80%}sub,sup{font-size:75%;line-height:0;position:relative;vertical-align:initial}sub{bottom:-.25em}sup{top:-.5em}table{border-collapse:collapse;border-color:inherit;text-indent:0}button,input,optgroup,select,textarea{font-feature-settings:inherit;color:inherit;font-family:inherit;font-size:100%;font-variation-settings:inherit;font-weight:inherit;letter-spacing:inherit;line-height:inherit;margin:0;padding:0}button,select{text-transform:none}button,input:where([type=button]),input:where([type=reset]),input:where([type=submit]){-webkit-appearance:button;background-color:initial;background-image:none}:-moz-focusring{outline:auto}:-moz-ui-invalid{box-shadow:none}progress{vertical-align:initial}::-webkit-inner-spin-button,::-webkit-outer-spin-button{height:auto}[type=search]{-webkit-appearance:textfield;outline-offset:-2px}::-webkit-search-decoration{-webkit-appearance:none}::-webkit-file-upload-button{-webkit-appearance:button;font:inherit}summary{display:list-item}blockquote,dd,dl,figure,h1,h2,h3,h4,h5,h6,hr,p,pre{margin:0}fieldset{margin:0}fieldset,legend{padding:0}menu,ol,ul{list-style:none;margin:0;padding:0}dialog{padding:0}textarea{resize:vertical}input::placeholder,textarea::placeholder{color:#9ca3af;opacity:1}[role=button],button{cursor:pointer}:disabled{cursor:default}audio,canvas,embed,iframe,img,object,svg,video{display:block;vertical-align:middle}img,video{height:auto;max-width:100%}[hidden]:where(:not([hidden=until-found])){display:none}:root{--primary-color:#1a73e8;--primary-light:#4ecdc4;--accent-color:#ff6b6b;--background-color:#fff;--text-color:#333;--border-color:#e0e0e0;--shadow-color:#0000001a;--font-family:"Noto Sans TC",sans-serif}*{box-sizing:border-box;margin:0;padding:0}html{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}body{font-family:var(--font-family);line-height:1.6}h1,h2,h3,h4,h5,h6{font-family:Noto Serif TC,serif}.\\!container{width:100%!important}.container{width:100%}@media (min-width:640px){.\\!container{max-width:640px!important}.container{max-width:640px}}@media (min-width:768px){.\\!container{max-width:768px!important}.container{max-width:768px}}@media (min-width:1024px){.\\!container{max-width:1024px!important}.container{max-width:1024px}}@media (min-width:1280px){.\\!container{max-width:1280px!important}.container{max-width:1280px}}@media (min-width:1536px){.\\!container{max-width:1536px!important}.container{max-width:1536px}}.\\!container{margin-left:auto;margin-right:auto;max-width:80rem;padding-left:1rem;padding-right:1rem}@media (min-width:640px){.\\!container{padding-left:1.5rem;padding-right:1.5rem}}@media (min-width:1024px){.\\!container{padding-left:2rem;padding-right:2rem}}.container{margin-left:auto;margin-right:auto;max-width:80rem;padding-left:1rem;padding-right:1rem}@media (min-width:640px){.container{padding-left:1.5rem;padding-right:1.5rem}}@media (min-width:1024px){.container{padding-left:2rem;padding-right:2rem}}.header{--tw-border-opacity:1;--tw-backdrop-blur:blur(12px);-webkit-backdrop-filter:var(--tw-backdrop-blur) var(--tw-backdrop-brightness) var(--tw-backdrop-contrast) var(--tw-backdrop-grayscale) var(--tw-backdrop-hue-rotate) var(--tw-backdrop-invert) var(--tw-backdrop-opacity) var(--tw-backdrop-saturate) var(--tw-backdrop-sepia);backdrop-filter:var(--tw-backdrop-blur) var(--tw-backdrop-brightness) var(--tw-backdrop-contrast) var(--tw-backdrop-grayscale) var(--tw-backdrop-hue-rotate) var(--tw-backdrop-invert) var(--tw-backdrop-opacity) var(--tw-backdrop-saturate) var(--tw-backdrop-sepia);background-color:#fffc;border-bottom-width:1px;border-color:rgb(224 224 224/var(--tw-border-opacity,1));padding-bottom:1rem;padding-top:1rem;position:sticky;top:0;z-index:100}.nav{align-items:center;display:flex;justify-content:space-between}.nav-logo{--tw-text-opacity:1;color:rgb(26 115 232/var(--tw-text-opacity,1));color:var(--primary-color);font-size:1.5rem;font-weight:700;line-height:2rem;text-decoration-line:none}.image-error-message.nav-menu{display:none}.nav-menu{align-items:center;display:none;gap:1.5rem;list-style-type:none}@media (min-width:768px){.nav-menu{display:flex}}.nav-link-active{--tw-text-opacity:1;color:rgb(0 102 204/var(--tw-text-opacity,1));font-weight:500}.mobile-menu-toggle{--tw-text-opacity:1;background-image:none;border-style:none;color:rgb(51 51 51/var(--tw-text-opacity,1));cursor:pointer;font-size:1.5rem;line-height:2rem}@media (min-width:768px){.mobile-menu-toggle,.mobile-menu-toggle.image-error-message{display:none}}.\\!button,.button{border-radius:.25rem;cursor:pointer;display:inline-block;font-weight:500;padding:.5rem 1rem;text-decoration-line:none;transition-duration:.3s;transition-property:all;transition-timing-function:cubic-bezier(.4,0,.2,1)}.\\!button{border-radius:.25rem!important;padding:.5rem 1rem!important}.button{border-radius:.25rem;padding:.5rem 1rem}.button-primary{--tw-bg-opacity:1;--tw-text-opacity:1;background-color:rgb(37 99 235/var(--tw-bg-opacity,1));border-style:none;color:rgb(255 255 255/var(--tw-text-opacity,1))}.button-primary:hover{--tw-bg-opacity:1;background-color:rgb(29 78 216/var(--tw-bg-opacity,1))}.button-primary{background-color:var(--primary-color)}.button-primary:hover{background-color:#1558b0}.button-secondary{--tw-bg-opacity:1;--tw-text-opacity:1;background-color:rgb(107 114 128/var(--tw-bg-opacity,1));border-style:none;color:rgb(255 255 255/var(--tw-text-opacity,1))}.button-secondary:hover{--tw-bg-opacity:1;background-color:rgb(75 85 99/var(--tw-bg-opacity,1))}.button-secondary:hover{background-color:#5a6268}.footer{--tw-border-opacity:1;--tw-bg-opacity:1;background-color:rgb(243 244 246/var(--tw-bg-opacity,1));border-color:rgb(224 224 224/var(--tw-border-opacity,1));border-top-width:1px;margin-top:4rem;padding-bottom:1rem;padding-top:1rem;text-align:center}@media (max-width:768px){.image-error-message.nav-menu,.nav-menu{display:none}.nav-menu{--tw-border-opacity:1;--tw-bg-opacity:1;--tw-shadow:0 4px 6px -1px #0000001a,0 2px 4px -1px #0000000f;--tw-shadow-colored:0 4px 6px -1px var(--tw-shadow-color),0 2px 4px -1px var(--tw-shadow-color);align-items:stretch;background-color:rgb(255 255 255/var(--tw-bg-opacity,1));border-bottom-width:1px;border-color:rgb(224 224 224/var(--tw-border-opacity,1));box-shadow:var(--tw-ring-offset-shadow,0 0 #0000),var(--tw-ring-shadow,0 0 #0000),var(--tw-shadow);flex-direction:column;gap:1rem;left:0;padding:1rem;position:absolute;right:0;top:100%}.nav-menu.active{display:flex}.nav-menu .button{text-align:center;width:100%}.image-error-message{display:none}.nav-menu .\\!button{text-align:center;width:100%}}.nav-menu-item-avatar{align-items:center;display:flex;position:relative}.avatar-container-div{background-color:initial;border-style:none;cursor:pointer;padding:0}.user-avatar{border-color:#0000;border-radius:9999px;border-width:2px;cursor:pointer;display:inline-block;height:2rem;object-fit:cover;transition-duration:.2s;transition-property:color,background-color,border-color,text-decoration-color,fill,stroke;transition-timing-function:cubic-bezier(.4,0,.2,1);vertical-align:middle;width:2rem}.avatar-container-div:focus .user-avatar,.user-avatar:hover{border-color:var(--primary-color)}.avatar-fallback{--tw-text-opacity:1;background-color:#4ecdc4;border-radius:9999px;color:rgb(255 255 255/var(--tw-text-opacity,1));font-size:1rem;font-weight:700;height:2rem;line-height:2rem;text-align:center;width:2rem}.image-error-message.user-dropdown{display:none}.user-dropdown{--tw-border-opacity:1;--tw-bg-opacity:1;--tw-shadow:0 4px 6px -1px #0000001a,0 2px 4px -1px #0000000f;--tw-shadow-colored:0 4px 6px -1px var(--tw-shadow-color),0 2px 4px -1px var(--tw-shadow-color);background-color:rgb(255 255 255/var(--tw-bg-opacity,1));border-color:rgb(224 224 224/var(--tw-border-opacity,1));border-radius:.375rem;border-width:1px;box-shadow:var(--tw-ring-offset-shadow,0 0 #0000),var(--tw-ring-shadow,0 0 #0000),var(--tw-shadow);display:none;margin-top:.5rem;min-width:160px;padding-bottom:.25rem;padding-top:.25rem;position:absolute;right:0;top:100%;z-index:50}.user-dropdown.dropdown-active{display:block}.dropdown-header{--tw-border-opacity:1;border-bottom-width:1px;border-color:rgb(224 224 224/var(--tw-border-opacity,1));padding:.5rem 1rem}.dropdown-header-name{color:rgb(17 24 39/var(--tw-text-opacity,1));font-size:.875rem;font-weight:500;line-height:1.25rem}.dropdown-header-email,.dropdown-header-name{--tw-text-opacity:1;margin:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.dropdown-header-email{color:rgb(107 114 128/var(--tw-text-opacity,1));font-size:.75rem;line-height:1rem}.dropdown-item{--tw-text-opacity:1;color:rgb(51 51 51/var(--tw-text-opacity,1));display:block;font-size:.875rem;line-height:1.25rem;padding:.5rem 1rem;text-decoration-line:none;white-space:nowrap}.dropdown-item:hover{--tw-bg-opacity:1;--tw-text-opacity:1;background-color:rgb(243 244 246/var(--tw-bg-opacity,1));color:rgb(26 115 232/var(--tw-text-opacity,1))}.dropdown-item{color:var(--text-color)}.dropdown-divider{--tw-bg-opacity:1;background-color:rgb(224 224 224/var(--tw-bg-opacity,1));height:1px;margin-bottom:.25rem;margin-top:.25rem}#logout-button{--tw-text-opacity:1;background-color:initial;border-style:none;color:rgb(220 38 38/var(--tw-text-opacity,1));cursor:pointer;text-align:left;width:100%}#logout-button:hover{--tw-bg-opacity:1;background-color:rgb(254 242 242/var(--tw-bg-opacity,1))}.category-label.active{--tw-border-opacity:1;--tw-bg-opacity:1;--tw-text-opacity:1;background-color:rgb(0 102 204/var(--tw-bg-opacity,1));border-color:rgb(0 102 204/var(--tw-border-opacity,1));color:rgb(255 255 255/var(--tw-text-opacity,1))}.error-message{--tw-bg-opacity:1;--tw-text-opacity:1;background-color:rgb(254 226 226/var(--tw-bg-opacity,1));border-radius:.375rem;color:rgb(185 28 28/var(--tw-text-opacity,1));margin-bottom:1rem;padding:1rem}.error-state-icon{--tw-text-opacity:1;color:rgb(239 68 68/var(--tw-text-opacity,1));margin-bottom:.5rem}.error-state-title{--tw-text-opacity:1;color:rgb(153 27 27/var(--tw-text-opacity,1));font-weight:600;margin-bottom:.25rem}.error-state-message{--tw-text-opacity:1;color:rgb(220 38 38/var(--tw-text-opacity,1));font-size:.875rem;line-height:1.25rem}.image-error-message{align-items:center;-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);display:flex;flex-direction:column;justify-content:center}.image-error-message svg{--tw-text-opacity:1;color:rgb(156 163 175/var(--tw-text-opacity,1));height:2rem;margin-bottom:.5rem;width:2rem}.image-error-message p{--tw-text-opacity:1;color:rgb(107 114 128/var(--tw-text-opacity,1));font-size:.75rem;line-height:1rem}.location-detail-panel{align-items:center;display:flex;height:100%;justify-content:center;left:0;opacity:0;position:fixed;top:0;transition:all .3s ease;visibility:hidden;width:100%;z-index:1000}.location-detail-panel.visible{opacity:1;visibility:visible}.detail-panel-overlay{-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);background:#00000080;cursor:pointer;height:100%;left:0;position:absolute;top:0;width:100%}.detail-panel-content{background:#fff;border-radius:16px;box-shadow:0 20px 60px #0000004d;display:flex;flex-direction:column;height:100%;max-height:90vh;max-width:90vw;overflow:hidden;position:relative;transform:translateX(100%);transition:transform .3s ease;width:100%}.location-detail-panel.visible .detail-panel-content{transform:translateX(0)}@media (min-width:1024px){.detail-panel-content{height:90vh;margin-left:auto;margin-right:0;max-width:25vw;width:400px}.location-detail-panel{justify-content:flex-end}}@media (max-width:1023px){.detail-panel-content{border-radius:0;height:100%;max-height:100vh;max-width:100vw;width:100%}.location-detail-panel{justify-content:center}}.detail-panel-close-mobile{align-items:center;-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);background:#ffffffe6;border:none;border-radius:50%;cursor:pointer;display:flex;height:40px;justify-content:center;left:16px;position:absolute;top:16px;transition:all .2s ease;width:40px;z-index:10}.detail-panel-close-mobile:hover{background:#fff;transform:scale(1.1)}.detail-panel-close-desktop{align-items:center;background:#0000001a;border:none;border-radius:50%;cursor:pointer;display:flex;height:32px;justify-content:center;position:absolute;right:16px;top:16px;transition:all .2s ease;width:32px;z-index:10}.detail-panel-close-desktop:hover{background:#0003;transform:scale(1.1)}@media (max-width:1023px){.detail-panel-close-desktop{display:none}}@media (min-width:1024px){.detail-panel-close-mobile{display:none}}.detail-panel-image{background:#f5f5f5;height:250px;overflow:hidden;position:relative;width:100%}.detail-panel-img{height:100%;object-fit:cover;width:100%}.status-badge{-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);border-radius:16px;color:#fff;font-size:14px;font-weight:600;padding:6px 12px;position:absolute;right:12px;top:12px;z-index:2}.detail-panel-info{flex:1;overflow-y:auto;padding:24px}.detail-panel-title{color:#1f2937;font-size:24px;font-weight:700;line-height:1.3;margin:0 0 16px}.detail-panel-meta{margin-bottom:20px}.meta-item{align-items:center;color:#6b7280;display:flex;font-size:14px;gap:8px;margin-bottom:8px}.meta-item svg{color:#9ca3af;flex-shrink:0}.meta-item a{color:#3b82f6;text-decoration:none}.meta-item a:hover{text-decoration:underline}.detail-panel-actions{margin-top:24px}.detail-panel-actions h3{color:#374151;font-size:16px;font-weight:600;margin:0 0 12px}.action-buttons{display:flex;flex-wrap:wrap;gap:8px}.status-btn{align-items:center;border:none;border-radius:8px;cursor:pointer;display:flex;font-size:14px;font-weight:500;gap:4px;padding:8px 16px;transition:all .2s ease}.status-btn:hover{box-shadow:0 4px 8px #0000001a;transform:translateY(-1px)}.status-btn:active{transform:translateY(0)}@media (max-width:640px){.detail-panel-info{padding:16px}.detail-panel-title{font-size:20px}.detail-panel-image{height:200px}.action-buttons{flex-direction:column}.status-btn{justify-content:center}}@keyframes slideInFromRight{0%{transform:translateX(100%)}to{transform:translateX(0)}}@keyframes slideOutToRight{0%{transform:translateX(0)}to{transform:translateX(100%)}}.location-card{transition:transform .2s ease,box-shadow .2s ease}.location-card:hover{box-shadow:0 8px 25px #00000026;transform:translateY(-2px)}.image-loader-container{height:100%;overflow:hidden;position:relative;width:100%}.image-loader-img{height:100%;object-fit:cover;width:100%}.image-skeleton{animation:shimmer 1.5s infinite;background:linear-gradient(90deg,#f0f0f0 25%,#e0e0e0 50%,#f0f0f0 75%);background-size:200% 100%;height:100%;left:0;position:absolute;top:0;width:100%;z-index:1}@keyframes shimmer{0%{background-position:-200% 0}to{background-position:200% 0}}.image-progress{background:#fffc;height:100%;justify-content:center;left:0;position:absolute;top:0;width:100%;z-index:2}.image-progress,.image-progress-spinner{align-items:center;display:flex}.image-preview-container{overflow:hidden;position:relative}.image-preview-thumbnail{transition:transform .3s ease}.image-preview-overlay{transition:opacity .3s ease}.image-preview-modal{animation:fadeIn .3s ease}@keyframes fadeIn{0%{opacity:0}to{opacity:1}}.image-preview-content{animation:zoomIn .3s ease}@keyframes zoomIn{0%{opacity:0;transform:scale(.9)}to{opacity:1;transform:scale(1)}}.image-preview-close,.image-preview-download{-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px)}.image-preview-close:hover,.image-preview-download:hover{transform:scale(1.1)}.image-error-message{align-items:center;background:#f9fafbf2;display:flex;flex-direction:column;height:100%;justify-content:center;left:0;position:absolute;top:0;width:100%;z-index:3}.image-error-message.hidden{display:none}@media (max-width:640px){.image-progress,.image-skeleton{border-radius:8px}}.sr-only{clip:rect(0,0,0,0);border-width:0;height:1px;margin:-1px;overflow:hidden;padding:0;position:absolute;white-space:nowrap;width:1px}.pointer-events-none{pointer-events:none}.pointer-events-auto{pointer-events:auto}.visible{visibility:visible}.collapse{visibility:collapse}.static{position:static}.fixed{position:fixed}.absolute{position:absolute}.relative{position:relative}.sticky{position:sticky}.inset-0{inset:0}.-left-2{left:-.5rem}.bottom-0{bottom:0}.bottom-4{bottom:1rem}.bottom-\\[-54px\\]{bottom:-54px}.bottom-full{bottom:100%}.left-0{left:0}.left-1\\/2{left:50%}.left-2{left:.5rem}.left-4{left:1rem}.right-0{right:0}.right-4{right:1rem}.top-0{top:0}.top-12{top:3rem}.top-2{top:.5rem}.top-4{top:1rem}.top-6{top:1.5rem}.top-8{top:2rem}.top-full{top:100%}.z-10{z-index:10}.z-20{z-index:20}.z-30{z-index:30}.z-40{z-index:40}.z-50{z-index:50}.z-\\[101\\]{z-index:101}.z-\\[110\\]{z-index:110}.z-\\[90\\]{z-index:90}.col-span-full{grid-column:1/-1}.mx-4{margin-left:1rem;margin-right:1rem}.mx-auto{margin-left:auto;margin-right:auto}.my-1{margin-bottom:.25rem;margin-top:.25rem}.my-2{margin-bottom:.5rem;margin-top:.5rem}.-mb-px{margin-bottom:-1px}.mb-0{margin-bottom:0}.mb-0\\.5{margin-bottom:.125rem}.mb-1{margin-bottom:.25rem}.mb-2{margin-bottom:.5rem}.mb-3{margin-bottom:.75rem}.mb-4{margin-bottom:1rem}.mb-5{margin-bottom:1.25rem}.mb-6{margin-bottom:1.5rem}.mb-8{margin-bottom:2rem}.ml-2{margin-left:.5rem}.ml-3{margin-left:.75rem}.ml-4{margin-left:1rem}.ml-5{margin-left:1.25rem}.mr-1{margin-right:.25rem}.mr-2{margin-right:.5rem}.mr-4{margin-right:1rem}.mt-1{margin-top:.25rem}.mt-1\\.5{margin-top:.375rem}.mt-2{margin-top:.5rem}.mt-3{margin-top:.75rem}.mt-4{margin-top:1rem}.mt-5{margin-top:1.25rem}.mt-6{margin-top:1.5rem}.mt-8{margin-top:2rem}.mt-auto{margin-top:auto}.line-clamp-1{-webkit-line-clamp:1}.line-clamp-1,.line-clamp-2{-webkit-box-orient:vertical;display:-webkit-box;overflow:hidden}.line-clamp-2{-webkit-line-clamp:2}.line-clamp-3{-webkit-box-orient:vertical;-webkit-line-clamp:3;display:-webkit-box;overflow:hidden}.block{display:block}.inline-block{display:inline-block}.inline{display:inline}.flex{display:flex}.inline-flex{display:inline-flex}.table{display:table}.grid{display:grid}.contents{display:contents}.hidden{display:none}.aspect-\\[3\\/4\\]{aspect-ratio:3/4}.aspect-\\[4\\/3\\]{aspect-ratio:4/3}.h-1{height:.25rem}.h-1\\.5{height:.375rem}.h-10{height:2.5rem}.h-11{height:2.75rem}.h-12{height:3rem}.h-14{height:3.5rem}.h-16{height:4rem}.h-2{height:.5rem}.h-3{height:.75rem}.h-4{height:1rem}.h-48{height:12rem}.h-5{height:1.25rem}.h-6{height:1.5rem}.h-7{height:1.75rem}.h-8{height:2rem}.h-\\[100dvh\\]{height:100dvh}.h-\\[100px\\]{height:100px}.h-\\[1px\\]{height:1px}.h-auto{height:auto}.h-full{height:100%}.h-screen{height:100vh}.max-h-12{max-height:3rem}.max-h-48{max-height:12rem}.max-h-\\[50vh\\]{max-height:50vh}.max-h-\\[90vh\\]{max-height:90vh}.max-h-\\[calc\\(50vh-60px\\)\\]{max-height:calc(50vh - 60px)}.max-h-full{max-height:100%}.min-h-0{min-height:0}.min-h-\\[70vh\\]{min-height:70vh}.min-h-screen{min-height:100vh}.w-0{width:0}.w-1\\/2{width:50%}.w-1\\/3{width:33.333333%}.w-1\\/4{width:25%}.w-10{width:2.5rem}.w-11{width:2.75rem}.w-12{width:3rem}.w-14{width:3.5rem}.w-16{width:4rem}.w-2{width:.5rem}.w-24{width:6rem}.w-4{width:1rem}.w-44{width:11rem}.w-48{width:12rem}.w-5{width:1.25rem}.w-5\\/6{width:83.333333%}.w-6{width:1.5rem}.w-7{width:1.75rem}.w-8{width:2rem}.w-\\[2px\\]{width:2px}.w-\\[30\\%\\]{width:30%}.w-\\[90\\%\\]{width:90%}.w-fit{width:fit-content}.w-full{width:100%}.min-w-0{min-width:0}.min-w-\\[180px\\]{min-width:180px}.min-w-\\[300px\\]{min-width:300px}.max-w-2xl{max-width:42rem}.max-w-4xl{max-width:56rem}.max-w-6xl{max-width:72rem}.max-w-7xl{max-width:80rem}.max-w-\\[160px\\]{max-width:160px}.max-w-\\[260px\\]{max-width:260px}.max-w-\\[340px\\]{max-width:340px}.max-w-full{max-width:100%}.max-w-lg{max-width:32rem}.max-w-md{max-width:28rem}.max-w-sm{max-width:24rem}.flex-1{flex:1 1 0%}.flex-shrink{flex-shrink:1}.flex-shrink-0{flex-shrink:0}.flex-grow{flex-grow:1}.border-collapse{border-collapse:collapse}.-translate-x-1\\/2{--tw-translate-x:-50%}.-translate-x-1\\/2,.translate-x-full{transform:translate(var(--tw-translate-x),var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y))}.translate-x-full{--tw-translate-x:100%}.translate-y-full{--tw-translate-y:100%}.rotate-\\[-45deg\\],.translate-y-full{transform:translate(var(--tw-translate-x),var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y))}.rotate-\\[-45deg\\]{--tw-rotate:-45deg}.transform{transform:translate(var(--tw-translate-x),var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y))}@keyframes pulse{50%{opacity:.5}}.animate-pulse{animation:pulse 2s cubic-bezier(.4,0,.6,1) infinite}@keyframes spin{to{transform:rotate(1turn)}}.animate-spin{animation:spin 1s linear infinite}.cursor-grab{cursor:grab}.cursor-pointer{cursor:pointer}.resize-none{resize:none}.resize{resize:both}.list-inside{list-style-position:inside}.list-decimal{list-style-type:decimal}.list-disc{list-style-type:disc}.grid-cols-1{grid-template-columns:repeat(1,minmax(0,1fr))}.grid-cols-2{grid-template-columns:repeat(2,minmax(0,1fr))}.flex-col{flex-direction:column}.flex-wrap{flex-wrap:wrap}.items-start{align-items:flex-start}.items-center{align-items:center}.items-baseline{align-items:baseline}.justify-start{justify-content:flex-start}.justify-end{justify-content:flex-end}.justify-center{justify-content:center}.justify-between{justify-content:space-between}.justify-around{justify-content:space-around}.gap-0{gap:0}.gap-0\\.5{gap:.125rem}.gap-1{gap:.25rem}.gap-1\\.5{gap:.375rem}.gap-2{gap:.5rem}.gap-3{gap:.75rem}.gap-4{gap:1rem}.gap-6{gap:1.5rem}.gap-8{gap:2rem}.gap-x-4{column-gap:1rem}.gap-y-2{row-gap:.5rem}.space-x-1>:not([hidden])~:not([hidden]){--tw-space-x-reverse:0;margin-left:calc(.25rem*(1 - var(--tw-space-x-reverse)));margin-right:calc(.25rem*var(--tw-space-x-reverse))}.space-x-2>:not([hidden])~:not([hidden]){--tw-space-x-reverse:0;margin-left:calc(.5rem*(1 - var(--tw-space-x-reverse)));margin-right:calc(.5rem*var(--tw-space-x-reverse))}.space-x-3>:not([hidden])~:not([hidden]){--tw-space-x-reverse:0;margin-left:calc(.75rem*(1 - var(--tw-space-x-reverse)));margin-right:calc(.75rem*var(--tw-space-x-reverse))}.space-x-4>:not([hidden])~:not([hidden]){--tw-space-x-reverse:0;margin-left:calc(1rem*(1 - var(--tw-space-x-reverse)));margin-right:calc(1rem*var(--tw-space-x-reverse))}.space-x-8>:not([hidden])~:not([hidden]){--tw-space-x-reverse:0;margin-left:calc(2rem*(1 - var(--tw-space-x-reverse)));margin-right:calc(2rem*var(--tw-space-x-reverse))}.space-y-0>:not([hidden])~:not([hidden]){--tw-space-y-reverse:0;margin-bottom:calc(0px*var(--tw-space-y-reverse));margin-top:calc(0px*(1 - var(--tw-space-y-reverse)))}.space-y-1>:not([hidden])~:not([hidden]){--tw-space-y-reverse:0;margin-bottom:calc(.25rem*var(--tw-space-y-reverse));margin-top:calc(.25rem*(1 - var(--tw-space-y-reverse)))}.space-y-2>:not([hidden])~:not([hidden]){--tw-space-y-reverse:0;margin-bottom:calc(.5rem*var(--tw-space-y-reverse));margin-top:calc(.5rem*(1 - var(--tw-space-y-reverse)))}.space-y-3>:not([hidden])~:not([hidden]){--tw-space-y-reverse:0;margin-bottom:calc(.75rem*var(--tw-space-y-reverse));margin-top:calc(.75rem*(1 - var(--tw-space-y-reverse)))}.space-y-4>:not([hidden])~:not([hidden]){--tw-space-y-reverse:0;margin-bottom:calc(1rem*var(--tw-space-y-reverse));margin-top:calc(1rem*(1 - var(--tw-space-y-reverse)))}.space-y-6>:not([hidden])~:not([hidden]){--tw-space-y-reverse:0;margin-bottom:calc(1.5rem*var(--tw-space-y-reverse));margin-top:calc(1.5rem*(1 - var(--tw-space-y-reverse)))}.space-y-8>:not([hidden])~:not([hidden]){--tw-space-y-reverse:0;margin-bottom:calc(2rem*var(--tw-space-y-reverse));margin-top:calc(2rem*(1 - var(--tw-space-y-reverse)))}.divide-y>:not([hidden])~:not([hidden]){--tw-divide-y-reverse:0;border-bottom-width:calc(1px*var(--tw-divide-y-reverse));border-top-width:calc(1px*(1 - var(--tw-divide-y-reverse)))}.divide-gray-200>:not([hidden])~:not([hidden]){--tw-divide-opacity:1;border-color:rgb(229 231 235/var(--tw-divide-opacity,1))}.overflow-hidden{overflow:hidden}.overflow-x-auto{overflow-x:auto}.overflow-y-auto{overflow-y:auto}.overflow-x-visible{overflow-x:visible}.truncate{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.whitespace-normal{white-space:normal}.whitespace-nowrap{white-space:nowrap}.whitespace-pre-wrap{white-space:pre-wrap}.break-words{overflow-wrap:break-word}.break-all{word-break:break-all}.rounded{border-radius:.25rem}.rounded-2xl{border-radius:1rem}.rounded-3xl{border-radius:1.5rem}.rounded-\\[1\\.25rem\\]{border-radius:1.25rem}.rounded-\\[2\\.5rem\\]{border-radius:2.5rem}.rounded-\\[2rem\\]{border-radius:2rem}.rounded-\\[3\\.5rem\\]{border-radius:3.5rem}.rounded-full{border-radius:9999px}.rounded-lg{border-radius:.5rem}.rounded-md{border-radius:.375rem}.rounded-xl{border-radius:.75rem}.rounded-t-\\[3\\.5rem\\]{border-top-left-radius:3.5rem;border-top-right-radius:3.5rem}.border{border-width:1px}.border-2{border-width:2px}.border-4{border-width:4px}.border-b{border-bottom-width:1px}.border-b-2{border-bottom-width:2px}.border-l{border-left-width:1px}.border-l-4{border-left-width:4px}.border-r{border-right-width:1px}.border-t{border-top-width:1px}.border-dashed{border-style:dashed}.border-none{border-style:none}.border-amber-100\\/50{border-color:#fef3c780}.border-blue-100{--tw-border-opacity:1;border-color:rgb(219 234 254/var(--tw-border-opacity,1))}.border-blue-200{--tw-border-opacity:1;border-color:rgb(191 219 254/var(--tw-border-opacity,1))}.border-blue-500{--tw-border-opacity:1;border-color:rgb(59 130 246/var(--tw-border-opacity,1))}.border-blue-600{--tw-border-opacity:1;border-color:rgb(37 99 235/var(--tw-border-opacity,1))}.border-gray-100{--tw-border-opacity:1;border-color:rgb(243 244 246/var(--tw-border-opacity,1))}.border-gray-200{--tw-border-opacity:1;border-color:rgb(229 231 235/var(--tw-border-opacity,1))}.border-gray-300{--tw-border-opacity:1;border-color:rgb(209 213 219/var(--tw-border-opacity,1))}.border-gray-900{--tw-border-opacity:1;border-color:rgb(17 24 39/var(--tw-border-opacity,1))}.border-green-200{--tw-border-opacity:1;border-color:rgb(187 247 208/var(--tw-border-opacity,1))}.border-green-400{--tw-border-opacity:1;border-color:rgb(74 222 128/var(--tw-border-opacity,1))}.border-green-500{--tw-border-opacity:1;border-color:rgb(34 197 94/var(--tw-border-opacity,1))}.border-primary-sky{--tw-border-opacity:1;border-color:rgb(232 240 254/var(--tw-border-opacity,1))}.border-red-200{--tw-border-opacity:1;border-color:rgb(254 202 202/var(--tw-border-opacity,1))}.border-red-300{--tw-border-opacity:1;border-color:rgb(252 165 165/var(--tw-border-opacity,1))}.border-slate-100{--tw-border-opacity:1;border-color:rgb(241 245 249/var(--tw-border-opacity,1))}.border-slate-200{--tw-border-opacity:1;border-color:rgb(226 232 240/var(--tw-border-opacity,1))}.border-slate-50{--tw-border-opacity:1;border-color:rgb(248 250 252/var(--tw-border-opacity,1))}.border-slate-700{--tw-border-opacity:1;border-color:rgb(51 65 85/var(--tw-border-opacity,1))}.border-transparent{border-color:#0000}.border-white{--tw-border-opacity:1;border-color:rgb(255 255 255/var(--tw-border-opacity,1))}.border-yellow-200{--tw-border-opacity:1;border-color:rgb(254 240 138/var(--tw-border-opacity,1))}.border-yellow-300{--tw-border-opacity:1;border-color:rgb(253 224 71/var(--tw-border-opacity,1))}.border-yellow-400{--tw-border-opacity:1;border-color:rgb(250 204 21/var(--tw-border-opacity,1))}.border-yellow-500{--tw-border-opacity:1;border-color:rgb(234 179 8/var(--tw-border-opacity,1))}.border-t-transparent{border-top-color:#0000}.bg-\\[\\#1e1e1e\\]{--tw-bg-opacity:1;background-color:rgb(30 30 30/var(--tw-bg-opacity,1))}.bg-\\[\\#2a2d31\\]{--tw-bg-opacity:1;background-color:rgb(42 45 49/var(--tw-bg-opacity,1))}.bg-\\[\\#fdfdfe\\]{--tw-bg-opacity:1;background-color:rgb(253 253 254/var(--tw-bg-opacity,1))}.bg-amber-50\\/50{background-color:#fffbeb80}.bg-amber-500{--tw-bg-opacity:1;background-color:rgb(245 158 11/var(--tw-bg-opacity,1))}.bg-black{--tw-bg-opacity:1;background-color:rgb(0 0 0/var(--tw-bg-opacity,1))}.bg-blue-100{--tw-bg-opacity:1;background-color:rgb(219 234 254/var(--tw-bg-opacity,1))}.bg-blue-50{--tw-bg-opacity:1;background-color:rgb(239 246 255/var(--tw-bg-opacity,1))}.bg-blue-50\\/60{background-color:#eff6ff99}.bg-blue-500{--tw-bg-opacity:1;background-color:rgb(59 130 246/var(--tw-bg-opacity,1))}.bg-blue-600{--tw-bg-opacity:1;background-color:rgb(37 99 235/var(--tw-bg-opacity,1))}.bg-emerald-600{--tw-bg-opacity:1;background-color:rgb(5 150 105/var(--tw-bg-opacity,1))}.bg-gray-100{--tw-bg-opacity:1;background-color:rgb(243 244 246/var(--tw-bg-opacity,1))}.bg-gray-200{--tw-bg-opacity:1;background-color:rgb(229 231 235/var(--tw-bg-opacity,1))}.bg-gray-300{--tw-bg-opacity:1;background-color:rgb(209 213 219/var(--tw-bg-opacity,1))}.bg-gray-50{--tw-bg-opacity:1;background-color:rgb(249 250 251/var(--tw-bg-opacity,1))}.bg-gray-600{--tw-bg-opacity:1;background-color:rgb(75 85 99/var(--tw-bg-opacity,1))}.bg-gray-800{--tw-bg-opacity:1;background-color:rgb(31 41 55/var(--tw-bg-opacity,1))}.bg-green-100{--tw-bg-opacity:1;background-color:rgb(220 252 231/var(--tw-bg-opacity,1))}.bg-green-50{--tw-bg-opacity:1;background-color:rgb(240 253 244/var(--tw-bg-opacity,1))}.bg-green-500{--tw-bg-opacity:1;background-color:rgb(34 197 94/var(--tw-bg-opacity,1))}.bg-green-600{--tw-bg-opacity:1;background-color:rgb(22 163 74/var(--tw-bg-opacity,1))}.bg-indigo-50{--tw-bg-opacity:1;background-color:rgb(238 242 255/var(--tw-bg-opacity,1))}.bg-indigo-600{--tw-bg-opacity:1;background-color:rgb(79 70 229/var(--tw-bg-opacity,1))}.bg-primary-sky{--tw-bg-opacity:1;background-color:rgb(232 240 254/var(--tw-bg-opacity,1))}.bg-purple-100{--tw-bg-opacity:1;background-color:rgb(243 232 255/var(--tw-bg-opacity,1))}.bg-purple-500{--tw-bg-opacity:1;background-color:rgb(168 85 247/var(--tw-bg-opacity,1))}.bg-purple-600{--tw-bg-opacity:1;background-color:rgb(147 51 234/var(--tw-bg-opacity,1))}.bg-red-100{--tw-bg-opacity:1;background-color:rgb(254 226 226/var(--tw-bg-opacity,1))}.bg-red-50{--tw-bg-opacity:1;background-color:rgb(254 242 242/var(--tw-bg-opacity,1))}.bg-red-500{--tw-bg-opacity:1;background-color:rgb(239 68 68/var(--tw-bg-opacity,1))}.bg-red-600{--tw-bg-opacity:1;background-color:rgb(220 38 38/var(--tw-bg-opacity,1))}.bg-slate-100{--tw-bg-opacity:1;background-color:rgb(241 245 249/var(--tw-bg-opacity,1))}.bg-slate-50{--tw-bg-opacity:1;background-color:rgb(248 250 252/var(--tw-bg-opacity,1))}.bg-slate-50\\/90{background-color:#f8fafce6}.bg-slate-900{--tw-bg-opacity:1;background-color:rgb(15 23 42/var(--tw-bg-opacity,1))}.bg-slate-900\\/5{background-color:#0f172a0d}.bg-teal-600{--tw-bg-opacity:1;background-color:rgb(13 148 136/var(--tw-bg-opacity,1))}.bg-transparent{background-color:initial}.bg-white{--tw-bg-opacity:1;background-color:rgb(255 255 255/var(--tw-bg-opacity,1))}.bg-white\\/95{background-color:#fffffff2}.bg-yellow-100{--tw-bg-opacity:1;background-color:rgb(254 249 195/var(--tw-bg-opacity,1))}.bg-yellow-200{--tw-bg-opacity:1;background-color:rgb(254 240 138/var(--tw-bg-opacity,1))}.bg-yellow-400{--tw-bg-opacity:1;background-color:rgb(250 204 21/var(--tw-bg-opacity,1))}.bg-yellow-50{--tw-bg-opacity:1;background-color:rgb(254 252 232/var(--tw-bg-opacity,1))}.bg-yellow-500{--tw-bg-opacity:1;background-color:rgb(234 179 8/var(--tw-bg-opacity,1))}.bg-yellow-600{--tw-bg-opacity:1;background-color:rgb(202 138 4/var(--tw-bg-opacity,1))}.bg-opacity-0{--tw-bg-opacity:0}.bg-opacity-20{--tw-bg-opacity:0.2}.bg-opacity-25{--tw-bg-opacity:0.25}.bg-opacity-50{--tw-bg-opacity:0.5}.bg-opacity-90{--tw-bg-opacity:0.9}.bg-gradient-to-b{background-image:linear-gradient(to bottom,var(--tw-gradient-stops))}.bg-gradient-to-br{background-image:linear-gradient(to bottom right,var(--tw-gradient-stops))}.bg-gradient-to-r{background-image:linear-gradient(to right,var(--tw-gradient-stops))}.from-blue-400{--tw-gradient-from:#60a5fa var(--tw-gradient-from-position);--tw-gradient-to:#60a5fa00 var(--tw-gradient-to-position);--tw-gradient-stops:var(--tw-gradient-from),var(--tw-gradient-to)}.from-blue-50{--tw-gradient-from:#eff6ff var(--tw-gradient-from-position);--tw-gradient-to:#eff6ff00 var(--tw-gradient-to-position);--tw-gradient-stops:var(--tw-gradient-from),var(--tw-gradient-to)}.from-blue-600{--tw-gradient-from:#2563eb var(--tw-gradient-from-position);--tw-gradient-to:#2563eb00 var(--tw-gradient-to-position);--tw-gradient-stops:var(--tw-gradient-from),var(--tw-gradient-to)}.from-blue-600\\/30{--tw-gradient-from:#2563eb4d var(--tw-gradient-from-position);--tw-gradient-to:#2563eb00 var(--tw-gradient-to-position);--tw-gradient-stops:var(--tw-gradient-from),var(--tw-gradient-to)}.from-emerald-500{--tw-gradient-from:#10b981 var(--tw-gradient-from-position);--tw-gradient-to:#10b98100 var(--tw-gradient-to-position);--tw-gradient-stops:var(--tw-gradient-from),var(--tw-gradient-to)}.from-gray-200{--tw-gradient-from:#e5e7eb var(--tw-gradient-from-position);--tw-gradient-to:#e5e7eb00 var(--tw-gradient-to-position);--tw-gradient-stops:var(--tw-gradient-from),var(--tw-gradient-to)}.from-purple-50{--tw-gradient-from:#faf5ff var(--tw-gradient-from-position);--tw-gradient-to:#faf5ff00 var(--tw-gradient-to-position);--tw-gradient-stops:var(--tw-gradient-from),var(--tw-gradient-to)}.via-gray-300{--tw-gradient-to:#d1d5db00 var(--tw-gradient-to-position);--tw-gradient-stops:var(--tw-gradient-from),#d1d5db var(--tw-gradient-via-position),var(--tw-gradient-to)}.via-slate-100{--tw-gradient-to:#f1f5f900 var(--tw-gradient-to-position);--tw-gradient-stops:var(--tw-gradient-from),#f1f5f9 var(--tw-gradient-via-position),var(--tw-gradient-to)}.to-blue-50{--tw-gradient-to:#eff6ff var(--tw-gradient-to-position)}.to-gray-200{--tw-gradient-to:#e5e7eb var(--tw-gradient-to-position)}.to-green-50{--tw-gradient-to:#f0fdf4 var(--tw-gradient-to-position)}.to-indigo-600{--tw-gradient-to:#4f46e5 var(--tw-gradient-to-position)}.to-indigo-700{--tw-gradient-to:#4338ca var(--tw-gradient-to-position)}.to-purple-500{--tw-gradient-to:#a855f7 var(--tw-gradient-to-position)}.to-slate-100{--tw-gradient-to:#f1f5f9 var(--tw-gradient-to-position)}.to-teal-600{--tw-gradient-to:#0d9488 var(--tw-gradient-to-position)}.bg-\\[length\\:200\\%_100\\%\\]{background-size:200% 100%}.fill-current{fill:currentColor}.object-contain{object-fit:contain}.object-cover{object-fit:cover}.p-0{padding:0}.p-1\\.5{padding:.375rem}.p-10{padding:2.5rem}.p-12{padding:3rem}.p-2{padding:.5rem}.p-2\\.5{padding:.625rem}.p-3{padding:.75rem}.p-4{padding:1rem}.p-5{padding:1.25rem}.p-6{padding:1.5rem}.p-8{padding:2rem}.px-1{padding-left:.25rem;padding-right:.25rem}.px-2{padding-left:.5rem;padding-right:.5rem}.px-2\\.5{padding-left:.625rem;padding-right:.625rem}.px-3{padding-left:.75rem;padding-right:.75rem}.px-4{padding-left:1rem;padding-right:1rem}.px-6{padding-left:1.5rem;padding-right:1.5rem}.px-8{padding-left:2rem;padding-right:2rem}.py-0\\.5{padding-bottom:.125rem;padding-top:.125rem}.py-1{padding-bottom:.25rem;padding-top:.25rem}.py-1\\.5{padding-bottom:.375rem;padding-top:.375rem}.py-12{padding-bottom:3rem;padding-top:3rem}.py-2{padding-bottom:.5rem;padding-top:.5rem}.py-2\\.5{padding-bottom:.625rem;padding-top:.625rem}.py-24{padding-bottom:6rem;padding-top:6rem}.py-3{padding-bottom:.75rem;padding-top:.75rem}.py-3\\.5{padding-bottom:.875rem;padding-top:.875rem}.py-4{padding-bottom:1rem;padding-top:1rem}.py-4\\.5{padding-bottom:1.125rem;padding-top:1.125rem}.py-5{padding-bottom:1.25rem;padding-top:1.25rem}.py-6{padding-bottom:1.5rem;padding-top:1.5rem}.py-8{padding-bottom:2rem;padding-top:2rem}.pb-20{padding-bottom:5rem}.pb-28{padding-bottom:7rem}.pb-3{padding-bottom:.75rem}.pb-4{padding-bottom:1rem}.pl-4{padding-left:1rem}.pt-2{padding-top:.5rem}.pt-4{padding-top:1rem}.pt-5{padding-top:1.25rem}.pt-6{padding-top:1.5rem}.text-left{text-align:left}.text-center{text-align:center}.text-right{text-align:right}.font-mono{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,Liberation Mono,Courier New,monospace}.font-sans{font-family:Noto Sans TC,sans-serif}.text-2xl{font-size:1.5rem;line-height:2rem}.text-3xl{font-size:1.875rem;line-height:2.25rem}.text-4xl{font-size:2.25rem;line-height:2.5rem}.text-6xl{font-size:3.75rem;line-height:1}.text-\\[10px\\]{font-size:10px}.text-\\[11px\\]{font-size:11px}.text-\\[12px\\]{font-size:12px}.text-\\[13px\\]{font-size:13px}.text-\\[14px\\]{font-size:14px}.text-\\[16px\\]{font-size:16px}.text-\\[18px\\]{font-size:18px}.text-\\[8px\\]{font-size:8px}.text-\\[9px\\]{font-size:9px}.text-base{font-size:1rem;line-height:1.5rem}.text-lg{font-size:1.125rem;line-height:1.75rem}.text-sm{font-size:.875rem;line-height:1.25rem}.text-xl{font-size:1.25rem;line-height:1.75rem}.text-xs{font-size:.75rem;line-height:1rem}.font-black{font-weight:900}.font-bold{font-weight:700}.font-extrabold{font-weight:800}.font-medium{font-weight:500}.font-semibold{font-weight:600}.uppercase{text-transform:uppercase}.lowercase{text-transform:lowercase}.italic{font-style:italic}.tabular-nums{--tw-numeric-spacing:tabular-nums;font-variant-numeric:var(--tw-ordinal) var(--tw-slashed-zero) var(--tw-numeric-figure) var(--tw-numeric-spacing) var(--tw-numeric-fraction)}.leading-5{line-height:1.25rem}.leading-6{line-height:1.5rem}.leading-8{line-height:2rem}.leading-none{line-height:1}.leading-relaxed{line-height:1.625}.leading-tight{line-height:1.25}.tracking-\\[0\\.25em\\]{letter-spacing:.25em}.tracking-\\[0\\.2em\\]{letter-spacing:.2em}.tracking-\\[0\\.3em\\]{letter-spacing:.3em}.tracking-\\[0\\.4em\\]{letter-spacing:.4em}.tracking-tight{letter-spacing:-.025em}.tracking-tighter{letter-spacing:-.05em}.tracking-widest{letter-spacing:.1em}.text-amber-400{--tw-text-opacity:1;color:rgb(251 191 36/var(--tw-text-opacity,1))}.text-amber-400\\/60{color:#fbbf2499}.text-amber-600\\/50{color:#d9770680}.text-amber-700{--tw-text-opacity:1;color:rgb(180 83 9/var(--tw-text-opacity,1))}.text-blue-400{--tw-text-opacity:1;color:rgb(96 165 250/var(--tw-text-opacity,1))}.text-blue-500{--tw-text-opacity:1;color:rgb(59 130 246/var(--tw-text-opacity,1))}.text-blue-600{--tw-text-opacity:1;color:rgb(37 99 235/var(--tw-text-opacity,1))}.text-blue-700{--tw-text-opacity:1;color:rgb(29 78 216/var(--tw-text-opacity,1))}.text-blue-800{--tw-text-opacity:1;color:rgb(30 64 175/var(--tw-text-opacity,1))}.text-blue-900{--tw-text-opacity:1;color:rgb(30 58 138/var(--tw-text-opacity,1))}.text-emerald-600{--tw-text-opacity:1;color:rgb(5 150 105/var(--tw-text-opacity,1))}.text-gray-300{--tw-text-opacity:1;color:rgb(209 213 219/var(--tw-text-opacity,1))}.text-gray-400{--tw-text-opacity:1;color:rgb(156 163 175/var(--tw-text-opacity,1))}.text-gray-500{--tw-text-opacity:1;color:rgb(107 114 128/var(--tw-text-opacity,1))}.text-gray-600{--tw-text-opacity:1;color:rgb(75 85 99/var(--tw-text-opacity,1))}.text-gray-700{--tw-text-opacity:1;color:rgb(55 65 81/var(--tw-text-opacity,1))}.text-gray-800{--tw-text-opacity:1;color:rgb(31 41 55/var(--tw-text-opacity,1))}.text-gray-900{--tw-text-opacity:1;color:rgb(17 24 39/var(--tw-text-opacity,1))}.text-green-400{--tw-text-opacity:1;color:rgb(74 222 128/var(--tw-text-opacity,1))}.text-green-600{--tw-text-opacity:1;color:rgb(22 163 74/var(--tw-text-opacity,1))}.text-green-700{--tw-text-opacity:1;color:rgb(21 128 61/var(--tw-text-opacity,1))}.text-green-800{--tw-text-opacity:1;color:rgb(22 101 52/var(--tw-text-opacity,1))}.text-green-900{--tw-text-opacity:1;color:rgb(20 83 45/var(--tw-text-opacity,1))}.text-indigo-600{--tw-text-opacity:1;color:rgb(79 70 229/var(--tw-text-opacity,1))}.text-orange-600{--tw-text-opacity:1;color:rgb(234 88 12/var(--tw-text-opacity,1))}.text-primary-ocean{--tw-text-opacity:1;color:rgb(0 102 204/var(--tw-text-opacity,1))}.text-purple-600{--tw-text-opacity:1;color:rgb(147 51 234/var(--tw-text-opacity,1))}.text-purple-800{--tw-text-opacity:1;color:rgb(107 33 168/var(--tw-text-opacity,1))}.text-red-400{--tw-text-opacity:1;color:rgb(248 113 113/var(--tw-text-opacity,1))}.text-red-500{--tw-text-opacity:1;color:rgb(239 68 68/var(--tw-text-opacity,1))}.text-red-600{--tw-text-opacity:1;color:rgb(220 38 38/var(--tw-text-opacity,1))}.text-red-700{--tw-text-opacity:1;color:rgb(185 28 28/var(--tw-text-opacity,1))}.text-red-800{--tw-text-opacity:1;color:rgb(153 27 27/var(--tw-text-opacity,1))}.text-slate-100{--tw-text-opacity:1;color:rgb(241 245 249/var(--tw-text-opacity,1))}.text-slate-200{--tw-text-opacity:1;color:rgb(226 232 240/var(--tw-text-opacity,1))}.text-slate-300{--tw-text-opacity:1;color:rgb(203 213 225/var(--tw-text-opacity,1))}.text-slate-400{--tw-text-opacity:1;color:rgb(148 163 184/var(--tw-text-opacity,1))}.text-slate-500{--tw-text-opacity:1;color:rgb(100 116 139/var(--tw-text-opacity,1))}.text-slate-700{--tw-text-opacity:1;color:rgb(51 65 85/var(--tw-text-opacity,1))}.text-slate-800{--tw-text-opacity:1;color:rgb(30 41 59/var(--tw-text-opacity,1))}.text-slate-900{--tw-text-opacity:1;color:rgb(15 23 42/var(--tw-text-opacity,1))}.text-text{--tw-text-opacity:1;color:rgb(51 51 51/var(--tw-text-opacity,1))}.text-white{--tw-text-opacity:1;color:rgb(255 255 255/var(--tw-text-opacity,1))}.text-yellow-400{--tw-text-opacity:1;color:rgb(250 204 21/var(--tw-text-opacity,1))}.text-yellow-500{--tw-text-opacity:1;color:rgb(234 179 8/var(--tw-text-opacity,1))}.text-yellow-600{--tw-text-opacity:1;color:rgb(202 138 4/var(--tw-text-opacity,1))}.text-yellow-700{--tw-text-opacity:1;color:rgb(161 98 7/var(--tw-text-opacity,1))}.text-yellow-800{--tw-text-opacity:1;color:rgb(133 77 14/var(--tw-text-opacity,1))}.text-yellow-900{--tw-text-opacity:1;color:rgb(113 63 18/var(--tw-text-opacity,1))}.no-underline{text-decoration-line:none}.opacity-0{opacity:0}.opacity-30{opacity:.3}.opacity-50{opacity:.5}.shadow{--tw-shadow:0 1px 3px 0 #0000001a,0 1px 2px 0 #0000000f;--tw-shadow-colored:0 1px 3px 0 var(--tw-shadow-color),0 1px 2px 0 var(--tw-shadow-color)}.shadow,.shadow-2xl{box-shadow:var(--tw-ring-offset-shadow,0 0 #0000),var(--tw-ring-shadow,0 0 #0000),var(--tw-shadow)}.shadow-2xl{--tw-shadow:0 25px 50px -12px #00000040;--tw-shadow-colored:0 25px 50px -12px var(--tw-shadow-color)}.shadow-\\[0_12px_40px_rgba\\(0\\2c 0\\2c 0\\2c 0\\.06\\)\\]{--tw-shadow:0 12px 40px #0000000f;--tw-shadow-colored:0 12px 40px var(--tw-shadow-color);box-shadow:var(--tw-ring-offset-shadow,0 0 #0000),var(--tw-ring-shadow,0 0 #0000),var(--tw-shadow)}.shadow-\\[0_30px_60px_-12px_rgba\\(0\\2c 0\\2c 0\\2c 0\\.45\\)\\]{--tw-shadow:0 30px 60px -12px #00000073;--tw-shadow-colored:0 30px 60px -12px var(--tw-shadow-color);box-shadow:var(--tw-ring-offset-shadow,0 0 #0000),var(--tw-ring-shadow,0 0 #0000),var(--tw-shadow)}.shadow-\\[0_30px_80px_rgba\\(0\\2c 0\\2c 0\\2c 0\\.15\\)\\]{--tw-shadow:0 30px 80px #00000026;--tw-shadow-colored:0 30px 80px var(--tw-shadow-color);box-shadow:var(--tw-ring-offset-shadow,0 0 #0000),var(--tw-ring-shadow,0 0 #0000),var(--tw-shadow)}.shadow-\\[0_4px_30px_rgba\\(0\\2c 0\\2c 0\\2c 0\\.02\\)\\]{--tw-shadow:0 4px 30px #00000005;--tw-shadow-colored:0 4px 30px var(--tw-shadow-color)}.shadow-\\[0_4px_30px_rgba\\(0\\2c 0\\2c 0\\2c 0\\.02\\)\\],.shadow-inner{box-shadow:var(--tw-ring-offset-shadow,0 0 #0000),var(--tw-ring-shadow,0 0 #0000),var(--tw-shadow)}.shadow-inner{--tw-shadow:inset 0 2px 4px 0 #0000000d;--tw-shadow-colored:inset 0 2px 4px 0 var(--tw-shadow-color)}.shadow-lg{--tw-shadow:0 10px 15px -3px #0000001a,0 4px 6px -2px #0000000d;--tw-shadow-colored:0 10px 15px -3px var(--tw-shadow-color),0 4px 6px -2px var(--tw-shadow-color)}.shadow-lg,.shadow-md{box-shadow:var(--tw-ring-offset-shadow,0 0 #0000),var(--tw-ring-shadow,0 0 #0000),var(--tw-shadow)}.shadow-md{--tw-shadow:0 4px 6px -1px #0000001a,0 2px 4px -1px #0000000f;--tw-shadow-colored:0 4px 6px -1px var(--tw-shadow-color),0 2px 4px -1px var(--tw-shadow-color)}.shadow-sm{--tw-shadow:0 1px 2px 0 #0000000d;--tw-shadow-colored:0 1px 2px 0 var(--tw-shadow-color)}.shadow-sm,.shadow-xl{box-shadow:var(--tw-ring-offset-shadow,0 0 #0000),var(--tw-ring-shadow,0 0 #0000),var(--tw-shadow)}.shadow-xl{--tw-shadow:0 20px 25px -5px #0000001a,0 10px 10px -5px #0000000a;--tw-shadow-colored:0 20px 25px -5px var(--tw-shadow-color),0 10px 10px -5px var(--tw-shadow-color)}.shadow-blue-200{--tw-shadow-color:#bfdbfe;--tw-shadow:var(--tw-shadow-colored)}.shadow-emerald-200{--tw-shadow-color:#a7f3d0;--tw-shadow:var(--tw-shadow-colored)}.shadow-slate-200{--tw-shadow-color:#e2e8f0;--tw-shadow:var(--tw-shadow-colored)}.outline-none{outline:2px solid #0000;outline-offset:2px}.outline{outline-style:solid}.ring-1{--tw-ring-offset-shadow:var(--tw-ring-inset) 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color);--tw-ring-shadow:var(--tw-ring-inset) 0 0 0 calc(1px + var(--tw-ring-offset-width)) var(--tw-ring-color);box-shadow:var(--tw-ring-offset-shadow),var(--tw-ring-shadow),var(--tw-shadow,0 0 #0000)}.ring-black{--tw-ring-opacity:1;--tw-ring-color:rgb(0 0 0/var(--tw-ring-opacity,1))}.ring-opacity-5{--tw-ring-opacity:0.05}.blur{--tw-blur:blur(8px)}.blur,.drop-shadow{filter:var(--tw-blur) var(--tw-brightness) var(--tw-contrast) var(--tw-grayscale) var(--tw-hue-rotate) var(--tw-invert) var(--tw-saturate) var(--tw-sepia) var(--tw-drop-shadow)}.drop-shadow{--tw-drop-shadow:drop-shadow(0 1px 2px #0000001a) drop-shadow(0 1px 1px #0000000f)}.filter{filter:var(--tw-blur) var(--tw-brightness) var(--tw-contrast) var(--tw-grayscale) var(--tw-hue-rotate) var(--tw-invert) var(--tw-saturate) var(--tw-sepia) var(--tw-drop-shadow)}.backdrop-blur-3xl{--tw-backdrop-blur:blur(64px)}.backdrop-blur-3xl,.backdrop-blur-\\[1px\\]{-webkit-backdrop-filter:var(--tw-backdrop-blur) var(--tw-backdrop-brightness) var(--tw-backdrop-contrast) var(--tw-backdrop-grayscale) var(--tw-backdrop-hue-rotate) var(--tw-backdrop-invert) var(--tw-backdrop-opacity) var(--tw-backdrop-saturate) var(--tw-backdrop-sepia);backdrop-filter:var(--tw-backdrop-blur) var(--tw-backdrop-brightness) var(--tw-backdrop-contrast) var(--tw-backdrop-grayscale) var(--tw-backdrop-hue-rotate) var(--tw-backdrop-invert) var(--tw-backdrop-opacity) var(--tw-backdrop-saturate) var(--tw-backdrop-sepia)}.backdrop-blur-\\[1px\\]{--tw-backdrop-blur:blur(1px)}.backdrop-blur-md{--tw-backdrop-blur:blur(12px)}.backdrop-blur-md,.backdrop-blur-xl{-webkit-backdrop-filter:var(--tw-backdrop-blur) var(--tw-backdrop-brightness) var(--tw-backdrop-contrast) var(--tw-backdrop-grayscale) var(--tw-backdrop-hue-rotate) var(--tw-backdrop-invert) var(--tw-backdrop-opacity) var(--tw-backdrop-saturate) var(--tw-backdrop-sepia);backdrop-filter:var(--tw-backdrop-blur) var(--tw-backdrop-brightness) var(--tw-backdrop-contrast) var(--tw-backdrop-grayscale) var(--tw-backdrop-hue-rotate) var(--tw-backdrop-invert) var(--tw-backdrop-opacity) var(--tw-backdrop-saturate) var(--tw-backdrop-sepia)}.backdrop-blur-xl{--tw-backdrop-blur:blur(24px)}.transition{transition-duration:.15s;transition-property:color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,-webkit-backdrop-filter;transition-property:color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter;transition-property:color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter,-webkit-backdrop-filter;transition-timing-function:cubic-bezier(.4,0,.2,1)}.transition-all{transition-duration:.15s;transition-property:all;transition-timing-function:cubic-bezier(.4,0,.2,1)}.transition-colors{transition-duration:.15s;transition-property:color,background-color,border-color,text-decoration-color,fill,stroke;transition-timing-function:cubic-bezier(.4,0,.2,1)}.transition-opacity{transition-duration:.15s;transition-property:opacity;transition-timing-function:cubic-bezier(.4,0,.2,1)}.transition-shadow{transition-duration:.15s;transition-property:box-shadow;transition-timing-function:cubic-bezier(.4,0,.2,1)}.transition-transform{transition-property:transform;transition-timing-function:cubic-bezier(.4,0,.2,1)}.duration-150,.transition-transform{transition-duration:.15s}.duration-200{transition-duration:.2s}.duration-300{transition-duration:.3s}.duration-500{transition-duration:.5s}.ease-in{transition-timing-function:cubic-bezier(.4,0,1,1)}.ease-in-out{transition-timing-function:cubic-bezier(.4,0,.2,1)}.ease-out{transition-timing-function:cubic-bezier(0,0,.2,1)}@media (min-width:768px){.md\\:hidden.image-error-message{display:none}}@media (min-width:1024px){.lg\\:hidden.image-error-message{display:none}}.placeholder\\:text-slate-400::placeholder{--tw-text-opacity:1;color:rgb(148 163 184/var(--tw-text-opacity,1))}.focus-within\\:ring-4:focus-within{--tw-ring-offset-shadow:var(--tw-ring-inset) 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color);--tw-ring-shadow:var(--tw-ring-inset) 0 0 0 calc(4px + var(--tw-ring-offset-width)) var(--tw-ring-color);box-shadow:var(--tw-ring-offset-shadow),var(--tw-ring-shadow),var(--tw-shadow,0 0 #0000)}.focus-within\\:ring-blue-500\\/10:focus-within{--tw-ring-color:#3b82f61a}.hover\\:-translate-y-1:hover{--tw-translate-y:-0.25rem}.hover\\:-translate-y-1:hover,.hover\\:scale-105:hover{transform:translate(var(--tw-translate-x),var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y))}.hover\\:scale-105:hover{--tw-scale-x:1.05;--tw-scale-y:1.05}.hover\\:scale-110:hover{--tw-scale-x:1.1;--tw-scale-y:1.1;transform:translate(var(--tw-translate-x),var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y))}.hover\\:border-blue-200:hover{--tw-border-opacity:1;border-color:rgb(191 219 254/var(--tw-border-opacity,1))}.hover\\:border-blue-300:hover{--tw-border-opacity:1;border-color:rgb(147 197 253/var(--tw-border-opacity,1))}.hover\\:border-blue-400:hover{--tw-border-opacity:1;border-color:rgb(96 165 250/var(--tw-border-opacity,1))}.hover\\:border-blue-600:hover{--tw-border-opacity:1;border-color:rgb(37 99 235/var(--tw-border-opacity,1))}.hover\\:border-gray-300:hover{--tw-border-opacity:1;border-color:rgb(209 213 219/var(--tw-border-opacity,1))}.hover\\:border-primary-ocean:hover{--tw-border-opacity:1;border-color:rgb(0 102 204/var(--tw-border-opacity,1))}.hover\\:bg-amber-50:hover{--tw-bg-opacity:1;background-color:rgb(255 251 235/var(--tw-bg-opacity,1))}.hover\\:bg-blue-100:hover{--tw-bg-opacity:1;background-color:rgb(219 234 254/var(--tw-bg-opacity,1))}.hover\\:bg-blue-200:hover{--tw-bg-opacity:1;background-color:rgb(191 219 254/var(--tw-bg-opacity,1))}.hover\\:bg-blue-50:hover{--tw-bg-opacity:1;background-color:rgb(239 246 255/var(--tw-bg-opacity,1))}.hover\\:bg-blue-600:hover{--tw-bg-opacity:1;background-color:rgb(37 99 235/var(--tw-bg-opacity,1))}.hover\\:bg-blue-700:hover{--tw-bg-opacity:1;background-color:rgb(29 78 216/var(--tw-bg-opacity,1))}.hover\\:bg-emerald-50:hover{--tw-bg-opacity:1;background-color:rgb(236 253 245/var(--tw-bg-opacity,1))}.hover\\:bg-gray-100:hover{--tw-bg-opacity:1;background-color:rgb(243 244 246/var(--tw-bg-opacity,1))}.hover\\:bg-gray-200:hover{--tw-bg-opacity:1;background-color:rgb(229 231 235/var(--tw-bg-opacity,1))}.hover\\:bg-gray-300:hover{--tw-bg-opacity:1;background-color:rgb(209 213 219/var(--tw-bg-opacity,1))}.hover\\:bg-gray-50:hover{--tw-bg-opacity:1;background-color:rgb(249 250 251/var(--tw-bg-opacity,1))}.hover\\:bg-gray-700:hover{--tw-bg-opacity:1;background-color:rgb(55 65 81/var(--tw-bg-opacity,1))}.hover\\:bg-green-100:hover{--tw-bg-opacity:1;background-color:rgb(220 252 231/var(--tw-bg-opacity,1))}.hover\\:bg-green-200:hover{--tw-bg-opacity:1;background-color:rgb(187 247 208/var(--tw-bg-opacity,1))}.hover\\:bg-green-50:hover{--tw-bg-opacity:1;background-color:rgb(240 253 244/var(--tw-bg-opacity,1))}.hover\\:bg-green-600:hover{--tw-bg-opacity:1;background-color:rgb(22 163 74/var(--tw-bg-opacity,1))}.hover\\:bg-green-700:hover{--tw-bg-opacity:1;background-color:rgb(21 128 61/var(--tw-bg-opacity,1))}.hover\\:bg-indigo-700:hover{--tw-bg-opacity:1;background-color:rgb(67 56 202/var(--tw-bg-opacity,1))}.hover\\:bg-primary-sky:hover{--tw-bg-opacity:1;background-color:rgb(232 240 254/var(--tw-bg-opacity,1))}.hover\\:bg-purple-100:hover{--tw-bg-opacity:1;background-color:rgb(243 232 255/var(--tw-bg-opacity,1))}.hover\\:bg-purple-50:hover{--tw-bg-opacity:1;background-color:rgb(250 245 255/var(--tw-bg-opacity,1))}.hover\\:bg-purple-700:hover{--tw-bg-opacity:1;background-color:rgb(126 34 206/var(--tw-bg-opacity,1))}.hover\\:bg-red-200:hover{--tw-bg-opacity:1;background-color:rgb(254 202 202/var(--tw-bg-opacity,1))}.hover\\:bg-red-50:hover{--tw-bg-opacity:1;background-color:rgb(254 242 242/var(--tw-bg-opacity,1))}.hover\\:bg-red-700:hover{--tw-bg-opacity:1;background-color:rgb(185 28 28/var(--tw-bg-opacity,1))}.hover\\:bg-slate-100:hover{--tw-bg-opacity:1;background-color:rgb(241 245 249/var(--tw-bg-opacity,1))}.hover\\:bg-slate-200:hover{--tw-bg-opacity:1;background-color:rgb(226 232 240/var(--tw-bg-opacity,1))}.hover\\:bg-slate-50:hover{--tw-bg-opacity:1;background-color:rgb(248 250 252/var(--tw-bg-opacity,1))}.hover\\:bg-teal-700:hover{--tw-bg-opacity:1;background-color:rgb(15 118 110/var(--tw-bg-opacity,1))}.hover\\:bg-white:hover{--tw-bg-opacity:1;background-color:rgb(255 255 255/var(--tw-bg-opacity,1))}.hover\\:bg-yellow-700:hover{--tw-bg-opacity:1;background-color:rgb(161 98 7/var(--tw-bg-opacity,1))}.hover\\:bg-opacity-30:hover{--tw-bg-opacity:0.3}.hover\\:text-amber-500:hover{--tw-text-opacity:1;color:rgb(245 158 11/var(--tw-text-opacity,1))}.hover\\:text-blue-500:hover{--tw-text-opacity:1;color:rgb(59 130 246/var(--tw-text-opacity,1))}.hover\\:text-blue-600:hover{--tw-text-opacity:1;color:rgb(37 99 235/var(--tw-text-opacity,1))}.hover\\:text-blue-800:hover{--tw-text-opacity:1;color:rgb(30 64 175/var(--tw-text-opacity,1))}.hover\\:text-emerald-600:hover{--tw-text-opacity:1;color:rgb(5 150 105/var(--tw-text-opacity,1))}.hover\\:text-gray-600:hover{--tw-text-opacity:1;color:rgb(75 85 99/var(--tw-text-opacity,1))}.hover\\:text-gray-700:hover{--tw-text-opacity:1;color:rgb(55 65 81/var(--tw-text-opacity,1))}.hover\\:text-gray-800:hover{--tw-text-opacity:1;color:rgb(31 41 55/var(--tw-text-opacity,1))}.hover\\:text-gray-900:hover{--tw-text-opacity:1;color:rgb(17 24 39/var(--tw-text-opacity,1))}.hover\\:text-indigo-800:hover{--tw-text-opacity:1;color:rgb(55 48 163/var(--tw-text-opacity,1))}.hover\\:text-primary-dark:hover{--tw-text-opacity:1;color:rgb(23 78 166/var(--tw-text-opacity,1))}.hover\\:text-primary-ocean:hover{--tw-text-opacity:1;color:rgb(0 102 204/var(--tw-text-opacity,1))}.hover\\:text-purple-600:hover{--tw-text-opacity:1;color:rgb(147 51 234/var(--tw-text-opacity,1))}.hover\\:text-red-500:hover{--tw-text-opacity:1;color:rgb(239 68 68/var(--tw-text-opacity,1))}.hover\\:text-red-600:hover{--tw-text-opacity:1;color:rgb(220 38 38/var(--tw-text-opacity,1))}.hover\\:text-red-700:hover{--tw-text-opacity:1;color:rgb(185 28 28/var(--tw-text-opacity,1))}.hover\\:text-white:hover{--tw-text-opacity:1;color:rgb(255 255 255/var(--tw-text-opacity,1))}.hover\\:text-yellow-400:hover{--tw-text-opacity:1;color:rgb(250 204 21/var(--tw-text-opacity,1))}.hover\\:underline:hover{text-decoration-line:underline}.hover\\:shadow-2xl:hover{--tw-shadow:0 25px 50px -12px #00000040;--tw-shadow-colored:0 25px 50px -12px var(--tw-shadow-color);box-shadow:var(--tw-ring-offset-shadow,0 0 #0000),var(--tw-ring-shadow,0 0 #0000),var(--tw-shadow)}.hover\\:shadow-\\[0_25px_60px_rgba\\(37\\2c 99\\2c 235\\2c 0\\.12\\)\\]:hover{--tw-shadow:0 25px 60px #2563eb1f;--tw-shadow-colored:0 25px 60px var(--tw-shadow-color);box-shadow:var(--tw-ring-offset-shadow,0 0 #0000),var(--tw-ring-shadow,0 0 #0000),var(--tw-shadow)}.hover\\:shadow-lg:hover{--tw-shadow:0 10px 15px -3px #0000001a,0 4px 6px -2px #0000000d;--tw-shadow-colored:0 10px 15px -3px var(--tw-shadow-color),0 4px 6px -2px var(--tw-shadow-color)}.hover\\:shadow-lg:hover,.hover\\:shadow-md:hover{box-shadow:var(--tw-ring-offset-shadow,0 0 #0000),var(--tw-ring-shadow,0 0 #0000),var(--tw-shadow)}.hover\\:shadow-md:hover{--tw-shadow:0 4px 6px -1px #0000001a,0 2px 4px -1px #0000000f;--tw-shadow-colored:0 4px 6px -1px var(--tw-shadow-color),0 2px 4px -1px var(--tw-shadow-color)}.hover\\:shadow-sm:hover{--tw-shadow:0 1px 2px 0 #0000000d;--tw-shadow-colored:0 1px 2px 0 var(--tw-shadow-color);box-shadow:var(--tw-ring-offset-shadow,0 0 #0000),var(--tw-ring-shadow,0 0 #0000),var(--tw-shadow)}.hover\\:shadow-emerald-300:hover{--tw-shadow-color:#6ee7b7;--tw-shadow:var(--tw-shadow-colored)}.hover\\:ring-2:hover{--tw-ring-offset-shadow:var(--tw-ring-inset) 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color);--tw-ring-shadow:var(--tw-ring-inset) 0 0 0 calc(2px + var(--tw-ring-offset-width)) var(--tw-ring-color);box-shadow:var(--tw-ring-offset-shadow),var(--tw-ring-shadow),var(--tw-shadow,0 0 #0000)}.hover\\:ring-blue-500:hover{--tw-ring-opacity:1;--tw-ring-color:rgb(59 130 246/var(--tw-ring-opacity,1))}.focus\\:border-blue-500:focus{--tw-border-opacity:1;border-color:rgb(59 130 246/var(--tw-border-opacity,1))}.focus\\:border-indigo-500:focus{--tw-border-opacity:1;border-color:rgb(99 102 241/var(--tw-border-opacity,1))}.focus\\:border-transparent:focus{border-color:#0000}.focus\\:outline-none:focus{outline:2px solid #0000;outline-offset:2px}.focus\\:ring-2:focus{--tw-ring-offset-shadow:var(--tw-ring-inset) 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color);--tw-ring-shadow:var(--tw-ring-inset) 0 0 0 calc(2px + var(--tw-ring-offset-width)) var(--tw-ring-color);box-shadow:var(--tw-ring-offset-shadow),var(--tw-ring-shadow),var(--tw-shadow,0 0 #0000)}.focus\\:ring-blue-500:focus{--tw-ring-opacity:1;--tw-ring-color:rgb(59 130 246/var(--tw-ring-opacity,1))}.focus\\:ring-green-500:focus{--tw-ring-opacity:1;--tw-ring-color:rgb(34 197 94/var(--tw-ring-opacity,1))}.focus\\:ring-indigo-500:focus{--tw-ring-opacity:1;--tw-ring-color:rgb(99 102 241/var(--tw-ring-opacity,1))}.focus\\:ring-red-500:focus{--tw-ring-opacity:1;--tw-ring-color:rgb(239 68 68/var(--tw-ring-opacity,1))}.focus\\:ring-offset-2:focus{--tw-ring-offset-width:2px}.active\\:scale-\\[0\\.96\\]:active{--tw-scale-x:0.96;--tw-scale-y:0.96}.active\\:scale-\\[0\\.96\\]:active,.active\\:scale-\\[0\\.97\\]:active{transform:translate(var(--tw-translate-x),var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y))}.active\\:scale-\\[0\\.97\\]:active{--tw-scale-x:0.97;--tw-scale-y:0.97}.active\\:scale-\\[0\\.98\\]:active{--tw-scale-x:0.98;--tw-scale-y:0.98;transform:translate(var(--tw-translate-x),var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y))}.active\\:cursor-grabbing:active{cursor:grabbing}.disabled\\:cursor-not-allowed:disabled{cursor:not-allowed}.disabled\\:opacity-30:disabled{opacity:.3}.disabled\\:opacity-50:disabled{opacity:.5}.group\\/nav:hover .group-hover\\/nav\\:rotate-12{--tw-rotate:12deg}.group:hover .group-hover\\:scale-105,.group\\/nav:hover .group-hover\\/nav\\:rotate-12{transform:translate(var(--tw-translate-x),var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y))}.group:hover .group-hover\\:scale-105{--tw-scale-x:1.05;--tw-scale-y:1.05}.group:hover .group-hover\\:scale-125{--tw-scale-x:1.25;--tw-scale-y:1.25;transform:translate(var(--tw-translate-x),var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y))}.group:hover .group-hover\\:bg-blue-600,.group\\/time:hover .group-hover\\/time\\:bg-blue-600{--tw-bg-opacity:1;background-color:rgb(37 99 235/var(--tw-bg-opacity,1))}.group:hover .group-hover\\:bg-indigo-600{--tw-bg-opacity:1;background-color:rgb(79 70 229/var(--tw-bg-opacity,1))}.group:hover .group-hover\\:bg-opacity-20{--tw-bg-opacity:0.2}.group\\/time:hover .group-hover\\/time\\:text-white{--tw-text-opacity:1;color:rgb(255 255 255/var(--tw-text-opacity,1))}.group:hover .group-hover\\:text-blue-600{--tw-text-opacity:1;color:rgb(37 99 235/var(--tw-text-opacity,1))}.group:hover .group-hover\\:text-white{--tw-text-opacity:1;color:rgb(255 255 255/var(--tw-text-opacity,1))}.group:hover .group-hover\\:underline{text-decoration-line:underline}.group:hover .group-hover\\:opacity-100{opacity:1}@media (min-width:640px){.sm\\:ml-3{margin-left:.75rem}.sm\\:mt-0{margin-top:0}.sm\\:mt-8{margin-top:2rem}.sm\\:flex{display:flex}.sm\\:grid-cols-2{grid-template-columns:repeat(2,minmax(0,1fr))}.sm\\:grid-cols-3{grid-template-columns:repeat(3,minmax(0,1fr))}.sm\\:justify-center{justify-content:center}.sm\\:justify-between{justify-content:space-between}.sm\\:gap-6{gap:1.5rem}.sm\\:rounded-md{border-radius:.375rem}.sm\\:p-6{padding:1.5rem}.sm\\:px-6{padding-left:1.5rem;padding-right:1.5rem}.sm\\:text-\\[18px\\]{font-size:18px}.sm\\:text-sm{font-size:.875rem;line-height:1.25rem}}@media (min-width:768px){.md\\:block{display:block}.md\\:flex{display:flex}.md\\:hidden{display:none}.md\\:w-1\\/4{width:25%}.md\\:w-3\\/4{width:75%}.md\\:grid-cols-2{grid-template-columns:repeat(2,minmax(0,1fr))}.md\\:grid-cols-3{grid-template-columns:repeat(3,minmax(0,1fr))}.md\\:grid-cols-4{grid-template-columns:repeat(4,minmax(0,1fr))}.md\\:flex-row{flex-direction:row}.md\\:gap-3{gap:.75rem}.md\\:gap-6{gap:1.5rem}.md\\:py-4{padding-bottom:1rem;padding-top:1rem}.md\\:text-2xl{font-size:1.5rem;line-height:2rem}.md\\:text-5xl{font-size:3rem;line-height:1}.md\\:text-lg{font-size:1.125rem;line-height:1.75rem}}@media (min-width:1024px){.lg\\:col-span-2{grid-column:span 2/span 2}.lg\\:block{display:block}.lg\\:flex{display:flex}.lg\\:hidden{display:none}.lg\\:w-\\[540px\\]{width:540px}.lg\\:grid-cols-2{grid-template-columns:repeat(2,minmax(0,1fr))}.lg\\:grid-cols-3{grid-template-columns:repeat(3,minmax(0,1fr))}.lg\\:grid-cols-4{grid-template-columns:repeat(4,minmax(0,1fr))}.lg\\:flex-row{flex-direction:row}.lg\\:gap-4{gap:1rem}.lg\\:px-8{padding-left:2rem;padding-right:2rem}}@media (min-width:1280px){.xl\\:w-\\[28\\%\\]{width:28%}.xl\\:p-8{padding:2rem}.xl\\:px-8{padding-left:2rem;padding-right:2rem}.xl\\:text-3xl{font-size:1.875rem;line-height:2.25rem}}';
+var tailwind_output_default = '*,::backdrop,:after,:before{--tw-border-spacing-x:0;--tw-border-spacing-y:0;--tw-translate-x:0;--tw-translate-y:0;--tw-rotate:0;--tw-skew-x:0;--tw-skew-y:0;--tw-scale-x:1;--tw-scale-y:1;--tw-pan-x: ;--tw-pan-y: ;--tw-pinch-zoom: ;--tw-scroll-snap-strictness:proximity;--tw-gradient-from-position: ;--tw-gradient-via-position: ;--tw-gradient-to-position: ;--tw-ordinal: ;--tw-slashed-zero: ;--tw-numeric-figure: ;--tw-numeric-spacing: ;--tw-numeric-fraction: ;--tw-ring-inset: ;--tw-ring-offset-width:0px;--tw-ring-offset-color:#fff;--tw-ring-color:#3b82f680;--tw-ring-offset-shadow:0 0 #0000;--tw-ring-shadow:0 0 #0000;--tw-shadow:0 0 #0000;--tw-shadow-colored:0 0 #0000;--tw-blur: ;--tw-brightness: ;--tw-contrast: ;--tw-grayscale: ;--tw-hue-rotate: ;--tw-invert: ;--tw-saturate: ;--tw-sepia: ;--tw-drop-shadow: ;--tw-backdrop-blur: ;--tw-backdrop-brightness: ;--tw-backdrop-contrast: ;--tw-backdrop-grayscale: ;--tw-backdrop-hue-rotate: ;--tw-backdrop-invert: ;--tw-backdrop-opacity: ;--tw-backdrop-saturate: ;--tw-backdrop-sepia: ;--tw-contain-size: ;--tw-contain-layout: ;--tw-contain-paint: ;--tw-contain-style: }/*! tailwindcss v3.4.17 | MIT License | https://tailwindcss.com*/*,:after,:before{border:0 solid #e5e7eb;box-sizing:border-box}:after,:before{--tw-content:""}:host,html{-webkit-text-size-adjust:100%;font-feature-settings:normal;-webkit-tap-highlight-color:transparent;font-family:Noto Sans TC,sans-serif;font-variation-settings:normal;line-height:1.5;tab-size:4}body{line-height:inherit;margin:0}hr{border-top-width:1px;color:inherit;height:0}abbr:where([title]){-webkit-text-decoration:underline dotted;text-decoration:underline dotted}h1,h2,h3,h4,h5,h6{font-size:inherit;font-weight:inherit}a{color:inherit;text-decoration:inherit}b,strong{font-weight:bolder}code,kbd,pre,samp{font-feature-settings:normal;font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,Liberation Mono,Courier New,monospace;font-size:1em;font-variation-settings:normal}small{font-size:80%}sub,sup{font-size:75%;line-height:0;position:relative;vertical-align:initial}sub{bottom:-.25em}sup{top:-.5em}table{border-collapse:collapse;border-color:inherit;text-indent:0}button,input,optgroup,select,textarea{font-feature-settings:inherit;color:inherit;font-family:inherit;font-size:100%;font-variation-settings:inherit;font-weight:inherit;letter-spacing:inherit;line-height:inherit;margin:0;padding:0}button,select{text-transform:none}button,input:where([type=button]),input:where([type=reset]),input:where([type=submit]){-webkit-appearance:button;background-color:initial;background-image:none}:-moz-focusring{outline:auto}:-moz-ui-invalid{box-shadow:none}progress{vertical-align:initial}::-webkit-inner-spin-button,::-webkit-outer-spin-button{height:auto}[type=search]{-webkit-appearance:textfield;outline-offset:-2px}::-webkit-search-decoration{-webkit-appearance:none}::-webkit-file-upload-button{-webkit-appearance:button;font:inherit}summary{display:list-item}blockquote,dd,dl,figure,h1,h2,h3,h4,h5,h6,hr,p,pre{margin:0}fieldset{margin:0}fieldset,legend{padding:0}menu,ol,ul{list-style:none;margin:0;padding:0}dialog{padding:0}textarea{resize:vertical}input::placeholder,textarea::placeholder{color:#9ca3af;opacity:1}[role=button],button{cursor:pointer}:disabled{cursor:default}audio,canvas,embed,iframe,img,object,svg,video{display:block;vertical-align:middle}img,video{height:auto;max-width:100%}[hidden]:where(:not([hidden=until-found])){display:none}:root{--primary-color:#1a73e8;--primary-light:#4ecdc4;--accent-color:#ff6b6b;--background-color:#fff;--text-color:#333;--border-color:#e0e0e0;--shadow-color:#0000001a;--font-family:"Noto Sans TC",sans-serif}*{box-sizing:border-box;margin:0;padding:0}html{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}body{font-family:var(--font-family);line-height:1.6}h1,h2,h3,h4,h5,h6{font-family:Noto Serif TC,serif}.\\!container{width:100%!important}.container{width:100%}@media (min-width:640px){.\\!container{max-width:640px!important}.container{max-width:640px}}@media (min-width:768px){.\\!container{max-width:768px!important}.container{max-width:768px}}@media (min-width:1024px){.\\!container{max-width:1024px!important}.container{max-width:1024px}}@media (min-width:1280px){.\\!container{max-width:1280px!important}.container{max-width:1280px}}@media (min-width:1536px){.\\!container{max-width:1536px!important}.container{max-width:1536px}}.\\!container{margin-left:auto;margin-right:auto;max-width:80rem;padding-left:1rem;padding-right:1rem}@media (min-width:640px){.\\!container{padding-left:1.5rem;padding-right:1.5rem}}@media (min-width:1024px){.\\!container{padding-left:2rem;padding-right:2rem}}.container{margin-left:auto;margin-right:auto;max-width:80rem;padding-left:1rem;padding-right:1rem}@media (min-width:640px){.container{padding-left:1.5rem;padding-right:1.5rem}}@media (min-width:1024px){.container{padding-left:2rem;padding-right:2rem}}.header{--tw-border-opacity:1;--tw-backdrop-blur:blur(12px);-webkit-backdrop-filter:var(--tw-backdrop-blur) var(--tw-backdrop-brightness) var(--tw-backdrop-contrast) var(--tw-backdrop-grayscale) var(--tw-backdrop-hue-rotate) var(--tw-backdrop-invert) var(--tw-backdrop-opacity) var(--tw-backdrop-saturate) var(--tw-backdrop-sepia);backdrop-filter:var(--tw-backdrop-blur) var(--tw-backdrop-brightness) var(--tw-backdrop-contrast) var(--tw-backdrop-grayscale) var(--tw-backdrop-hue-rotate) var(--tw-backdrop-invert) var(--tw-backdrop-opacity) var(--tw-backdrop-saturate) var(--tw-backdrop-sepia);background-color:#fffc;border-bottom-width:1px;border-color:rgb(224 224 224/var(--tw-border-opacity,1));padding-bottom:1rem;padding-top:1rem;position:sticky;top:0;z-index:100}.nav{align-items:center;display:flex;justify-content:space-between}.nav-logo{--tw-text-opacity:1;color:rgb(26 115 232/var(--tw-text-opacity,1));color:var(--primary-color);font-size:1.5rem;font-weight:700;line-height:2rem;text-decoration-line:none}.image-error-message.nav-menu{display:none}.nav-menu{align-items:center;display:none;gap:1.5rem;list-style-type:none}@media (min-width:768px){.nav-menu{display:flex}}.nav-link-active{--tw-text-opacity:1;color:rgb(0 102 204/var(--tw-text-opacity,1));font-weight:500}.mobile-menu-toggle{--tw-text-opacity:1;background-image:none;border-style:none;color:rgb(51 51 51/var(--tw-text-opacity,1));cursor:pointer;font-size:1.5rem;line-height:2rem}@media (min-width:768px){.mobile-menu-toggle,.mobile-menu-toggle.image-error-message{display:none}}.\\!button,.button{border-radius:.25rem;cursor:pointer;display:inline-block;font-weight:500;padding:.5rem 1rem;text-decoration-line:none;transition-duration:.3s;transition-property:all;transition-timing-function:cubic-bezier(.4,0,.2,1)}.\\!button{border-radius:.25rem!important;padding:.5rem 1rem!important}.button{border-radius:.25rem;padding:.5rem 1rem}.button-primary{--tw-bg-opacity:1;--tw-text-opacity:1;background-color:rgb(37 99 235/var(--tw-bg-opacity,1));border-style:none;color:rgb(255 255 255/var(--tw-text-opacity,1))}.button-primary:hover{--tw-bg-opacity:1;background-color:rgb(29 78 216/var(--tw-bg-opacity,1))}.button-primary{background-color:var(--primary-color)}.button-primary:hover{background-color:#1558b0}.button-secondary{--tw-bg-opacity:1;--tw-text-opacity:1;background-color:rgb(107 114 128/var(--tw-bg-opacity,1));border-style:none;color:rgb(255 255 255/var(--tw-text-opacity,1))}.button-secondary:hover{--tw-bg-opacity:1;background-color:rgb(75 85 99/var(--tw-bg-opacity,1))}.button-secondary:hover{background-color:#5a6268}.footer{--tw-border-opacity:1;--tw-bg-opacity:1;background-color:rgb(243 244 246/var(--tw-bg-opacity,1));border-color:rgb(224 224 224/var(--tw-border-opacity,1));border-top-width:1px;margin-top:4rem;padding-bottom:1rem;padding-top:1rem;text-align:center}@media (max-width:768px){.image-error-message.nav-menu,.nav-menu{display:none}.nav-menu{--tw-border-opacity:1;--tw-bg-opacity:1;--tw-shadow:0 4px 6px -1px #0000001a,0 2px 4px -1px #0000000f;--tw-shadow-colored:0 4px 6px -1px var(--tw-shadow-color),0 2px 4px -1px var(--tw-shadow-color);align-items:stretch;background-color:rgb(255 255 255/var(--tw-bg-opacity,1));border-bottom-width:1px;border-color:rgb(224 224 224/var(--tw-border-opacity,1));box-shadow:var(--tw-ring-offset-shadow,0 0 #0000),var(--tw-ring-shadow,0 0 #0000),var(--tw-shadow);flex-direction:column;gap:1rem;left:0;padding:1rem;position:absolute;right:0;top:100%}.nav-menu.active{display:flex}.nav-menu .button{text-align:center;width:100%}.image-error-message{display:none}.nav-menu .\\!button{text-align:center;width:100%}}.nav-menu-item-avatar{align-items:center;display:flex;position:relative}.avatar-container-div{background-color:initial;border-style:none;cursor:pointer;padding:0}.user-avatar{border-color:#0000;border-radius:9999px;border-width:2px;cursor:pointer;display:inline-block;height:2rem;object-fit:cover;transition-duration:.2s;transition-property:color,background-color,border-color,text-decoration-color,fill,stroke;transition-timing-function:cubic-bezier(.4,0,.2,1);vertical-align:middle;width:2rem}.avatar-container-div:focus .user-avatar,.user-avatar:hover{border-color:var(--primary-color)}.avatar-fallback{--tw-text-opacity:1;background-color:#4ecdc4;border-radius:9999px;color:rgb(255 255 255/var(--tw-text-opacity,1));font-size:1rem;font-weight:700;height:2rem;line-height:2rem;text-align:center;width:2rem}.image-error-message.user-dropdown{display:none}.user-dropdown{--tw-border-opacity:1;--tw-bg-opacity:1;--tw-shadow:0 4px 6px -1px #0000001a,0 2px 4px -1px #0000000f;--tw-shadow-colored:0 4px 6px -1px var(--tw-shadow-color),0 2px 4px -1px var(--tw-shadow-color);background-color:rgb(255 255 255/var(--tw-bg-opacity,1));border-color:rgb(224 224 224/var(--tw-border-opacity,1));border-radius:.375rem;border-width:1px;box-shadow:var(--tw-ring-offset-shadow,0 0 #0000),var(--tw-ring-shadow,0 0 #0000),var(--tw-shadow);display:none;margin-top:.5rem;min-width:160px;padding-bottom:.25rem;padding-top:.25rem;position:absolute;right:0;top:100%;z-index:50}.user-dropdown.dropdown-active{display:block}.dropdown-header{--tw-border-opacity:1;border-bottom-width:1px;border-color:rgb(224 224 224/var(--tw-border-opacity,1));padding:.5rem 1rem}.dropdown-header-name{color:rgb(17 24 39/var(--tw-text-opacity,1));font-size:.875rem;font-weight:500;line-height:1.25rem}.dropdown-header-email,.dropdown-header-name{--tw-text-opacity:1;margin:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.dropdown-header-email{color:rgb(107 114 128/var(--tw-text-opacity,1));font-size:.75rem;line-height:1rem}.dropdown-item{--tw-text-opacity:1;color:rgb(51 51 51/var(--tw-text-opacity,1));display:block;font-size:.875rem;line-height:1.25rem;padding:.5rem 1rem;text-decoration-line:none;white-space:nowrap}.dropdown-item:hover{--tw-bg-opacity:1;--tw-text-opacity:1;background-color:rgb(243 244 246/var(--tw-bg-opacity,1));color:rgb(26 115 232/var(--tw-text-opacity,1))}.dropdown-item{color:var(--text-color)}.dropdown-divider{--tw-bg-opacity:1;background-color:rgb(224 224 224/var(--tw-bg-opacity,1));height:1px;margin-bottom:.25rem;margin-top:.25rem}#logout-button{--tw-text-opacity:1;background-color:initial;border-style:none;color:rgb(220 38 38/var(--tw-text-opacity,1));cursor:pointer;text-align:left;width:100%}#logout-button:hover{--tw-bg-opacity:1;background-color:rgb(254 242 242/var(--tw-bg-opacity,1))}.category-label.active{--tw-border-opacity:1;--tw-bg-opacity:1;--tw-text-opacity:1;background-color:rgb(0 102 204/var(--tw-bg-opacity,1));border-color:rgb(0 102 204/var(--tw-border-opacity,1));color:rgb(255 255 255/var(--tw-text-opacity,1))}.error-message{--tw-bg-opacity:1;--tw-text-opacity:1;background-color:rgb(254 226 226/var(--tw-bg-opacity,1));border-radius:.375rem;color:rgb(185 28 28/var(--tw-text-opacity,1));margin-bottom:1rem;padding:1rem}.error-state-icon{--tw-text-opacity:1;color:rgb(239 68 68/var(--tw-text-opacity,1));margin-bottom:.5rem}.error-state-title{--tw-text-opacity:1;color:rgb(153 27 27/var(--tw-text-opacity,1));font-weight:600;margin-bottom:.25rem}.error-state-message{--tw-text-opacity:1;color:rgb(220 38 38/var(--tw-text-opacity,1));font-size:.875rem;line-height:1.25rem}.image-error-message{align-items:center;-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);display:flex;flex-direction:column;justify-content:center}.image-error-message svg{--tw-text-opacity:1;color:rgb(156 163 175/var(--tw-text-opacity,1));height:2rem;margin-bottom:.5rem;width:2rem}.image-error-message p{--tw-text-opacity:1;color:rgb(107 114 128/var(--tw-text-opacity,1));font-size:.75rem;line-height:1rem}.location-detail-panel{align-items:center;display:flex;height:100%;justify-content:center;left:0;opacity:0;position:fixed;top:0;transition:all .3s ease;visibility:hidden;width:100%;z-index:1000}.location-detail-panel.visible{opacity:1;visibility:visible}.detail-panel-overlay{-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);background:#00000080;cursor:pointer;height:100%;left:0;position:absolute;top:0;width:100%}.detail-panel-content{background:#fff;border-radius:16px;box-shadow:0 20px 60px #0000004d;display:flex;flex-direction:column;height:100%;max-height:90vh;max-width:90vw;overflow:hidden;position:relative;transform:translateX(100%);transition:transform .3s ease;width:100%}.location-detail-panel.visible .detail-panel-content{transform:translateX(0)}@media (min-width:1024px){.detail-panel-content{height:90vh;margin-left:auto;margin-right:0;max-width:25vw;width:400px}.location-detail-panel{justify-content:flex-end}}@media (max-width:1023px){.detail-panel-content{border-radius:0;height:100%;max-height:100vh;max-width:100vw;width:100%}.location-detail-panel{justify-content:center}}.detail-panel-close-mobile{align-items:center;-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);background:#ffffffe6;border:none;border-radius:50%;cursor:pointer;display:flex;height:40px;justify-content:center;left:16px;position:absolute;top:16px;transition:all .2s ease;width:40px;z-index:10}.detail-panel-close-mobile:hover{background:#fff;transform:scale(1.1)}.detail-panel-close-desktop{align-items:center;background:#0000001a;border:none;border-radius:50%;cursor:pointer;display:flex;height:32px;justify-content:center;position:absolute;right:16px;top:16px;transition:all .2s ease;width:32px;z-index:10}.detail-panel-close-desktop:hover{background:#0003;transform:scale(1.1)}@media (max-width:1023px){.detail-panel-close-desktop{display:none}}@media (min-width:1024px){.detail-panel-close-mobile{display:none}}.detail-panel-image{background:#f5f5f5;height:250px;overflow:hidden;position:relative;width:100%}.detail-panel-img{height:100%;object-fit:cover;width:100%}.status-badge{-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);border-radius:16px;color:#fff;font-size:14px;font-weight:600;padding:6px 12px;position:absolute;right:12px;top:12px;z-index:2}.detail-panel-info{flex:1;overflow-y:auto;padding:24px}.detail-panel-title{color:#1f2937;font-size:24px;font-weight:700;line-height:1.3;margin:0 0 16px}.detail-panel-meta{margin-bottom:20px}.meta-item{align-items:center;color:#6b7280;display:flex;font-size:14px;gap:8px;margin-bottom:8px}.meta-item svg{color:#9ca3af;flex-shrink:0}.meta-item a{color:#3b82f6;text-decoration:none}.meta-item a:hover{text-decoration:underline}.detail-panel-actions{margin-top:24px}.detail-panel-actions h3{color:#374151;font-size:16px;font-weight:600;margin:0 0 12px}.action-buttons{display:flex;flex-wrap:wrap;gap:8px}.status-btn{align-items:center;border:none;border-radius:8px;cursor:pointer;display:flex;font-size:14px;font-weight:500;gap:4px;padding:8px 16px;transition:all .2s ease}.status-btn:hover{box-shadow:0 4px 8px #0000001a;transform:translateY(-1px)}.status-btn:active{transform:translateY(0)}@media (max-width:640px){.detail-panel-info{padding:16px}.detail-panel-title{font-size:20px}.detail-panel-image{height:200px}.action-buttons{flex-direction:column}.status-btn{justify-content:center}}@keyframes slideInFromRight{0%{transform:translateX(100%)}to{transform:translateX(0)}}@keyframes slideOutToRight{0%{transform:translateX(0)}to{transform:translateX(100%)}}.location-card{transition:transform .2s ease,box-shadow .2s ease}.location-card:hover{box-shadow:0 8px 25px #00000026;transform:translateY(-2px)}.image-loader-container{height:100%;overflow:hidden;position:relative;width:100%}.image-loader-img{height:100%;object-fit:cover;width:100%}.image-skeleton{animation:shimmer 1.5s infinite;background:linear-gradient(90deg,#f0f0f0 25%,#e0e0e0 50%,#f0f0f0 75%);background-size:200% 100%;height:100%;left:0;position:absolute;top:0;width:100%;z-index:1}@keyframes shimmer{0%{background-position:-200% 0}to{background-position:200% 0}}.image-progress{background:#fffc;height:100%;justify-content:center;left:0;position:absolute;top:0;width:100%;z-index:2}.image-progress,.image-progress-spinner{align-items:center;display:flex}.image-preview-container{overflow:hidden;position:relative}.image-preview-thumbnail{transition:transform .3s ease}.image-preview-overlay{transition:opacity .3s ease}.image-preview-modal{animation:fadeIn .3s ease}@keyframes fadeIn{0%{opacity:0}to{opacity:1}}.image-preview-content{animation:zoomIn .3s ease}@keyframes zoomIn{0%{opacity:0;transform:scale(.9)}to{opacity:1;transform:scale(1)}}.image-preview-close,.image-preview-download{-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px)}.image-preview-close:hover,.image-preview-download:hover{transform:scale(1.1)}.image-error-message{align-items:center;background:#f9fafbf2;display:flex;flex-direction:column;height:100%;justify-content:center;left:0;position:absolute;top:0;width:100%;z-index:3}.image-error-message.hidden{display:none}@media (max-width:640px){.image-progress,.image-skeleton{border-radius:8px}}.sr-only{clip:rect(0,0,0,0);border-width:0;height:1px;margin:-1px;overflow:hidden;padding:0;position:absolute;white-space:nowrap;width:1px}.pointer-events-none{pointer-events:none}.pointer-events-auto{pointer-events:auto}.visible{visibility:visible}.collapse{visibility:collapse}.static{position:static}.fixed{position:fixed}.absolute{position:absolute}.relative{position:relative}.sticky{position:sticky}.inset-0{inset:0}.-left-2{left:-.5rem}.bottom-0{bottom:0}.bottom-4{bottom:1rem}.bottom-\\[-54px\\]{bottom:-54px}.bottom-full{bottom:100%}.left-0{left:0}.left-1\\/2{left:50%}.left-2{left:.5rem}.left-4{left:1rem}.right-0{right:0}.right-4{right:1rem}.top-0{top:0}.top-12{top:3rem}.top-2{top:.5rem}.top-20{top:5rem}.top-4{top:1rem}.top-6{top:1.5rem}.top-8{top:2rem}.top-full{top:100%}.z-10{z-index:10}.z-20{z-index:20}.z-30{z-index:30}.z-40{z-index:40}.z-50{z-index:50}.z-\\[101\\]{z-index:101}.z-\\[110\\]{z-index:110}.z-\\[90\\]{z-index:90}.col-span-full{grid-column:1/-1}.mx-4{margin-left:1rem;margin-right:1rem}.mx-auto{margin-left:auto;margin-right:auto}.my-1{margin-bottom:.25rem;margin-top:.25rem}.my-2{margin-bottom:.5rem;margin-top:.5rem}.-mb-px{margin-bottom:-1px}.mb-0{margin-bottom:0}.mb-0\\.5{margin-bottom:.125rem}.mb-1{margin-bottom:.25rem}.mb-2{margin-bottom:.5rem}.mb-3{margin-bottom:.75rem}.mb-4{margin-bottom:1rem}.mb-5{margin-bottom:1.25rem}.mb-6{margin-bottom:1.5rem}.mb-8{margin-bottom:2rem}.ml-2{margin-left:.5rem}.ml-3{margin-left:.75rem}.ml-4{margin-left:1rem}.ml-5{margin-left:1.25rem}.mr-1{margin-right:.25rem}.mr-2{margin-right:.5rem}.mr-4{margin-right:1rem}.mt-1{margin-top:.25rem}.mt-1\\.5{margin-top:.375rem}.mt-2{margin-top:.5rem}.mt-3{margin-top:.75rem}.mt-4{margin-top:1rem}.mt-5{margin-top:1.25rem}.mt-6{margin-top:1.5rem}.mt-8{margin-top:2rem}.mt-auto{margin-top:auto}.line-clamp-1{-webkit-line-clamp:1}.line-clamp-1,.line-clamp-2{-webkit-box-orient:vertical;display:-webkit-box;overflow:hidden}.line-clamp-2{-webkit-line-clamp:2}.line-clamp-3{-webkit-box-orient:vertical;-webkit-line-clamp:3;display:-webkit-box;overflow:hidden}.block{display:block}.inline-block{display:inline-block}.inline{display:inline}.flex{display:flex}.inline-flex{display:inline-flex}.table{display:table}.grid{display:grid}.contents{display:contents}.hidden{display:none}.aspect-\\[3\\/4\\]{aspect-ratio:3/4}.aspect-\\[4\\/3\\]{aspect-ratio:4/3}.h-1{height:.25rem}.h-1\\.5{height:.375rem}.h-10{height:2.5rem}.h-11{height:2.75rem}.h-12{height:3rem}.h-14{height:3.5rem}.h-16{height:4rem}.h-2{height:.5rem}.h-3{height:.75rem}.h-4{height:1rem}.h-48{height:12rem}.h-5{height:1.25rem}.h-6{height:1.5rem}.h-7{height:1.75rem}.h-8{height:2rem}.h-\\[100dvh\\]{height:100dvh}.h-\\[100px\\]{height:100px}.h-\\[1px\\]{height:1px}.h-auto{height:auto}.h-full{height:100%}.max-h-12{max-height:3rem}.max-h-48{max-height:12rem}.max-h-\\[50vh\\]{max-height:50vh}.max-h-\\[90vh\\]{max-height:90vh}.max-h-\\[calc\\(50vh-60px\\)\\]{max-height:calc(50vh - 60px)}.max-h-full{max-height:100%}.min-h-0{min-height:0}.min-h-\\[70vh\\]{min-height:70vh}.min-h-screen{min-height:100vh}.w-0{width:0}.w-1\\/2{width:50%}.w-1\\/3{width:33.333333%}.w-1\\/4{width:25%}.w-10{width:2.5rem}.w-11{width:2.75rem}.w-12{width:3rem}.w-14{width:3.5rem}.w-16{width:4rem}.w-2{width:.5rem}.w-24{width:6rem}.w-4{width:1rem}.w-44{width:11rem}.w-48{width:12rem}.w-5{width:1.25rem}.w-5\\/6{width:83.333333%}.w-6{width:1.5rem}.w-7{width:1.75rem}.w-8{width:2rem}.w-\\[2px\\]{width:2px}.w-\\[30\\%\\]{width:30%}.w-\\[90\\%\\]{width:90%}.w-fit{width:fit-content}.w-full{width:100%}.min-w-0{min-width:0}.min-w-\\[180px\\]{min-width:180px}.min-w-\\[300px\\]{min-width:300px}.max-w-2xl{max-width:42rem}.max-w-4xl{max-width:56rem}.max-w-6xl{max-width:72rem}.max-w-7xl{max-width:80rem}.max-w-\\[160px\\]{max-width:160px}.max-w-\\[260px\\]{max-width:260px}.max-w-\\[340px\\]{max-width:340px}.max-w-full{max-width:100%}.max-w-lg{max-width:32rem}.max-w-md{max-width:28rem}.max-w-sm{max-width:24rem}.flex-1{flex:1 1 0%}.flex-shrink{flex-shrink:1}.flex-shrink-0{flex-shrink:0}.flex-grow{flex-grow:1}.border-collapse{border-collapse:collapse}.-translate-x-1\\/2{--tw-translate-x:-50%}.-translate-x-1\\/2,.translate-x-full{transform:translate(var(--tw-translate-x),var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y))}.translate-x-full{--tw-translate-x:100%}.translate-y-full{--tw-translate-y:100%}.rotate-\\[-45deg\\],.translate-y-full{transform:translate(var(--tw-translate-x),var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y))}.rotate-\\[-45deg\\]{--tw-rotate:-45deg}.transform{transform:translate(var(--tw-translate-x),var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y))}@keyframes pulse{50%{opacity:.5}}.animate-pulse{animation:pulse 2s cubic-bezier(.4,0,.6,1) infinite}@keyframes spin{to{transform:rotate(1turn)}}.animate-spin{animation:spin 1s linear infinite}.cursor-grab{cursor:grab}.cursor-pointer{cursor:pointer}.resize-none{resize:none}.resize{resize:both}.list-inside{list-style-position:inside}.list-decimal{list-style-type:decimal}.list-disc{list-style-type:disc}.grid-cols-1{grid-template-columns:repeat(1,minmax(0,1fr))}.grid-cols-2{grid-template-columns:repeat(2,minmax(0,1fr))}.flex-col{flex-direction:column}.flex-wrap{flex-wrap:wrap}.items-start{align-items:flex-start}.items-center{align-items:center}.items-baseline{align-items:baseline}.justify-start{justify-content:flex-start}.justify-end{justify-content:flex-end}.justify-center{justify-content:center}.justify-between{justify-content:space-between}.justify-around{justify-content:space-around}.gap-0{gap:0}.gap-0\\.5{gap:.125rem}.gap-1{gap:.25rem}.gap-1\\.5{gap:.375rem}.gap-2{gap:.5rem}.gap-3{gap:.75rem}.gap-4{gap:1rem}.gap-6{gap:1.5rem}.gap-8{gap:2rem}.gap-x-4{column-gap:1rem}.gap-y-2{row-gap:.5rem}.space-x-1>:not([hidden])~:not([hidden]){--tw-space-x-reverse:0;margin-left:calc(.25rem*(1 - var(--tw-space-x-reverse)));margin-right:calc(.25rem*var(--tw-space-x-reverse))}.space-x-2>:not([hidden])~:not([hidden]){--tw-space-x-reverse:0;margin-left:calc(.5rem*(1 - var(--tw-space-x-reverse)));margin-right:calc(.5rem*var(--tw-space-x-reverse))}.space-x-3>:not([hidden])~:not([hidden]){--tw-space-x-reverse:0;margin-left:calc(.75rem*(1 - var(--tw-space-x-reverse)));margin-right:calc(.75rem*var(--tw-space-x-reverse))}.space-x-4>:not([hidden])~:not([hidden]){--tw-space-x-reverse:0;margin-left:calc(1rem*(1 - var(--tw-space-x-reverse)));margin-right:calc(1rem*var(--tw-space-x-reverse))}.space-x-8>:not([hidden])~:not([hidden]){--tw-space-x-reverse:0;margin-left:calc(2rem*(1 - var(--tw-space-x-reverse)));margin-right:calc(2rem*var(--tw-space-x-reverse))}.space-y-0>:not([hidden])~:not([hidden]){--tw-space-y-reverse:0;margin-bottom:calc(0px*var(--tw-space-y-reverse));margin-top:calc(0px*(1 - var(--tw-space-y-reverse)))}.space-y-1>:not([hidden])~:not([hidden]){--tw-space-y-reverse:0;margin-bottom:calc(.25rem*var(--tw-space-y-reverse));margin-top:calc(.25rem*(1 - var(--tw-space-y-reverse)))}.space-y-2>:not([hidden])~:not([hidden]){--tw-space-y-reverse:0;margin-bottom:calc(.5rem*var(--tw-space-y-reverse));margin-top:calc(.5rem*(1 - var(--tw-space-y-reverse)))}.space-y-3>:not([hidden])~:not([hidden]){--tw-space-y-reverse:0;margin-bottom:calc(.75rem*var(--tw-space-y-reverse));margin-top:calc(.75rem*(1 - var(--tw-space-y-reverse)))}.space-y-4>:not([hidden])~:not([hidden]){--tw-space-y-reverse:0;margin-bottom:calc(1rem*var(--tw-space-y-reverse));margin-top:calc(1rem*(1 - var(--tw-space-y-reverse)))}.space-y-6>:not([hidden])~:not([hidden]){--tw-space-y-reverse:0;margin-bottom:calc(1.5rem*var(--tw-space-y-reverse));margin-top:calc(1.5rem*(1 - var(--tw-space-y-reverse)))}.space-y-8>:not([hidden])~:not([hidden]){--tw-space-y-reverse:0;margin-bottom:calc(2rem*var(--tw-space-y-reverse));margin-top:calc(2rem*(1 - var(--tw-space-y-reverse)))}.divide-y>:not([hidden])~:not([hidden]){--tw-divide-y-reverse:0;border-bottom-width:calc(1px*var(--tw-divide-y-reverse));border-top-width:calc(1px*(1 - var(--tw-divide-y-reverse)))}.divide-gray-200>:not([hidden])~:not([hidden]){--tw-divide-opacity:1;border-color:rgb(229 231 235/var(--tw-divide-opacity,1))}.overflow-hidden{overflow:hidden}.overflow-x-auto{overflow-x:auto}.overflow-y-auto{overflow-y:auto}.overflow-x-visible{overflow-x:visible}.truncate{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.whitespace-normal{white-space:normal}.whitespace-nowrap{white-space:nowrap}.whitespace-pre-wrap{white-space:pre-wrap}.break-words{overflow-wrap:break-word}.break-all{word-break:break-all}.rounded{border-radius:.25rem}.rounded-2xl{border-radius:1rem}.rounded-3xl{border-radius:1.5rem}.rounded-\\[1\\.25rem\\]{border-radius:1.25rem}.rounded-\\[2\\.5rem\\]{border-radius:2.5rem}.rounded-\\[2rem\\]{border-radius:2rem}.rounded-\\[3\\.5rem\\]{border-radius:3.5rem}.rounded-full{border-radius:9999px}.rounded-lg{border-radius:.5rem}.rounded-md{border-radius:.375rem}.rounded-xl{border-radius:.75rem}.rounded-t-\\[3\\.5rem\\]{border-top-left-radius:3.5rem;border-top-right-radius:3.5rem}.border{border-width:1px}.border-2{border-width:2px}.border-4{border-width:4px}.border-b{border-bottom-width:1px}.border-b-2{border-bottom-width:2px}.border-l{border-left-width:1px}.border-l-4{border-left-width:4px}.border-r{border-right-width:1px}.border-t{border-top-width:1px}.border-dashed{border-style:dashed}.border-none{border-style:none}.border-amber-100\\/50{border-color:#fef3c780}.border-blue-100{--tw-border-opacity:1;border-color:rgb(219 234 254/var(--tw-border-opacity,1))}.border-blue-200{--tw-border-opacity:1;border-color:rgb(191 219 254/var(--tw-border-opacity,1))}.border-blue-500{--tw-border-opacity:1;border-color:rgb(59 130 246/var(--tw-border-opacity,1))}.border-blue-600{--tw-border-opacity:1;border-color:rgb(37 99 235/var(--tw-border-opacity,1))}.border-gray-100{--tw-border-opacity:1;border-color:rgb(243 244 246/var(--tw-border-opacity,1))}.border-gray-200{--tw-border-opacity:1;border-color:rgb(229 231 235/var(--tw-border-opacity,1))}.border-gray-300{--tw-border-opacity:1;border-color:rgb(209 213 219/var(--tw-border-opacity,1))}.border-gray-900{--tw-border-opacity:1;border-color:rgb(17 24 39/var(--tw-border-opacity,1))}.border-green-200{--tw-border-opacity:1;border-color:rgb(187 247 208/var(--tw-border-opacity,1))}.border-green-400{--tw-border-opacity:1;border-color:rgb(74 222 128/var(--tw-border-opacity,1))}.border-green-500{--tw-border-opacity:1;border-color:rgb(34 197 94/var(--tw-border-opacity,1))}.border-primary-sky{--tw-border-opacity:1;border-color:rgb(232 240 254/var(--tw-border-opacity,1))}.border-red-200{--tw-border-opacity:1;border-color:rgb(254 202 202/var(--tw-border-opacity,1))}.border-red-300{--tw-border-opacity:1;border-color:rgb(252 165 165/var(--tw-border-opacity,1))}.border-slate-100{--tw-border-opacity:1;border-color:rgb(241 245 249/var(--tw-border-opacity,1))}.border-slate-200{--tw-border-opacity:1;border-color:rgb(226 232 240/var(--tw-border-opacity,1))}.border-slate-50{--tw-border-opacity:1;border-color:rgb(248 250 252/var(--tw-border-opacity,1))}.border-slate-700{--tw-border-opacity:1;border-color:rgb(51 65 85/var(--tw-border-opacity,1))}.border-transparent{border-color:#0000}.border-white{--tw-border-opacity:1;border-color:rgb(255 255 255/var(--tw-border-opacity,1))}.border-yellow-200{--tw-border-opacity:1;border-color:rgb(254 240 138/var(--tw-border-opacity,1))}.border-yellow-300{--tw-border-opacity:1;border-color:rgb(253 224 71/var(--tw-border-opacity,1))}.border-yellow-400{--tw-border-opacity:1;border-color:rgb(250 204 21/var(--tw-border-opacity,1))}.border-yellow-500{--tw-border-opacity:1;border-color:rgb(234 179 8/var(--tw-border-opacity,1))}.border-t-transparent{border-top-color:#0000}.bg-\\[\\#1e1e1e\\]{--tw-bg-opacity:1;background-color:rgb(30 30 30/var(--tw-bg-opacity,1))}.bg-\\[\\#2a2d31\\]{--tw-bg-opacity:1;background-color:rgb(42 45 49/var(--tw-bg-opacity,1))}.bg-\\[\\#fdfdfe\\]{--tw-bg-opacity:1;background-color:rgb(253 253 254/var(--tw-bg-opacity,1))}.bg-amber-50\\/50{background-color:#fffbeb80}.bg-amber-500{--tw-bg-opacity:1;background-color:rgb(245 158 11/var(--tw-bg-opacity,1))}.bg-black{--tw-bg-opacity:1;background-color:rgb(0 0 0/var(--tw-bg-opacity,1))}.bg-blue-100{--tw-bg-opacity:1;background-color:rgb(219 234 254/var(--tw-bg-opacity,1))}.bg-blue-50{--tw-bg-opacity:1;background-color:rgb(239 246 255/var(--tw-bg-opacity,1))}.bg-blue-50\\/60{background-color:#eff6ff99}.bg-blue-500{--tw-bg-opacity:1;background-color:rgb(59 130 246/var(--tw-bg-opacity,1))}.bg-blue-600{--tw-bg-opacity:1;background-color:rgb(37 99 235/var(--tw-bg-opacity,1))}.bg-emerald-600{--tw-bg-opacity:1;background-color:rgb(5 150 105/var(--tw-bg-opacity,1))}.bg-gray-100{--tw-bg-opacity:1;background-color:rgb(243 244 246/var(--tw-bg-opacity,1))}.bg-gray-200{--tw-bg-opacity:1;background-color:rgb(229 231 235/var(--tw-bg-opacity,1))}.bg-gray-300{--tw-bg-opacity:1;background-color:rgb(209 213 219/var(--tw-bg-opacity,1))}.bg-gray-50{--tw-bg-opacity:1;background-color:rgb(249 250 251/var(--tw-bg-opacity,1))}.bg-gray-600{--tw-bg-opacity:1;background-color:rgb(75 85 99/var(--tw-bg-opacity,1))}.bg-gray-800{--tw-bg-opacity:1;background-color:rgb(31 41 55/var(--tw-bg-opacity,1))}.bg-green-100{--tw-bg-opacity:1;background-color:rgb(220 252 231/var(--tw-bg-opacity,1))}.bg-green-50{--tw-bg-opacity:1;background-color:rgb(240 253 244/var(--tw-bg-opacity,1))}.bg-green-500{--tw-bg-opacity:1;background-color:rgb(34 197 94/var(--tw-bg-opacity,1))}.bg-green-600{--tw-bg-opacity:1;background-color:rgb(22 163 74/var(--tw-bg-opacity,1))}.bg-indigo-50{--tw-bg-opacity:1;background-color:rgb(238 242 255/var(--tw-bg-opacity,1))}.bg-indigo-600{--tw-bg-opacity:1;background-color:rgb(79 70 229/var(--tw-bg-opacity,1))}.bg-primary-sky{--tw-bg-opacity:1;background-color:rgb(232 240 254/var(--tw-bg-opacity,1))}.bg-purple-100{--tw-bg-opacity:1;background-color:rgb(243 232 255/var(--tw-bg-opacity,1))}.bg-purple-500{--tw-bg-opacity:1;background-color:rgb(168 85 247/var(--tw-bg-opacity,1))}.bg-purple-600{--tw-bg-opacity:1;background-color:rgb(147 51 234/var(--tw-bg-opacity,1))}.bg-red-100{--tw-bg-opacity:1;background-color:rgb(254 226 226/var(--tw-bg-opacity,1))}.bg-red-50{--tw-bg-opacity:1;background-color:rgb(254 242 242/var(--tw-bg-opacity,1))}.bg-red-500{--tw-bg-opacity:1;background-color:rgb(239 68 68/var(--tw-bg-opacity,1))}.bg-red-600{--tw-bg-opacity:1;background-color:rgb(220 38 38/var(--tw-bg-opacity,1))}.bg-slate-100{--tw-bg-opacity:1;background-color:rgb(241 245 249/var(--tw-bg-opacity,1))}.bg-slate-50{--tw-bg-opacity:1;background-color:rgb(248 250 252/var(--tw-bg-opacity,1))}.bg-slate-50\\/90{background-color:#f8fafce6}.bg-slate-900{--tw-bg-opacity:1;background-color:rgb(15 23 42/var(--tw-bg-opacity,1))}.bg-slate-900\\/5{background-color:#0f172a0d}.bg-teal-600{--tw-bg-opacity:1;background-color:rgb(13 148 136/var(--tw-bg-opacity,1))}.bg-transparent{background-color:initial}.bg-white{--tw-bg-opacity:1;background-color:rgb(255 255 255/var(--tw-bg-opacity,1))}.bg-white\\/95{background-color:#fffffff2}.bg-yellow-100{--tw-bg-opacity:1;background-color:rgb(254 249 195/var(--tw-bg-opacity,1))}.bg-yellow-200{--tw-bg-opacity:1;background-color:rgb(254 240 138/var(--tw-bg-opacity,1))}.bg-yellow-400{--tw-bg-opacity:1;background-color:rgb(250 204 21/var(--tw-bg-opacity,1))}.bg-yellow-50{--tw-bg-opacity:1;background-color:rgb(254 252 232/var(--tw-bg-opacity,1))}.bg-yellow-500{--tw-bg-opacity:1;background-color:rgb(234 179 8/var(--tw-bg-opacity,1))}.bg-yellow-600{--tw-bg-opacity:1;background-color:rgb(202 138 4/var(--tw-bg-opacity,1))}.bg-opacity-0{--tw-bg-opacity:0}.bg-opacity-20{--tw-bg-opacity:0.2}.bg-opacity-25{--tw-bg-opacity:0.25}.bg-opacity-50{--tw-bg-opacity:0.5}.bg-opacity-90{--tw-bg-opacity:0.9}.bg-gradient-to-b{background-image:linear-gradient(to bottom,var(--tw-gradient-stops))}.bg-gradient-to-br{background-image:linear-gradient(to bottom right,var(--tw-gradient-stops))}.bg-gradient-to-r{background-image:linear-gradient(to right,var(--tw-gradient-stops))}.from-blue-400{--tw-gradient-from:#60a5fa var(--tw-gradient-from-position);--tw-gradient-to:#60a5fa00 var(--tw-gradient-to-position);--tw-gradient-stops:var(--tw-gradient-from),var(--tw-gradient-to)}.from-blue-50{--tw-gradient-from:#eff6ff var(--tw-gradient-from-position);--tw-gradient-to:#eff6ff00 var(--tw-gradient-to-position);--tw-gradient-stops:var(--tw-gradient-from),var(--tw-gradient-to)}.from-blue-600{--tw-gradient-from:#2563eb var(--tw-gradient-from-position);--tw-gradient-to:#2563eb00 var(--tw-gradient-to-position);--tw-gradient-stops:var(--tw-gradient-from),var(--tw-gradient-to)}.from-blue-600\\/30{--tw-gradient-from:#2563eb4d var(--tw-gradient-from-position);--tw-gradient-to:#2563eb00 var(--tw-gradient-to-position);--tw-gradient-stops:var(--tw-gradient-from),var(--tw-gradient-to)}.from-emerald-500{--tw-gradient-from:#10b981 var(--tw-gradient-from-position);--tw-gradient-to:#10b98100 var(--tw-gradient-to-position);--tw-gradient-stops:var(--tw-gradient-from),var(--tw-gradient-to)}.from-gray-200{--tw-gradient-from:#e5e7eb var(--tw-gradient-from-position);--tw-gradient-to:#e5e7eb00 var(--tw-gradient-to-position);--tw-gradient-stops:var(--tw-gradient-from),var(--tw-gradient-to)}.from-purple-50{--tw-gradient-from:#faf5ff var(--tw-gradient-from-position);--tw-gradient-to:#faf5ff00 var(--tw-gradient-to-position);--tw-gradient-stops:var(--tw-gradient-from),var(--tw-gradient-to)}.via-gray-300{--tw-gradient-to:#d1d5db00 var(--tw-gradient-to-position);--tw-gradient-stops:var(--tw-gradient-from),#d1d5db var(--tw-gradient-via-position),var(--tw-gradient-to)}.via-slate-100{--tw-gradient-to:#f1f5f900 var(--tw-gradient-to-position);--tw-gradient-stops:var(--tw-gradient-from),#f1f5f9 var(--tw-gradient-via-position),var(--tw-gradient-to)}.to-blue-50{--tw-gradient-to:#eff6ff var(--tw-gradient-to-position)}.to-gray-200{--tw-gradient-to:#e5e7eb var(--tw-gradient-to-position)}.to-green-50{--tw-gradient-to:#f0fdf4 var(--tw-gradient-to-position)}.to-indigo-600{--tw-gradient-to:#4f46e5 var(--tw-gradient-to-position)}.to-indigo-700{--tw-gradient-to:#4338ca var(--tw-gradient-to-position)}.to-purple-500{--tw-gradient-to:#a855f7 var(--tw-gradient-to-position)}.to-slate-100{--tw-gradient-to:#f1f5f9 var(--tw-gradient-to-position)}.to-teal-600{--tw-gradient-to:#0d9488 var(--tw-gradient-to-position)}.bg-\\[length\\:200\\%_100\\%\\]{background-size:200% 100%}.fill-current{fill:currentColor}.object-contain{object-fit:contain}.object-cover{object-fit:cover}.p-0{padding:0}.p-1\\.5{padding:.375rem}.p-10{padding:2.5rem}.p-12{padding:3rem}.p-2{padding:.5rem}.p-2\\.5{padding:.625rem}.p-3{padding:.75rem}.p-4{padding:1rem}.p-5{padding:1.25rem}.p-6{padding:1.5rem}.p-8{padding:2rem}.px-1{padding-left:.25rem;padding-right:.25rem}.px-2{padding-left:.5rem;padding-right:.5rem}.px-2\\.5{padding-left:.625rem;padding-right:.625rem}.px-3{padding-left:.75rem;padding-right:.75rem}.px-4{padding-left:1rem;padding-right:1rem}.px-6{padding-left:1.5rem;padding-right:1.5rem}.px-8{padding-left:2rem;padding-right:2rem}.py-0\\.5{padding-bottom:.125rem;padding-top:.125rem}.py-1{padding-bottom:.25rem;padding-top:.25rem}.py-1\\.5{padding-bottom:.375rem;padding-top:.375rem}.py-12{padding-bottom:3rem;padding-top:3rem}.py-2{padding-bottom:.5rem;padding-top:.5rem}.py-2\\.5{padding-bottom:.625rem;padding-top:.625rem}.py-24{padding-bottom:6rem;padding-top:6rem}.py-3{padding-bottom:.75rem;padding-top:.75rem}.py-3\\.5{padding-bottom:.875rem;padding-top:.875rem}.py-4{padding-bottom:1rem;padding-top:1rem}.py-4\\.5{padding-bottom:1.125rem;padding-top:1.125rem}.py-5{padding-bottom:1.25rem;padding-top:1.25rem}.py-6{padding-bottom:1.5rem;padding-top:1.5rem}.py-8{padding-bottom:2rem;padding-top:2rem}.pb-20{padding-bottom:5rem}.pb-28{padding-bottom:7rem}.pb-3{padding-bottom:.75rem}.pb-4{padding-bottom:1rem}.pl-4{padding-left:1rem}.pt-2{padding-top:.5rem}.pt-4{padding-top:1rem}.pt-5{padding-top:1.25rem}.pt-6{padding-top:1.5rem}.text-left{text-align:left}.text-center{text-align:center}.text-right{text-align:right}.font-mono{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,Liberation Mono,Courier New,monospace}.font-sans{font-family:Noto Sans TC,sans-serif}.text-2xl{font-size:1.5rem;line-height:2rem}.text-3xl{font-size:1.875rem;line-height:2.25rem}.text-4xl{font-size:2.25rem;line-height:2.5rem}.text-5xl{font-size:3rem;line-height:1}.text-6xl{font-size:3.75rem;line-height:1}.text-\\[10px\\]{font-size:10px}.text-\\[11px\\]{font-size:11px}.text-\\[12px\\]{font-size:12px}.text-\\[13px\\]{font-size:13px}.text-\\[14px\\]{font-size:14px}.text-\\[16px\\]{font-size:16px}.text-\\[18px\\]{font-size:18px}.text-\\[8px\\]{font-size:8px}.text-\\[9px\\]{font-size:9px}.text-base{font-size:1rem;line-height:1.5rem}.text-lg{font-size:1.125rem;line-height:1.75rem}.text-sm{font-size:.875rem;line-height:1.25rem}.text-xl{font-size:1.25rem;line-height:1.75rem}.text-xs{font-size:.75rem;line-height:1rem}.font-black{font-weight:900}.font-bold{font-weight:700}.font-extrabold{font-weight:800}.font-medium{font-weight:500}.font-semibold{font-weight:600}.uppercase{text-transform:uppercase}.lowercase{text-transform:lowercase}.italic{font-style:italic}.tabular-nums{--tw-numeric-spacing:tabular-nums;font-variant-numeric:var(--tw-ordinal) var(--tw-slashed-zero) var(--tw-numeric-figure) var(--tw-numeric-spacing) var(--tw-numeric-fraction)}.leading-5{line-height:1.25rem}.leading-6{line-height:1.5rem}.leading-8{line-height:2rem}.leading-none{line-height:1}.leading-relaxed{line-height:1.625}.leading-tight{line-height:1.25}.tracking-\\[0\\.25em\\]{letter-spacing:.25em}.tracking-\\[0\\.2em\\]{letter-spacing:.2em}.tracking-\\[0\\.3em\\]{letter-spacing:.3em}.tracking-\\[0\\.4em\\]{letter-spacing:.4em}.tracking-tight{letter-spacing:-.025em}.tracking-tighter{letter-spacing:-.05em}.tracking-widest{letter-spacing:.1em}.text-amber-400{--tw-text-opacity:1;color:rgb(251 191 36/var(--tw-text-opacity,1))}.text-amber-400\\/60{color:#fbbf2499}.text-amber-600\\/50{color:#d9770680}.text-amber-700{--tw-text-opacity:1;color:rgb(180 83 9/var(--tw-text-opacity,1))}.text-blue-400{--tw-text-opacity:1;color:rgb(96 165 250/var(--tw-text-opacity,1))}.text-blue-500{--tw-text-opacity:1;color:rgb(59 130 246/var(--tw-text-opacity,1))}.text-blue-600{--tw-text-opacity:1;color:rgb(37 99 235/var(--tw-text-opacity,1))}.text-blue-700{--tw-text-opacity:1;color:rgb(29 78 216/var(--tw-text-opacity,1))}.text-blue-800{--tw-text-opacity:1;color:rgb(30 64 175/var(--tw-text-opacity,1))}.text-blue-900{--tw-text-opacity:1;color:rgb(30 58 138/var(--tw-text-opacity,1))}.text-emerald-600{--tw-text-opacity:1;color:rgb(5 150 105/var(--tw-text-opacity,1))}.text-gray-300{--tw-text-opacity:1;color:rgb(209 213 219/var(--tw-text-opacity,1))}.text-gray-400{--tw-text-opacity:1;color:rgb(156 163 175/var(--tw-text-opacity,1))}.text-gray-500{--tw-text-opacity:1;color:rgb(107 114 128/var(--tw-text-opacity,1))}.text-gray-600{--tw-text-opacity:1;color:rgb(75 85 99/var(--tw-text-opacity,1))}.text-gray-700{--tw-text-opacity:1;color:rgb(55 65 81/var(--tw-text-opacity,1))}.text-gray-800{--tw-text-opacity:1;color:rgb(31 41 55/var(--tw-text-opacity,1))}.text-gray-900{--tw-text-opacity:1;color:rgb(17 24 39/var(--tw-text-opacity,1))}.text-green-400{--tw-text-opacity:1;color:rgb(74 222 128/var(--tw-text-opacity,1))}.text-green-600{--tw-text-opacity:1;color:rgb(22 163 74/var(--tw-text-opacity,1))}.text-green-700{--tw-text-opacity:1;color:rgb(21 128 61/var(--tw-text-opacity,1))}.text-green-800{--tw-text-opacity:1;color:rgb(22 101 52/var(--tw-text-opacity,1))}.text-green-900{--tw-text-opacity:1;color:rgb(20 83 45/var(--tw-text-opacity,1))}.text-indigo-600{--tw-text-opacity:1;color:rgb(79 70 229/var(--tw-text-opacity,1))}.text-orange-600{--tw-text-opacity:1;color:rgb(234 88 12/var(--tw-text-opacity,1))}.text-primary-ocean{--tw-text-opacity:1;color:rgb(0 102 204/var(--tw-text-opacity,1))}.text-purple-600{--tw-text-opacity:1;color:rgb(147 51 234/var(--tw-text-opacity,1))}.text-purple-800{--tw-text-opacity:1;color:rgb(107 33 168/var(--tw-text-opacity,1))}.text-red-400{--tw-text-opacity:1;color:rgb(248 113 113/var(--tw-text-opacity,1))}.text-red-500{--tw-text-opacity:1;color:rgb(239 68 68/var(--tw-text-opacity,1))}.text-red-600{--tw-text-opacity:1;color:rgb(220 38 38/var(--tw-text-opacity,1))}.text-red-700{--tw-text-opacity:1;color:rgb(185 28 28/var(--tw-text-opacity,1))}.text-red-800{--tw-text-opacity:1;color:rgb(153 27 27/var(--tw-text-opacity,1))}.text-slate-100{--tw-text-opacity:1;color:rgb(241 245 249/var(--tw-text-opacity,1))}.text-slate-200{--tw-text-opacity:1;color:rgb(226 232 240/var(--tw-text-opacity,1))}.text-slate-300{--tw-text-opacity:1;color:rgb(203 213 225/var(--tw-text-opacity,1))}.text-slate-400{--tw-text-opacity:1;color:rgb(148 163 184/var(--tw-text-opacity,1))}.text-slate-500{--tw-text-opacity:1;color:rgb(100 116 139/var(--tw-text-opacity,1))}.text-slate-700{--tw-text-opacity:1;color:rgb(51 65 85/var(--tw-text-opacity,1))}.text-slate-800{--tw-text-opacity:1;color:rgb(30 41 59/var(--tw-text-opacity,1))}.text-slate-900{--tw-text-opacity:1;color:rgb(15 23 42/var(--tw-text-opacity,1))}.text-text{--tw-text-opacity:1;color:rgb(51 51 51/var(--tw-text-opacity,1))}.text-white{--tw-text-opacity:1;color:rgb(255 255 255/var(--tw-text-opacity,1))}.text-yellow-400{--tw-text-opacity:1;color:rgb(250 204 21/var(--tw-text-opacity,1))}.text-yellow-500{--tw-text-opacity:1;color:rgb(234 179 8/var(--tw-text-opacity,1))}.text-yellow-600{--tw-text-opacity:1;color:rgb(202 138 4/var(--tw-text-opacity,1))}.text-yellow-700{--tw-text-opacity:1;color:rgb(161 98 7/var(--tw-text-opacity,1))}.text-yellow-800{--tw-text-opacity:1;color:rgb(133 77 14/var(--tw-text-opacity,1))}.text-yellow-900{--tw-text-opacity:1;color:rgb(113 63 18/var(--tw-text-opacity,1))}.underline{text-decoration-line:underline}.no-underline{text-decoration-line:none}.opacity-0{opacity:0}.opacity-30{opacity:.3}.opacity-50{opacity:.5}.shadow{--tw-shadow:0 1px 3px 0 #0000001a,0 1px 2px 0 #0000000f;--tw-shadow-colored:0 1px 3px 0 var(--tw-shadow-color),0 1px 2px 0 var(--tw-shadow-color)}.shadow,.shadow-2xl{box-shadow:var(--tw-ring-offset-shadow,0 0 #0000),var(--tw-ring-shadow,0 0 #0000),var(--tw-shadow)}.shadow-2xl{--tw-shadow:0 25px 50px -12px #00000040;--tw-shadow-colored:0 25px 50px -12px var(--tw-shadow-color)}.shadow-\\[0_12px_40px_rgba\\(0\\2c 0\\2c 0\\2c 0\\.06\\)\\]{--tw-shadow:0 12px 40px #0000000f;--tw-shadow-colored:0 12px 40px var(--tw-shadow-color);box-shadow:var(--tw-ring-offset-shadow,0 0 #0000),var(--tw-ring-shadow,0 0 #0000),var(--tw-shadow)}.shadow-\\[0_30px_60px_-12px_rgba\\(0\\2c 0\\2c 0\\2c 0\\.45\\)\\]{--tw-shadow:0 30px 60px -12px #00000073;--tw-shadow-colored:0 30px 60px -12px var(--tw-shadow-color);box-shadow:var(--tw-ring-offset-shadow,0 0 #0000),var(--tw-ring-shadow,0 0 #0000),var(--tw-shadow)}.shadow-\\[0_30px_80px_rgba\\(0\\2c 0\\2c 0\\2c 0\\.15\\)\\]{--tw-shadow:0 30px 80px #00000026;--tw-shadow-colored:0 30px 80px var(--tw-shadow-color);box-shadow:var(--tw-ring-offset-shadow,0 0 #0000),var(--tw-ring-shadow,0 0 #0000),var(--tw-shadow)}.shadow-\\[0_4px_30px_rgba\\(0\\2c 0\\2c 0\\2c 0\\.02\\)\\]{--tw-shadow:0 4px 30px #00000005;--tw-shadow-colored:0 4px 30px var(--tw-shadow-color)}.shadow-\\[0_4px_30px_rgba\\(0\\2c 0\\2c 0\\2c 0\\.02\\)\\],.shadow-inner{box-shadow:var(--tw-ring-offset-shadow,0 0 #0000),var(--tw-ring-shadow,0 0 #0000),var(--tw-shadow)}.shadow-inner{--tw-shadow:inset 0 2px 4px 0 #0000000d;--tw-shadow-colored:inset 0 2px 4px 0 var(--tw-shadow-color)}.shadow-lg{--tw-shadow:0 10px 15px -3px #0000001a,0 4px 6px -2px #0000000d;--tw-shadow-colored:0 10px 15px -3px var(--tw-shadow-color),0 4px 6px -2px var(--tw-shadow-color)}.shadow-lg,.shadow-md{box-shadow:var(--tw-ring-offset-shadow,0 0 #0000),var(--tw-ring-shadow,0 0 #0000),var(--tw-shadow)}.shadow-md{--tw-shadow:0 4px 6px -1px #0000001a,0 2px 4px -1px #0000000f;--tw-shadow-colored:0 4px 6px -1px var(--tw-shadow-color),0 2px 4px -1px var(--tw-shadow-color)}.shadow-sm{--tw-shadow:0 1px 2px 0 #0000000d;--tw-shadow-colored:0 1px 2px 0 var(--tw-shadow-color)}.shadow-sm,.shadow-xl{box-shadow:var(--tw-ring-offset-shadow,0 0 #0000),var(--tw-ring-shadow,0 0 #0000),var(--tw-shadow)}.shadow-xl{--tw-shadow:0 20px 25px -5px #0000001a,0 10px 10px -5px #0000000a;--tw-shadow-colored:0 20px 25px -5px var(--tw-shadow-color),0 10px 10px -5px var(--tw-shadow-color)}.shadow-blue-200{--tw-shadow-color:#bfdbfe;--tw-shadow:var(--tw-shadow-colored)}.shadow-emerald-200{--tw-shadow-color:#a7f3d0;--tw-shadow:var(--tw-shadow-colored)}.shadow-slate-200{--tw-shadow-color:#e2e8f0;--tw-shadow:var(--tw-shadow-colored)}.outline-none{outline:2px solid #0000;outline-offset:2px}.outline{outline-style:solid}.ring-1{--tw-ring-offset-shadow:var(--tw-ring-inset) 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color);--tw-ring-shadow:var(--tw-ring-inset) 0 0 0 calc(1px + var(--tw-ring-offset-width)) var(--tw-ring-color);box-shadow:var(--tw-ring-offset-shadow),var(--tw-ring-shadow),var(--tw-shadow,0 0 #0000)}.ring-black{--tw-ring-opacity:1;--tw-ring-color:rgb(0 0 0/var(--tw-ring-opacity,1))}.ring-opacity-5{--tw-ring-opacity:0.05}.blur{--tw-blur:blur(8px)}.blur,.drop-shadow{filter:var(--tw-blur) var(--tw-brightness) var(--tw-contrast) var(--tw-grayscale) var(--tw-hue-rotate) var(--tw-invert) var(--tw-saturate) var(--tw-sepia) var(--tw-drop-shadow)}.drop-shadow{--tw-drop-shadow:drop-shadow(0 1px 2px #0000001a) drop-shadow(0 1px 1px #0000000f)}.filter{filter:var(--tw-blur) var(--tw-brightness) var(--tw-contrast) var(--tw-grayscale) var(--tw-hue-rotate) var(--tw-invert) var(--tw-saturate) var(--tw-sepia) var(--tw-drop-shadow)}.backdrop-blur-3xl{--tw-backdrop-blur:blur(64px)}.backdrop-blur-3xl,.backdrop-blur-\\[1px\\]{-webkit-backdrop-filter:var(--tw-backdrop-blur) var(--tw-backdrop-brightness) var(--tw-backdrop-contrast) var(--tw-backdrop-grayscale) var(--tw-backdrop-hue-rotate) var(--tw-backdrop-invert) var(--tw-backdrop-opacity) var(--tw-backdrop-saturate) var(--tw-backdrop-sepia);backdrop-filter:var(--tw-backdrop-blur) var(--tw-backdrop-brightness) var(--tw-backdrop-contrast) var(--tw-backdrop-grayscale) var(--tw-backdrop-hue-rotate) var(--tw-backdrop-invert) var(--tw-backdrop-opacity) var(--tw-backdrop-saturate) var(--tw-backdrop-sepia)}.backdrop-blur-\\[1px\\]{--tw-backdrop-blur:blur(1px)}.backdrop-blur-md{--tw-backdrop-blur:blur(12px)}.backdrop-blur-md,.backdrop-blur-xl{-webkit-backdrop-filter:var(--tw-backdrop-blur) var(--tw-backdrop-brightness) var(--tw-backdrop-contrast) var(--tw-backdrop-grayscale) var(--tw-backdrop-hue-rotate) var(--tw-backdrop-invert) var(--tw-backdrop-opacity) var(--tw-backdrop-saturate) var(--tw-backdrop-sepia);backdrop-filter:var(--tw-backdrop-blur) var(--tw-backdrop-brightness) var(--tw-backdrop-contrast) var(--tw-backdrop-grayscale) var(--tw-backdrop-hue-rotate) var(--tw-backdrop-invert) var(--tw-backdrop-opacity) var(--tw-backdrop-saturate) var(--tw-backdrop-sepia)}.backdrop-blur-xl{--tw-backdrop-blur:blur(24px)}.backdrop-filter{-webkit-backdrop-filter:var(--tw-backdrop-blur) var(--tw-backdrop-brightness) var(--tw-backdrop-contrast) var(--tw-backdrop-grayscale) var(--tw-backdrop-hue-rotate) var(--tw-backdrop-invert) var(--tw-backdrop-opacity) var(--tw-backdrop-saturate) var(--tw-backdrop-sepia);backdrop-filter:var(--tw-backdrop-blur) var(--tw-backdrop-brightness) var(--tw-backdrop-contrast) var(--tw-backdrop-grayscale) var(--tw-backdrop-hue-rotate) var(--tw-backdrop-invert) var(--tw-backdrop-opacity) var(--tw-backdrop-saturate) var(--tw-backdrop-sepia)}.transition{transition-duration:.15s;transition-property:color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,-webkit-backdrop-filter;transition-property:color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter;transition-property:color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter,-webkit-backdrop-filter;transition-timing-function:cubic-bezier(.4,0,.2,1)}.transition-all{transition-duration:.15s;transition-property:all;transition-timing-function:cubic-bezier(.4,0,.2,1)}.transition-colors{transition-duration:.15s;transition-property:color,background-color,border-color,text-decoration-color,fill,stroke;transition-timing-function:cubic-bezier(.4,0,.2,1)}.transition-opacity{transition-duration:.15s;transition-property:opacity;transition-timing-function:cubic-bezier(.4,0,.2,1)}.transition-shadow{transition-duration:.15s;transition-property:box-shadow;transition-timing-function:cubic-bezier(.4,0,.2,1)}.transition-transform{transition-property:transform;transition-timing-function:cubic-bezier(.4,0,.2,1)}.duration-150,.transition-transform{transition-duration:.15s}.duration-200{transition-duration:.2s}.duration-300{transition-duration:.3s}.duration-500{transition-duration:.5s}.ease-in{transition-timing-function:cubic-bezier(.4,0,1,1)}.ease-in-out{transition-timing-function:cubic-bezier(.4,0,.2,1)}.ease-out{transition-timing-function:cubic-bezier(0,0,.2,1)}@media (min-width:768px){.md\\:hidden.image-error-message{display:none}}@media (min-width:1024px){.lg\\:hidden.image-error-message{display:none}}.placeholder\\:text-slate-400::placeholder{--tw-text-opacity:1;color:rgb(148 163 184/var(--tw-text-opacity,1))}.focus-within\\:ring-4:focus-within{--tw-ring-offset-shadow:var(--tw-ring-inset) 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color);--tw-ring-shadow:var(--tw-ring-inset) 0 0 0 calc(4px + var(--tw-ring-offset-width)) var(--tw-ring-color);box-shadow:var(--tw-ring-offset-shadow),var(--tw-ring-shadow),var(--tw-shadow,0 0 #0000)}.focus-within\\:ring-blue-500\\/10:focus-within{--tw-ring-color:#3b82f61a}.hover\\:-translate-y-1:hover{--tw-translate-y:-0.25rem}.hover\\:-translate-y-1:hover,.hover\\:scale-105:hover{transform:translate(var(--tw-translate-x),var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y))}.hover\\:scale-105:hover{--tw-scale-x:1.05;--tw-scale-y:1.05}.hover\\:scale-110:hover{--tw-scale-x:1.1;--tw-scale-y:1.1;transform:translate(var(--tw-translate-x),var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y))}.hover\\:border-blue-200:hover{--tw-border-opacity:1;border-color:rgb(191 219 254/var(--tw-border-opacity,1))}.hover\\:border-blue-300:hover{--tw-border-opacity:1;border-color:rgb(147 197 253/var(--tw-border-opacity,1))}.hover\\:border-blue-400:hover{--tw-border-opacity:1;border-color:rgb(96 165 250/var(--tw-border-opacity,1))}.hover\\:border-blue-600:hover{--tw-border-opacity:1;border-color:rgb(37 99 235/var(--tw-border-opacity,1))}.hover\\:border-gray-300:hover{--tw-border-opacity:1;border-color:rgb(209 213 219/var(--tw-border-opacity,1))}.hover\\:border-primary-ocean:hover{--tw-border-opacity:1;border-color:rgb(0 102 204/var(--tw-border-opacity,1))}.hover\\:bg-amber-50:hover{--tw-bg-opacity:1;background-color:rgb(255 251 235/var(--tw-bg-opacity,1))}.hover\\:bg-blue-100:hover{--tw-bg-opacity:1;background-color:rgb(219 234 254/var(--tw-bg-opacity,1))}.hover\\:bg-blue-200:hover{--tw-bg-opacity:1;background-color:rgb(191 219 254/var(--tw-bg-opacity,1))}.hover\\:bg-blue-50:hover{--tw-bg-opacity:1;background-color:rgb(239 246 255/var(--tw-bg-opacity,1))}.hover\\:bg-blue-600:hover{--tw-bg-opacity:1;background-color:rgb(37 99 235/var(--tw-bg-opacity,1))}.hover\\:bg-blue-700:hover{--tw-bg-opacity:1;background-color:rgb(29 78 216/var(--tw-bg-opacity,1))}.hover\\:bg-emerald-50:hover{--tw-bg-opacity:1;background-color:rgb(236 253 245/var(--tw-bg-opacity,1))}.hover\\:bg-gray-100:hover{--tw-bg-opacity:1;background-color:rgb(243 244 246/var(--tw-bg-opacity,1))}.hover\\:bg-gray-200:hover{--tw-bg-opacity:1;background-color:rgb(229 231 235/var(--tw-bg-opacity,1))}.hover\\:bg-gray-300:hover{--tw-bg-opacity:1;background-color:rgb(209 213 219/var(--tw-bg-opacity,1))}.hover\\:bg-gray-50:hover{--tw-bg-opacity:1;background-color:rgb(249 250 251/var(--tw-bg-opacity,1))}.hover\\:bg-gray-700:hover{--tw-bg-opacity:1;background-color:rgb(55 65 81/var(--tw-bg-opacity,1))}.hover\\:bg-green-100:hover{--tw-bg-opacity:1;background-color:rgb(220 252 231/var(--tw-bg-opacity,1))}.hover\\:bg-green-200:hover{--tw-bg-opacity:1;background-color:rgb(187 247 208/var(--tw-bg-opacity,1))}.hover\\:bg-green-50:hover{--tw-bg-opacity:1;background-color:rgb(240 253 244/var(--tw-bg-opacity,1))}.hover\\:bg-green-600:hover{--tw-bg-opacity:1;background-color:rgb(22 163 74/var(--tw-bg-opacity,1))}.hover\\:bg-green-700:hover{--tw-bg-opacity:1;background-color:rgb(21 128 61/var(--tw-bg-opacity,1))}.hover\\:bg-indigo-700:hover{--tw-bg-opacity:1;background-color:rgb(67 56 202/var(--tw-bg-opacity,1))}.hover\\:bg-primary-sky:hover{--tw-bg-opacity:1;background-color:rgb(232 240 254/var(--tw-bg-opacity,1))}.hover\\:bg-purple-100:hover{--tw-bg-opacity:1;background-color:rgb(243 232 255/var(--tw-bg-opacity,1))}.hover\\:bg-purple-50:hover{--tw-bg-opacity:1;background-color:rgb(250 245 255/var(--tw-bg-opacity,1))}.hover\\:bg-purple-700:hover{--tw-bg-opacity:1;background-color:rgb(126 34 206/var(--tw-bg-opacity,1))}.hover\\:bg-red-200:hover{--tw-bg-opacity:1;background-color:rgb(254 202 202/var(--tw-bg-opacity,1))}.hover\\:bg-red-50:hover{--tw-bg-opacity:1;background-color:rgb(254 242 242/var(--tw-bg-opacity,1))}.hover\\:bg-red-700:hover{--tw-bg-opacity:1;background-color:rgb(185 28 28/var(--tw-bg-opacity,1))}.hover\\:bg-slate-100:hover{--tw-bg-opacity:1;background-color:rgb(241 245 249/var(--tw-bg-opacity,1))}.hover\\:bg-slate-200:hover{--tw-bg-opacity:1;background-color:rgb(226 232 240/var(--tw-bg-opacity,1))}.hover\\:bg-slate-50:hover{--tw-bg-opacity:1;background-color:rgb(248 250 252/var(--tw-bg-opacity,1))}.hover\\:bg-teal-700:hover{--tw-bg-opacity:1;background-color:rgb(15 118 110/var(--tw-bg-opacity,1))}.hover\\:bg-white:hover{--tw-bg-opacity:1;background-color:rgb(255 255 255/var(--tw-bg-opacity,1))}.hover\\:bg-yellow-700:hover{--tw-bg-opacity:1;background-color:rgb(161 98 7/var(--tw-bg-opacity,1))}.hover\\:bg-opacity-30:hover{--tw-bg-opacity:0.3}.hover\\:text-amber-500:hover{--tw-text-opacity:1;color:rgb(245 158 11/var(--tw-text-opacity,1))}.hover\\:text-blue-500:hover{--tw-text-opacity:1;color:rgb(59 130 246/var(--tw-text-opacity,1))}.hover\\:text-blue-600:hover{--tw-text-opacity:1;color:rgb(37 99 235/var(--tw-text-opacity,1))}.hover\\:text-blue-800:hover{--tw-text-opacity:1;color:rgb(30 64 175/var(--tw-text-opacity,1))}.hover\\:text-emerald-600:hover{--tw-text-opacity:1;color:rgb(5 150 105/var(--tw-text-opacity,1))}.hover\\:text-gray-600:hover{--tw-text-opacity:1;color:rgb(75 85 99/var(--tw-text-opacity,1))}.hover\\:text-gray-700:hover{--tw-text-opacity:1;color:rgb(55 65 81/var(--tw-text-opacity,1))}.hover\\:text-gray-800:hover{--tw-text-opacity:1;color:rgb(31 41 55/var(--tw-text-opacity,1))}.hover\\:text-gray-900:hover{--tw-text-opacity:1;color:rgb(17 24 39/var(--tw-text-opacity,1))}.hover\\:text-indigo-800:hover{--tw-text-opacity:1;color:rgb(55 48 163/var(--tw-text-opacity,1))}.hover\\:text-primary-dark:hover{--tw-text-opacity:1;color:rgb(23 78 166/var(--tw-text-opacity,1))}.hover\\:text-primary-ocean:hover{--tw-text-opacity:1;color:rgb(0 102 204/var(--tw-text-opacity,1))}.hover\\:text-purple-600:hover{--tw-text-opacity:1;color:rgb(147 51 234/var(--tw-text-opacity,1))}.hover\\:text-red-500:hover{--tw-text-opacity:1;color:rgb(239 68 68/var(--tw-text-opacity,1))}.hover\\:text-red-600:hover{--tw-text-opacity:1;color:rgb(220 38 38/var(--tw-text-opacity,1))}.hover\\:text-red-700:hover{--tw-text-opacity:1;color:rgb(185 28 28/var(--tw-text-opacity,1))}.hover\\:text-white:hover{--tw-text-opacity:1;color:rgb(255 255 255/var(--tw-text-opacity,1))}.hover\\:text-yellow-400:hover{--tw-text-opacity:1;color:rgb(250 204 21/var(--tw-text-opacity,1))}.hover\\:underline:hover{text-decoration-line:underline}.hover\\:shadow-2xl:hover{--tw-shadow:0 25px 50px -12px #00000040;--tw-shadow-colored:0 25px 50px -12px var(--tw-shadow-color);box-shadow:var(--tw-ring-offset-shadow,0 0 #0000),var(--tw-ring-shadow,0 0 #0000),var(--tw-shadow)}.hover\\:shadow-\\[0_25px_60px_rgba\\(37\\2c 99\\2c 235\\2c 0\\.12\\)\\]:hover{--tw-shadow:0 25px 60px #2563eb1f;--tw-shadow-colored:0 25px 60px var(--tw-shadow-color);box-shadow:var(--tw-ring-offset-shadow,0 0 #0000),var(--tw-ring-shadow,0 0 #0000),var(--tw-shadow)}.hover\\:shadow-lg:hover{--tw-shadow:0 10px 15px -3px #0000001a,0 4px 6px -2px #0000000d;--tw-shadow-colored:0 10px 15px -3px var(--tw-shadow-color),0 4px 6px -2px var(--tw-shadow-color)}.hover\\:shadow-lg:hover,.hover\\:shadow-md:hover{box-shadow:var(--tw-ring-offset-shadow,0 0 #0000),var(--tw-ring-shadow,0 0 #0000),var(--tw-shadow)}.hover\\:shadow-md:hover{--tw-shadow:0 4px 6px -1px #0000001a,0 2px 4px -1px #0000000f;--tw-shadow-colored:0 4px 6px -1px var(--tw-shadow-color),0 2px 4px -1px var(--tw-shadow-color)}.hover\\:shadow-sm:hover{--tw-shadow:0 1px 2px 0 #0000000d;--tw-shadow-colored:0 1px 2px 0 var(--tw-shadow-color);box-shadow:var(--tw-ring-offset-shadow,0 0 #0000),var(--tw-ring-shadow,0 0 #0000),var(--tw-shadow)}.hover\\:shadow-emerald-300:hover{--tw-shadow-color:#6ee7b7;--tw-shadow:var(--tw-shadow-colored)}.hover\\:ring-2:hover{--tw-ring-offset-shadow:var(--tw-ring-inset) 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color);--tw-ring-shadow:var(--tw-ring-inset) 0 0 0 calc(2px + var(--tw-ring-offset-width)) var(--tw-ring-color);box-shadow:var(--tw-ring-offset-shadow),var(--tw-ring-shadow),var(--tw-shadow,0 0 #0000)}.hover\\:ring-blue-500:hover{--tw-ring-opacity:1;--tw-ring-color:rgb(59 130 246/var(--tw-ring-opacity,1))}.focus\\:border-blue-500:focus{--tw-border-opacity:1;border-color:rgb(59 130 246/var(--tw-border-opacity,1))}.focus\\:border-indigo-500:focus{--tw-border-opacity:1;border-color:rgb(99 102 241/var(--tw-border-opacity,1))}.focus\\:border-transparent:focus{border-color:#0000}.focus\\:outline-none:focus{outline:2px solid #0000;outline-offset:2px}.focus\\:ring-2:focus{--tw-ring-offset-shadow:var(--tw-ring-inset) 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color);--tw-ring-shadow:var(--tw-ring-inset) 0 0 0 calc(2px + var(--tw-ring-offset-width)) var(--tw-ring-color);box-shadow:var(--tw-ring-offset-shadow),var(--tw-ring-shadow),var(--tw-shadow,0 0 #0000)}.focus\\:ring-blue-500:focus{--tw-ring-opacity:1;--tw-ring-color:rgb(59 130 246/var(--tw-ring-opacity,1))}.focus\\:ring-green-500:focus{--tw-ring-opacity:1;--tw-ring-color:rgb(34 197 94/var(--tw-ring-opacity,1))}.focus\\:ring-indigo-500:focus{--tw-ring-opacity:1;--tw-ring-color:rgb(99 102 241/var(--tw-ring-opacity,1))}.focus\\:ring-red-500:focus{--tw-ring-opacity:1;--tw-ring-color:rgb(239 68 68/var(--tw-ring-opacity,1))}.focus\\:ring-offset-2:focus{--tw-ring-offset-width:2px}.active\\:scale-\\[0\\.96\\]:active{--tw-scale-x:0.96;--tw-scale-y:0.96}.active\\:scale-\\[0\\.96\\]:active,.active\\:scale-\\[0\\.97\\]:active{transform:translate(var(--tw-translate-x),var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y))}.active\\:scale-\\[0\\.97\\]:active{--tw-scale-x:0.97;--tw-scale-y:0.97}.active\\:scale-\\[0\\.98\\]:active{--tw-scale-x:0.98;--tw-scale-y:0.98;transform:translate(var(--tw-translate-x),var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y))}.active\\:cursor-grabbing:active{cursor:grabbing}.disabled\\:cursor-not-allowed:disabled{cursor:not-allowed}.disabled\\:opacity-30:disabled{opacity:.3}.disabled\\:opacity-50:disabled{opacity:.5}.group\\/nav:hover .group-hover\\/nav\\:rotate-12{--tw-rotate:12deg}.group:hover .group-hover\\:scale-105,.group\\/nav:hover .group-hover\\/nav\\:rotate-12{transform:translate(var(--tw-translate-x),var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y))}.group:hover .group-hover\\:scale-105{--tw-scale-x:1.05;--tw-scale-y:1.05}.group:hover .group-hover\\:scale-125{--tw-scale-x:1.25;--tw-scale-y:1.25;transform:translate(var(--tw-translate-x),var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y))}.group:hover .group-hover\\:bg-blue-600,.group\\/time:hover .group-hover\\/time\\:bg-blue-600{--tw-bg-opacity:1;background-color:rgb(37 99 235/var(--tw-bg-opacity,1))}.group:hover .group-hover\\:bg-indigo-600{--tw-bg-opacity:1;background-color:rgb(79 70 229/var(--tw-bg-opacity,1))}.group:hover .group-hover\\:bg-opacity-20{--tw-bg-opacity:0.2}.group\\/time:hover .group-hover\\/time\\:text-white{--tw-text-opacity:1;color:rgb(255 255 255/var(--tw-text-opacity,1))}.group:hover .group-hover\\:text-blue-600{--tw-text-opacity:1;color:rgb(37 99 235/var(--tw-text-opacity,1))}.group:hover .group-hover\\:text-white{--tw-text-opacity:1;color:rgb(255 255 255/var(--tw-text-opacity,1))}.group:hover .group-hover\\:underline{text-decoration-line:underline}.group:hover .group-hover\\:opacity-100{opacity:1}@media (min-width:640px){.sm\\:ml-3{margin-left:.75rem}.sm\\:mt-0{margin-top:0}.sm\\:mt-8{margin-top:2rem}.sm\\:flex{display:flex}.sm\\:grid-cols-2{grid-template-columns:repeat(2,minmax(0,1fr))}.sm\\:grid-cols-3{grid-template-columns:repeat(3,minmax(0,1fr))}.sm\\:justify-center{justify-content:center}.sm\\:justify-between{justify-content:space-between}.sm\\:gap-6{gap:1.5rem}.sm\\:rounded-md{border-radius:.375rem}.sm\\:p-6{padding:1.5rem}.sm\\:px-6{padding-left:1.5rem;padding-right:1.5rem}.sm\\:text-\\[18px\\]{font-size:18px}.sm\\:text-sm{font-size:.875rem;line-height:1.25rem}}@media (min-width:768px){.md\\:block{display:block}.md\\:flex{display:flex}.md\\:hidden{display:none}.md\\:w-1\\/4{width:25%}.md\\:w-3\\/4{width:75%}.md\\:grid-cols-2{grid-template-columns:repeat(2,minmax(0,1fr))}.md\\:grid-cols-3{grid-template-columns:repeat(3,minmax(0,1fr))}.md\\:grid-cols-4{grid-template-columns:repeat(4,minmax(0,1fr))}.md\\:flex-row{flex-direction:row}.md\\:gap-3{gap:.75rem}.md\\:gap-6{gap:1.5rem}.md\\:py-4{padding-bottom:1rem;padding-top:1rem}.md\\:text-2xl{font-size:1.5rem;line-height:2rem}.md\\:text-5xl{font-size:3rem;line-height:1}.md\\:text-lg{font-size:1.125rem;line-height:1.75rem}}@media (min-width:1024px){.lg\\:col-span-2{grid-column:span 2/span 2}.lg\\:block{display:block}.lg\\:flex{display:flex}.lg\\:hidden{display:none}.lg\\:w-\\[540px\\]{width:540px}.lg\\:grid-cols-2{grid-template-columns:repeat(2,minmax(0,1fr))}.lg\\:grid-cols-3{grid-template-columns:repeat(3,minmax(0,1fr))}.lg\\:grid-cols-4{grid-template-columns:repeat(4,minmax(0,1fr))}.lg\\:flex-row{flex-direction:row}.lg\\:gap-4{gap:1rem}.lg\\:px-8{padding-left:2rem;padding-right:2rem}}@media (min-width:1280px){.xl\\:w-\\[28\\%\\]{width:28%}.xl\\:p-8{padding:2rem}.xl\\:px-8{padding-left:2rem;padding-right:2rem}.xl\\:text-3xl{font-size:1.875rem;line-height:2.25rem}}';
 
 // src/api/debug.js
 async function handleDebugRequest(request, env) {

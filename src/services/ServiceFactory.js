@@ -17,6 +17,8 @@ import { SearchService } from './SearchService.js';
 import { FavoritesService } from './FavoritesService.js';
 import { SecurityService } from './SecurityService.js';
 import { RateLimitService } from './RateLimitService.js';
+import { AIAgentFactory } from './AIAgentFactory.js';
+import { EcosystemService } from './EcosystemService.js';
 
 /**
  * 服務工廠類
@@ -137,6 +139,13 @@ export class ServiceFactory {
         case 'rateLimitService':
           return new RateLimitService(env.DB);
         
+        case 'aiAgentFactory':
+          // AIAgentFactory 需要 ServiceFactory 本身（循環依賴，但可以處理）
+          return new AIAgentFactory(this, options);
+        
+        case 'ecosystemService':
+          return new EcosystemService(env.DB, options);
+        
         default:
           throw new Error(`Unknown service: ${serviceName}`);
       }
@@ -177,7 +186,9 @@ export class ServiceFactory {
       searchService: this.getService('searchService'),
       favoritesService: this.getService('favoritesService'),
       securityService: this.getService('securityService'),
-      rateLimitService: this.getService('rateLimitService')
+      rateLimitService: this.getService('rateLimitService'),
+      aiAgentFactory: this.getService('aiAgentFactory'),
+      ecosystemService: this.getService('ecosystemService')
     };
   }
 

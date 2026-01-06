@@ -3,6 +3,7 @@ import { RateLimitService } from '../services/RateLimitService.js';
 import { SecurityAuditService } from '../services/SecurityAuditService.js';
 import { requireAdminAPI } from '../middleware/auth.js';
 import { getCacheStatsSummary, performanceMetrics } from '../utils/cacheMonitor.js';
+import { ServiceFactory } from '../services/ServiceFactory.js';
 
 /**
  * 處理管理員相關的API請求
@@ -89,6 +90,27 @@ export async function handleAdminRequest(request, env, user) {
         
         if (pathname === '/api/admin/users/get-role') {
             return await handleGetUserRole(request, env);
+        }
+
+        // 生態系統監控端點
+        if (pathname === '/api/admin/ecosystem/report') {
+            return await handleEcosystemReport(request, env);
+        }
+
+        if (pathname === '/api/admin/ecosystem/wellbeing') {
+            return await handleEcosystemWellbeing(request, env);
+        }
+
+        if (pathname === '/api/admin/ecosystem/resources') {
+            return await handleEcosystemResources(request, env);
+        }
+
+        if (pathname === '/api/admin/ecosystem/community') {
+            return await handleEcosystemCommunity(request, env);
+        }
+
+        if (pathname === '/api/admin/ecosystem/agents') {
+            return await handleEcosystemAgents(request, env);
         }
 
         return new Response('Not Found', { status: 404 });
@@ -600,6 +622,153 @@ async function handleGetUserRole(request, env) {
             error: 'Failed to get user role',
             message: error.message 
         }), { 
+            status: 500,
+            headers: { 'Content-Type': 'application/json' }
+        });
+    }
+}
+
+/**
+ * 處理生態系統報告請求
+ */
+async function handleEcosystemReport(request, env) {
+    try {
+        const url = new URL(request.url);
+        const days = parseInt(url.searchParams.get('days') || '7');
+        
+        const serviceFactory = new ServiceFactory(env);
+        const ecosystemService = serviceFactory.getService('ecosystemService');
+        
+        const report = await ecosystemService.getEcosystemReport({ days });
+        
+        return new Response(JSON.stringify(report), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' }
+        });
+    } catch (error) {
+        console.error('[Admin API] Ecosystem report failed:', error);
+        return new Response(JSON.stringify({
+            error: 'Failed to get ecosystem report',
+            message: error.message
+        }), {
+            status: 500,
+            headers: { 'Content-Type': 'application/json' }
+        });
+    }
+}
+
+/**
+ * 處理用戶福祉請求
+ */
+async function handleEcosystemWellbeing(request, env) {
+    try {
+        const url = new URL(request.url);
+        const userId = url.searchParams.get('userId');
+        const days = parseInt(url.searchParams.get('days') || '30');
+        
+        const serviceFactory = new ServiceFactory(env);
+        const ecosystemService = serviceFactory.getService('ecosystemService');
+        
+        const wellbeing = await ecosystemService.getUserWellbeing(userId, { days });
+        
+        return new Response(JSON.stringify(wellbeing), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' }
+        });
+    } catch (error) {
+        console.error('[Admin API] Ecosystem wellbeing failed:', error);
+        return new Response(JSON.stringify({
+            error: 'Failed to get wellbeing data',
+            message: error.message
+        }), {
+            status: 500,
+            headers: { 'Content-Type': 'application/json' }
+        });
+    }
+}
+
+/**
+ * 處理資源使用請求
+ */
+async function handleEcosystemResources(request, env) {
+    try {
+        const url = new URL(request.url);
+        const days = parseInt(url.searchParams.get('days') || '7');
+        
+        const serviceFactory = new ServiceFactory(env);
+        const ecosystemService = serviceFactory.getService('ecosystemService');
+        
+        const usage = await ecosystemService.getResourceUsage({ days });
+        
+        return new Response(JSON.stringify(usage), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' }
+        });
+    } catch (error) {
+        console.error('[Admin API] Ecosystem resources failed:', error);
+        return new Response(JSON.stringify({
+            error: 'Failed to get resource usage',
+            message: error.message
+        }), {
+            status: 500,
+            headers: { 'Content-Type': 'application/json' }
+        });
+    }
+}
+
+/**
+ * 處理社區健康請求
+ */
+async function handleEcosystemCommunity(request, env) {
+    try {
+        const url = new URL(request.url);
+        const days = parseInt(url.searchParams.get('days') || '7');
+        
+        const serviceFactory = new ServiceFactory(env);
+        const ecosystemService = serviceFactory.getService('ecosystemService');
+        
+        const health = await ecosystemService.getCommunityHealth({ days });
+        
+        return new Response(JSON.stringify(health), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' }
+        });
+    } catch (error) {
+        console.error('[Admin API] Ecosystem community failed:', error);
+        return new Response(JSON.stringify({
+            error: 'Failed to get community health',
+            message: error.message
+        }), {
+            status: 500,
+            headers: { 'Content-Type': 'application/json' }
+        });
+    }
+}
+
+/**
+ * 處理 AI Agent 統計請求
+ */
+async function handleEcosystemAgents(request, env) {
+    try {
+        const serviceFactory = new ServiceFactory(env);
+        const aiAgentFactory = serviceFactory.getService('aiAgentFactory');
+        
+        const stats = aiAgentFactory.getStats();
+        const allStates = aiAgentFactory.getAllAgentStates();
+        
+        return new Response(JSON.stringify({
+            stats,
+            agents: allStates
+        }), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' }
+        });
+    } catch (error) {
+        console.error('[Admin API] Ecosystem agents failed:', error);
+        return new Response(JSON.stringify({
+            error: 'Failed to get agent stats',
+            message: error.message
+        }), {
             status: 500,
             headers: { 'Content-Type': 'application/json' }
         });

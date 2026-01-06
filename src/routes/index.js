@@ -6,6 +6,7 @@ import { renderImageManagementPage } from '../pages/ImageManagement.js';
 import { renderAdminDashboardPage } from '../pages/AdminDashboard.js';
 import { renderAIAdminPage } from '../pages/AIAdminPage.js';
 import { renderBusinessVerificationAdminPage } from '../pages/BusinessVerificationAdmin.js';
+import { renderEcosystemDashboardPage } from '../pages/EcosystemDashboard.js';
 import { renderProfilePage } from '../pages/Profile.js';
 import { renderDesignPreviewPage } from '../pages/DesignPreview.js';
 // Game Pages
@@ -19,6 +20,7 @@ import { renderSearchPage } from '../pages/Search.js';
 import { renderFavoritesPage } from '../pages/Favorites.js';
 import { renderLocationDetailPage } from '../pages/LocationDetail.js';
 import { renderItineraryPlannerPage } from '../pages/ItineraryPlanner.js';
+import { renderTripPlannerPage } from '../pages/TripPlanner.js';
 import { handleAuthRequest } from '../api/auth.js';
 import { handleCspReport } from '../api/csp.js';
 import { handleImageRequest } from '../api/image.js';
@@ -120,6 +122,10 @@ export async function routePageRequest(request, env, session, user, nonce, cssCo
       return await renderBusinessVerificationAdminPage(request, env, session, user, nonce, cssContent);
     }
 
+    if (pathname === '/admin/ecosystem') {
+      return await renderEcosystemDashboardPage(request, env, session, user, nonce, cssContent);
+    }
+
     if (pathname === '/profile') {
       return await renderProfilePage(request, env, session, user, nonce, cssContent);
     }
@@ -148,8 +154,22 @@ export async function routePageRequest(request, env, session, user, nonce, cssCo
       return await renderFavoritesPage(request, env, session, user, nonce, cssContent);
     }
 
-    if (pathname === '/itinerary' || pathname === '/itinerary-planner') {
-      return await renderItineraryPlannerPage(request, env, session, user, nonce, cssContent);
+    // 暫時隱藏 AI 行程規劃功能（保留代碼，不刪除）
+    // if (pathname === '/itinerary' || pathname === '/itinerary-planner') {
+    //   return await renderItineraryPlannerPage(request, env, session, user, nonce, cssContent);
+    // }
+
+    if (pathname === '/trip-planner') {
+      return await renderTripPlannerPage(request, env, session, user, nonce, cssContent);
+    }
+
+    // 公開分享的行程頁面（無需登入）
+    if (pathname.startsWith('/trip-planner/shared/')) {
+      const shareToken = pathname.split('/').pop();
+      if (shareToken && shareToken !== 'shared') {
+        const { renderSharedTripPage } = await import('../pages/TripPlanner.js');
+        return await renderSharedTripPage(request, env, session, user, nonce, cssContent, shareToken);
+      }
     }
 
     if (pathname.startsWith('/location/')) {
@@ -241,6 +261,9 @@ export async function handleApiRequest(request, env, session, user, ctx = null) 
         case 'itinerary':
           const { handleItineraryRequest } = await import('../api/itinerary.js');
           return await handleItineraryRequest(request, env, user);
+        case 'trip-planner':
+          const { handleTripPlannerRequest } = await import('../api/trip-planner.js');
+          return await handleTripPlannerRequest(request, env, user);
         case 'business':
           // 檢查是否為驗證相關 API
           if (path.startsWith('/api/business/verify/')) {

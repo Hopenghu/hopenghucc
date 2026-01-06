@@ -3,7 +3,7 @@ export function pageTemplate({ title, content, user, nonce, cssContent, useConta
 
   // 根據當前路徑判斷哪個導覽連結應該高亮
   const isFootprintsActive = currentPath === '/footprints' || currentPath.startsWith('/footprints');
-  const isItineraryActive = currentPath === '/itinerary' || currentPath.startsWith('/itinerary');
+  const isTripPlannerActive = currentPath === '/trip-planner' || currentPath.startsWith('/trip-planner');
 
   try {
     const html = `
@@ -45,7 +45,7 @@ export function pageTemplate({ title, content, user, nonce, cssContent, useConta
             <a href="/" class="nav-logo">HOPE PENGHU</a>
             <ul class="nav-menu">
               <li><a href="/footprints" class="nav-link${isFootprintsActive ? ' nav-link-active' : ''}">足跡</a></li>
-              ${user ? `<li><a href="/itinerary" class="nav-link${isItineraryActive ? ' nav-link-active' : ''}">行程規劃</a></li>` : ''}
+              ${user ? `<li><a href="/trip-planner" class="nav-link${isTripPlannerActive ? ' nav-link-active' : ''}">行程規劃</a></li>` : ''}
               ${user ? `
                 <li class="nav-menu-item-avatar">
                   <div id="avatar-container" role="button" tabindex="0" aria-label="User menu" class="focus:outline-none avatar-container-div"> 
@@ -61,7 +61,7 @@ export function pageTemplate({ title, content, user, nonce, cssContent, useConta
                        <p class="dropdown-header-email">${user.email || ''}</p>
                     </div>
                     <a href="/profile" class="dropdown-item">我的地點</a>
-                    <a href="/itinerary" class="dropdown-item">我的行程</a>
+                    <a href="/trip-planner" class="dropdown-item">我的行程</a>
                     <a href="/google-info" class="dropdown-item">我的帳號</a>
                     ${user.role === 'admin' ? `
                       <a href="/admin/verifications" class="dropdown-item">商家驗證管理</a>
