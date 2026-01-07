@@ -597,7 +597,8 @@ export async function renderTripPlannerPage(request, env, session, user, nonce, 
                     }
 
                     const script = document.createElement('script');
-                    script.src = 'https://maps.googleapis.com/maps/api/js?key=' + this.mapsApiKey + '&libraries=places&loading=async';
+                    // 使用標準加載方式，移除 loading=async 參數（非標準參數）
+                    script.src = 'https://maps.googleapis.com/maps/api/js?key=' + this.mapsApiKey + '&libraries=places';
                     script.async = true;
                     script.defer = true;
 
@@ -661,12 +662,21 @@ export async function renderTripPlannerPage(request, env, session, user, nonce, 
                 }
 
                 try {
+                    // 確保地圖容器有明確的高度
+                    if (mapDiv.offsetHeight === 0) {
+                        console.warn('Map container has zero height, setting explicit height');
+                        mapDiv.style.height = '100%';
+                        mapDiv.style.minHeight = '400px';
+                    }
+                    
                     // 地圖元素已經通過 CSS 類設置了樣式，不需要 inline style
                     this.map = new google.maps.Map(mapDiv, {
                         center: initialCenter,
                         zoom: 12,
                         mapTypeControl: false,
-                        clickableIcons: true
+                        clickableIcons: true,
+                        fullscreenControl: false,
+                        streetViewControl: false
                     });
 
                     // 觸發 resize 事件確保地圖正確渲染
@@ -678,6 +688,13 @@ export async function renderTripPlannerPage(request, env, session, user, nonce, 
                             console.log('Map initialized and resized');
                         }
                     }, 200);
+                    
+                    // 額外觸發一次 resize 以確保地圖正確顯示
+                    window.addEventListener('resize', () => {
+                        if (this.map && google && google.maps) {
+                            google.maps.event.trigger(this.map, 'resize');
+                        }
+                    });
 
                     // 監聽地圖上的 POI 點擊
                     this.map.addListener('click', (event) => {
