@@ -85,19 +85,22 @@ export async function renderTripPlannerPage(request, env, session, user, nonce, 
         /* Map Container Styles */
         .trip-planner-main-area {
             height: calc(100vh - 128px - 60px);
+            min-height: 500px;
         }
         
         #map-container {
             height: 100%;
-            min-height: 400px;
+            min-height: 500px;
+            position: relative;
         }
         
         .trip-planner-map {
             width: 100%;
             height: 100%;
-            min-height: 400px;
+            min-height: 500px;
             background-color: #e5e7eb;
             position: relative;
+            display: block;
         }
         
         /* Loading indicator for map */
@@ -663,10 +666,33 @@ export async function renderTripPlannerPage(request, env, session, user, nonce, 
 
                 try {
                     // 確保地圖容器有明確的高度
-                    if (mapDiv.offsetHeight === 0) {
-                        console.warn('Map container has zero height, setting explicit height');
-                        mapDiv.style.height = '100%';
-                        mapDiv.style.minHeight = '400px';
+                    const mapContainer = document.getElementById('map-container');
+                    const containerHeight = mapDiv.offsetHeight || mapDiv.clientHeight;
+                    
+                    console.log('Map container dimensions:', {
+                        mapDiv: {
+                            offsetHeight: mapDiv.offsetHeight,
+                            clientHeight: mapDiv.clientHeight,
+                            offsetWidth: mapDiv.offsetWidth,
+                            clientWidth: mapDiv.clientWidth
+                        },
+                        mapContainer: mapContainer ? {
+                            offsetHeight: mapContainer.offsetHeight,
+                            clientHeight: mapContainer.clientHeight
+                        } : 'not found'
+                    });
+                    
+                    if (containerHeight === 0 || containerHeight < 400) {
+                        console.warn('Map container has insufficient height, setting explicit height');
+                        const viewportHeight = window.innerHeight;
+                        const calculatedHeight = Math.max(viewportHeight - 200, 500);
+                        mapDiv.style.height = calculatedHeight + 'px';
+                        mapDiv.style.minHeight = '500px';
+                        if (mapContainer) {
+                            mapContainer.style.height = calculatedHeight + 'px';
+                            mapContainer.style.minHeight = '500px';
+                        }
+                        console.log('Set map height to:', calculatedHeight);
                     }
                     
                     // 地圖元素已經通過 CSS 類設置了樣式，不需要 inline style
@@ -679,6 +705,8 @@ export async function renderTripPlannerPage(request, env, session, user, nonce, 
                         streetViewControl: false
                     });
 
+                    console.log('Map instance created successfully');
+
                     // 觸發 resize 事件確保地圖正確渲染
                     setTimeout(() => {
                         if (this.map && google && google.maps) {
@@ -687,14 +715,24 @@ export async function renderTripPlannerPage(request, env, session, user, nonce, 
                             this.map.setCenter(initialCenter);
                             console.log('Map initialized and resized');
                         }
-                    }, 200);
+                    }, 300);
                     
                     // 額外觸發一次 resize 以確保地圖正確顯示
-                    window.addEventListener('resize', () => {
+                    const resizeHandler = () => {
                         if (this.map && google && google.maps) {
                             google.maps.event.trigger(this.map, 'resize');
                         }
-                    });
+                    };
+                    window.addEventListener('resize', resizeHandler);
+                    
+                    // 在頁面完全載入後再次觸發 resize
+                    if (document.readyState === 'complete') {
+                        setTimeout(resizeHandler, 500);
+                    } else {
+                        window.addEventListener('load', () => {
+                            setTimeout(resizeHandler, 500);
+                        });
+                    }
 
                     // 監聽地圖上的 POI 點擊
                     this.map.addListener('click', (event) => {
@@ -2189,13 +2227,26 @@ export async function renderTripPlannerPage(request, env, session, user, nonce, 
         let tripPlanner = null;
 
         // 初始化
-        document.addEventListener('DOMContentLoaded', () => {
-            tripPlanner = new TripPlanner();
-            tripPlanner.initMap();
-            tripPlanner.initEventListeners();
-            // 檢查 URL 參數並載入行程（如果有的話）
-            tripPlanner.checkUrlParams();
-        });
+        function initializeTripPlanner() {
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', () => {
+                    tripPlanner = new TripPlanner();
+                    tripPlanner.initMap();
+                    tripPlanner.initEventListeners();
+                    // 檢查 URL 參數並載入行程（如果有的話）
+                    tripPlanner.checkUrlParams();
+                });
+            } else {
+                // DOM 已經載入完成
+                tripPlanner = new TripPlanner();
+                tripPlanner.initMap();
+                tripPlanner.initEventListeners();
+                // 檢查 URL 參數並載入行程（如果有的話）
+                tripPlanner.checkUrlParams();
+            }
+        }
+        
+        initializeTripPlanner();
     </script>
   `;
 
